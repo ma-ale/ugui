@@ -215,3 +215,24 @@ int ug_end(ug_ctx_t *ctx)
 	ctx->input_text[0]      = '\0';
 	return 0;
 }
+
+/*=============================================================================*
+ *                              UI ELEMENTS                                    *
+ *=============================================================================*/
+
+#undef TEST_CTX
+#define TEST_CTX(ctx) {                                                \
+	if (!ctx) {                                                    \
+		warn("__FUNCTION__:" "trying to use a null context");  \
+		return 0;                                              \
+	}                                                              \
+}
+
+// Slider element, a rectangle with some text and another rectangle inside
+// When used with a mouse the slider moves to the clicked area and stat gets
+// updated, in that case a non-zero value gets returned
+int ug_slider(ug_ctx_t *ctx, float *stat, float min, float max)
+{
+	TEST_CTX(ctx);
+	ug_draw_rect(ctx)
+}

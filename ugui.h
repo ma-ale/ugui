@@ -262,5 +262,115 @@ void ug_input_text(ug_ctx_t *ctx, const char *text);
 int ug_begin(ug_ctx_t *ctx);
 int ug_end(ug_ctx_t *ctx);
 
+// layout control
+// Split the layout vertically and horizontally, n times each time with the
+// supplied width/height
+
+/* Window space
+ * +-----------------------------+
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * +-----------------------------+
+ * 
+ * ug_layout_vsplit(ctx, 2, (int[]){10, 20});
+ * create two vertical zones
+ * +-----------------------------+
+ * | } 10px                      |
+ * +-----------------------------+
+ * | |> 20px                     |
+ * | |                           |
+ * +-----------------------------+
+ * |                             |
+ * |                             |
+ * |          remainder          |
+ * |                             |
+ * |                             |
+ * |                             |
+ * +-----------------------------+
+ * 
+ * ug_layout_hsplit(ctx, 3, NULL);
+ * equally spaced divisions
+ * +-----------------------------+
+ * |        |          |         |
+ * +-----------------------------+
+ * | |> 20px                     |
+ * | |                           |
+ * +-----------------------------+
+ * |                             |
+ * |                             |
+ * |          remainder          |
+ * |                             |
+ * |                             |
+ * |                             |
+ * +-----------------------------+
+ *
+ * ug_button(ctx, "ciao");
+ * ug_layout_next(ctx);  // skip second square
+ * ug_button(ctx, "quit");
+ * float val = 0.3 
+ * ug_slider(ctx, &val, 0, 1);
+ * ug_text(ctx, "lorem ipsum\ndolor et");
+ *
+ * +-----------------------------+
+ * | ciao   |          |  quit   |
+ * +-----------------------------+
+ * |     #     0.3               |
+ * |     #                       |
+ * +-----------------------------+
+ * | lorem ipsum                 |
+ * | dolor et                    |
+ * |                             |
+ * |                             |
+ * |                             |
+ * |                             |
+ * +-----------------------------+
+ *
+ * ug_layout_popup(ctx, {100x50, centrato});
+ * ug_layout_vsplit(ctx, 1, NULL);
+ * ug_button(ctx, "btn1");
+ * ug_button(ctx, "btn2");
+ *
+ * +-----------------------------+
+ * | ciao   |          |  quit   |
+ * +-----------------------------+
+ * |     #     0.3               |
+ * |     #  +----------+         |
+ * +--------|   btn1   |---------+
+ * | lorem i|          |         |
+ * | dolor e+----------+         |
+ * |        |   btn2   |         |
+ * |        |          |         |
+ * |        +----------+         |
+ * |                             |
+ * |                             |
+ * +-----------------------------+
+ */
+int ug_layout_vsplit(ug_ctx_t *ctx, int n, const int *heights);
+int ug_layout_hsplit(ug_ctx_t *ctx, int n, const int *widths);
+// popup layout, create a rectangle that sits over the view and has a higher
+// z-index, this allows it to have any position and have focus priority
+// creating a popup selects it as current layout
+int ug_layout_popup(ug_ctx_t *ctx, ug_rect_t rect);
+// get the next rectangular region in the layout context
+ug_rect_t ug_layout_next(ug_ctx_t *ctx);
+// get the current layout rectangle area, but do not pop it (select the next)
+// this is useful to get information about the area's width height and position
+ug_rect_t ug_layout_get_current(ug_ctx_t *ctx);
+// set the unit of the dimensions, in the context all units are pixels but
+// when regions are defined units can be in pixels, millimiters, etc
+int ui_layout_set_mm(ug_ctx_t *ctx);
+int ui_layout_set_px(ug_ctx_t *ctx);
+
+// ui elements
+int ug_slider(ug_ctx_t *ctx, float *stat, float min, float max);
 
 #endif
