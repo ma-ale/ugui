@@ -1,8 +1,11 @@
 #ifndef _UGUI_H
 #define _UGUI_H
 
-/* Point Coordinate */
 
+// Macros
+#define UG_STACK(T)  struct { T *items; int idx; int size; }
+
+/* Point Coordinate */
 // coordinate type, or how it is measured
 enum {
 	UG_CTYPE_PX  = 0x0,
@@ -84,6 +87,11 @@ typedef struct {
 struct ug_vec2 {
 	int x, y;
 };
+
+typedef struct {
+	int x, y;
+	int w, h;
+} ug_rect_t;
 //---//
 
 /* Mouse button mask */
@@ -195,6 +203,17 @@ typedef struct {
 } ug_element_t;
 //---//
 
+/* Layout region */
+typedef struct  {
+	ug_rect_t rect;
+	// FIXME: is this needed?
+	unsigned int id;
+	// indentation level, used in trees
+	// FIXME: is this needed?
+	unsigned int indent;
+} ug_layout_region_t;
+//---//s
+
 /* Global context */
 // one context per phisical window
 // a phisical window can be anything, but here it basically represents the true
@@ -206,9 +225,7 @@ typedef struct {
 	float scale, dpi, ppm;
 	// the user pushes the things that he wants to draw onto the element stack,
 	// which contains all the primitives needed to draw the wanted element
-	unsigned char *e_stack;
-	unsigned int e_size;
-	unsigned int e_idx;
+	UG_STACK(unsigned char) e_stack;
 	// the element which has focus
 	unsigned int focus_id;
 	// the element that we are hovering
@@ -372,5 +389,9 @@ int ui_layout_set_px(ug_ctx_t *ctx);
 
 // ui elements
 int ug_slider(ug_ctx_t *ctx, float *stat, float min, float max);
+
+
+// un-define macros that we don't want the user to access
+#undef UG_STACK
 
 #endif
