@@ -11,10 +11,12 @@
 #define DEF_PPI      96.0
 #define STACK_STEP   64
 
-#define PPI_PPM(ppi, scale) (ppi * scale * 0.03937008)
-#define PPI_PPD(ppi, scale) (PPI_PPM(ppi, scale) * 0.3528)
-#define IS_VALID_UNIT(u)    (u==UG_UNIT_PX||u==UG_UNIT_MM||u==UG_UNIT_PT)
-#define UG_ERR(...)         err(errno, "__FUNCTION__: " __VA_ARGS__)
+#define PPI_PPM(ppi, scale)  (ppi * scale * 0.03937008)
+#define PPI_PPD(ppi, scale)  (PPI_PPM(ppi, scale) * 0.3528)
+#define IS_VALID_UNIT(u)     (u==UG_UNIT_PX||u==UG_UNIT_MM||u==UG_UNIT_PT)
+#define UG_ERR(...)          err(errno, "__FUNCTION__: " __VA_ARGS__)
+#define BETWEEN(x, min, max) (x <= max && x >= min)
+
 
 // default style
 // TODO: fill default style
@@ -25,9 +27,18 @@ static const ug_style_t default_style = {
 		.size      = SIZE_PX(16),
 		.alt_size  = SIZE_PX(12),
 	},
+	.cnt = {
+		.bg_color          = RGB_FORMAT(0xaaaaaa),
+		.border.t          = SIZE_PX(3),
+		.border.b          = SIZE_PX(3),
+		.border.l          = SIZE_PX(3),
+		.border.r          = SIZE_PX(3),
+		.titlebar.height   = SIZE_PX(20),
+		.titlebar.bg_color = RGB_FORMAT(0xbababa),
+	},
 };
 
-static const ug_vec2_t max_size = {10e6, 10e6};
+static const ug_vec2_t max_size = {{10e6}, {10e6}};
 
 static ug_style_t style_cache = {0};
 
@@ -100,6 +111,10 @@ ug_rect_t rect_to_px(ug_ctx_t *ctx, ug_rect_t rect)
 
 	return rect;
 }
+
+
+#define mousedown(ctx, btn) (ctx->mouse.press_mask &  ctx->mouse.down_mask & btn)
+#define mouseup(ctx, btn)   (ctx->mouse.press_mask & ~ctx->mouse.down_mask & btn)
 
 
 /*=============================================================================*
@@ -214,17 +229,17 @@ int ug_ctx_set_unit(ug_ctx_t *ctx, ug_unit_t unit)
 static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 {
 	ug_container_t *c = NULL;
-	for (int i = 0; i < ctx->container_stack.idx; i++) {
-		if (ctx->container_stack.items[i].id == id) {
-			c = &(ctx->container_stack.items[i]);
+	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
+		if (ctx->cnt_stack.items[i].id == id) {
+			c = &(ctx->cnt_stack.items[i]);
 			break;
 		}
 	}
 	// if the container was not already there allocate a new one
 	if (!c) {
-		if(ctx->container_stack.idx >= ctx->container_stack.size)
-			grow(ctx->container_stack);
-		c = &(ctx->container_stack.items[ctx->container_stack.idx++]);
+		if(ctx->cnt_stack.idx >= ctx->cnt_stack.size)
+			grow(ctx->cnt_stack);
+		c = &(ctx->cnt_stack.items[ctx->cnt_stack.idx++]);
 	}
 
 	return c;
@@ -249,20 +264,104 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	//        context didn't change?
 	// the absoulute position of the container
 	ug_rect_t rect_abs = cnt->rect;
+
+	/*
+	 * Container style:
+	 * 
+	 * rect_abs(0,0)
+	 * v
+	 * +-----------------------------------------------+
+	 * |          Titlebar                             |
+	 * +-----------------------------------------------+
+	 * |+---------------------------------------------+|
+	 * ||\              ^ Border Top ^                ||
+	 * || \_ rect(0,0)                                ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * || < Border Left                               ||
+	 * ||                              Border Right > ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * ||                                             ||
+	 * |+---------------------------------------------+|
+	 * +-----------------------------------------------+
+	 *                  ^ Border Bottom ^ 
+	 */
 	
+	const ug_style_t *s = ctx->style_px;
 	// 0 -> take all the space, <0 -> take absolute
-	if (rect_abs.w == 0)     rect_abs.w = ctx->size.w;
-	else if (rect_abs.w < 0) rect_abs.w = -rect_abs.w;
-	if (rect_abs.h == 0)     rect_abs.h = ctx->size.h;
-	else if (rect_abs.h < 0) rect_abs.h = -rect_abs.h;
+	if (rect_abs.w < 0)  rect_abs.w = -rect_abs.w;
+	if (rect_abs.h < 0)  rect_abs.h = -rect_abs.h;
+
+	if (rect_abs.w == 0) rect_abs.w = ctx->size.w          - 
+	                                  s->cnt.border.l.size -
+					  s->cnt.border.r.size ;
+	if (rect_abs.h == 0) rect_abs.h = ctx->size.h          -
+	                                  s->cnt.border.t.size -
+					  s->cnt.border.b.size ;
+        if (cnt->flags & UG_CNT_MOVABLE) 
+		rect_abs.h -= s->cnt.titlebar.height.size;
 
 	// <0 -> relative to the right margin
 	if (rect_abs.x < 0) rect_abs.x = ctx->size.x - rect_abs.w + rect_abs.x;
 	if (rect_abs.y < 0) rect_abs.y = ctx->size.y - rect_abs.h + rect_abs.y;
 
 	// if we had focus the frame before, then do shit
+	// FIXME: if this is a brand new container then do we need to handle user
+	//        inputs, since all inputs lag one frame, then it would make no sense
 	if (ctx->hover.cnt == cnt->id) {
-		// TODO: do stuff
+		// mouse pressed handle resize, for simplicity containers can only 
+		// be resized from the bottom and right border
+		if (mousedown(ctx, UG_BTN_RIGHT)) {
+			ug_vec2_t mpos = ctx->mouse.pos;
+			int minx, maxx, miny, maxy;
+			
+			// handle movable windows
+			minx = rect_abs.x;
+			maxx = rect_abs.x + rect_abs.w - s->cnt.border.r.size;
+			miny = rect_abs.y;
+			maxy = rect_abs.y + s->cnt.titlebar.height.size;
+			if (cnt->flags & UG_CNT_MOVABLE &&
+			    BETWEEN(mpos.x, minx, maxx) &&
+			    BETWEEN(mpos.y, miny, maxy)) {
+				rect_abs.x  += ctx->mouse.delta.x;
+				rect_abs.y  += ctx->mouse.delta.y;
+				cnt->rect.x += ctx->mouse.delta.x;
+				cnt->rect.y += ctx->mouse.delta.y;
+			}
+
+			// right border resize
+			minx = rect_abs.x + rect_abs.w - s->cnt.border.r.size;
+			maxx = rect_abs.x + rect_abs.w;
+			miny = rect_abs.y;
+			maxy = rect_abs.y + rect_abs.h;
+			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+				rect_abs.w  += ctx->mouse.delta.x;
+				cnt->rect.w += ctx->mouse.delta.x;
+			}		
+
+			// bottom border resize
+			minx = rect_abs.x;
+			maxx = rect_abs.x + rect_abs.w;
+			miny = rect_abs.y + rect_abs.h - s->cnt.border.b.size;
+			maxy = rect_abs.y + rect_abs.h;
+			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+				rect_abs.h  += ctx->mouse.delta.y;
+				cnt->rect.h += ctx->mouse.delta.y;
+			}
+		}
+		// TODO: what if I want to close a floating container?
+		//       Maybe add a UG_CNT_CLOSABLE flag?
+
+		// TODO: what about scrolling? how do we know if we need to draw
+		//       a scroll bar? Maybe add that information inside the
+		//       container structure
 	}
 
 	// push the appropriate rectangles to the drawing stack

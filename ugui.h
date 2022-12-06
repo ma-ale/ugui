@@ -52,14 +52,19 @@ typedef struct {
 		ug_color_t color, alt_color;
 		ug_size_t size, alt_size;
 	} text;
-	ug_color_t bg_color;
-	// base sizes for all elements, some elements should be different, like
-	// buttons and other things that need to stand out
-	struct {
-		ug_size_t width, height, border_width;
-		ug_color_t color, hover_color, active_color; 
-	} base;
 
+	struct { 
+		ug_color_t bg_color;
+		struct {
+			ug_size_t t, b, l, r;
+		} border;
+		// titlebar only gets applied to movable containers
+		struct {
+			ug_size_t  height;
+			ug_color_t bg_color;
+		} titlebar;
+	} cnt;
+	
 	// a button should stand out, hence the different colors
 	struct {
 		ug_color_t bg_color, hover_color, active_color;
@@ -84,6 +89,16 @@ typedef struct {
 	} textdisplay;
 
 } ug_style_t;
+
+
+// mouse buttons
+enum {
+	UG_BTN_LEFT   = BIT(1),
+	UG_BTN_MIDDLE = BIT(1),
+	UG_BTN_RIGHT  = BIT(1),
+	UG_BTN_4      = BIT(1),
+	UG_BTN_5      = BIT(1),
+};
 
 // context
 typedef struct {
@@ -131,7 +146,7 @@ typedef struct {
 	// input text buffer
 	char input_text[32];
 	// stacks
-	UG_STACK(ug_container_t) container_stack;
+	UG_STACK(ug_container_t) cnt_stack;
 } ug_ctx_t;
 
 
