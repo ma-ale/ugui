@@ -1,0 +1,208 @@
+#include <stdio.h>
+#include <SDL2/SDL.h>
+
+#include "../ugui.h"
+
+int main(void)
+{
+	SDL_DisplayMode dm;
+
+	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+	SDL_EnableScreenSaver();
+	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);	
+	SDL_EventState(SDL_DROPTEXT, SDL_ENABLE);
+
+	SDL_GetDesktopDisplayMode(0, &dm);
+
+#ifdef SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR /* Available since 2.0.8 */
+	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+#endif
+
+#if SDL_VERSION_ATLEAST(2, 0, 5)
+	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+#endif
+
+	SDL_Window *w;
+	w = SDL_CreateWindow("test", 
+	                     SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+	                     dm.w*0.8, dm.h*0.8, 
+			     SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI |
+	                     SDL_WINDOW_OPENGL );
+
+	//SDL_Surface *s;
+	//s = SDL_GetWindowSurface(w);
+	SDL_Renderer *r;
+	r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);
+
+
+	ug_vec2_t size, dsize;
+	SDL_GetWindowSize(w, &size.w, &size.h);
+	SDL_GL_GetDrawableSize(w, &dsize.w, &dsize.h);
+	float scale = 1.0;
+	scale = ((float)(size.w+size.h)/2)/((float)(dsize.w+dsize.h)/2);
+	
+	float dpi;
+	int idx;
+	idx = SDL_GetWindowDisplayIndex(w);
+	SDL_GetDisplayDPI(idx, &dpi, NULL, NULL);
+
+
+	ug_ctx_t *ctx = ug_ctx_new();
+	ug_ctx_set_displayinfo(ctx, scale, dpi);
+	ug_ctx_set_drawableregion(ctx, dsize);
+
+
+	SDL_Event event;
+
+	char button_map[] = {
+		[SDL_BUTTON_LEFT   & 0xff] = UG_BTN_LEFT, 
+		[SDL_BUTTON_MIDDLE & 0xff] = UG_BTN_MIDDLE, 
+		[SDL_BUTTON_RIGHT  & 0xff] = UG_BTN_RIGHT, 
+		[SDL_BUTTON_X1     & 0xff] = UG_BTN_4, 
+		[SDL_BUTTON_X2     & 0xff] = UG_BTN_5, 
+	};
+	
+	do {
+	SDL_WaitEvent(&event);
+
+		switch (event.type) {
+		case SDL_WINDOWEVENT:
+	        	switch (event.window.event) {
+			case SDL_WINDOWEVENT_SHOWN:
+				(SDL_Log("Window %d shown", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_HIDDEN:
+				(SDL_Log("Window %d hidden", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_EXPOSED:
+				(SDL_Log("Window %d exposed", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_MOVED:
+				(SDL_Log("Window %d moved to %d,%d",
+				event.window.windowID, event.window.data1,
+				event.window.data2));
+				break;
+			case SDL_WINDOWEVENT_RESIZED:
+				(SDL_Log("Window %d resized to %dx%d",
+				event.window.windowID, event.window.data1,
+				event.window.data2));
+				break;
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+				(SDL_Log("Window %d size changed to %dx%d",
+				event.window.windowID, event.window.data1,
+				event.window.data2));
+
+				size.w = event.window.data1;
+				size.h = event.window.data2;
+				// surface is invalidated every time the window
+				// is resized
+				//s = SDL_GetWindowSurface(w);
+				ug_ctx_set_drawableregion(ctx, size);
+
+				break;
+			case SDL_WINDOWEVENT_MINIMIZED:
+				(SDL_Log("Window %d minimized", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_MAXIMIZED:
+				(SDL_Log("Window %d maximized", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_RESTORED:
+				(SDL_Log("Window %d restored", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_ENTER:
+				(SDL_Log("Mouse entered window %d",
+					event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_LEAVE:
+				(SDL_Log("Mouse left window %d", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_FOCUS_GAINED:
+				(SDL_Log("Window %d gained keyboard focus",
+				event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_FOCUS_LOST:
+				(SDL_Log("Window %d lost keyboard focus",
+				event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_CLOSE:
+				(SDL_Log("Window %d closed", event.window.windowID));
+				break;
+#if SDL_VERSION_ATLEAST(2, 0, 5)
+			case SDL_WINDOWEVENT_TAKE_FOCUS:
+				(SDL_Log("Window %d is offered a focus", event.window.windowID));
+				break;
+			case SDL_WINDOWEVENT_HIT_TEST:
+				(SDL_Log("Window %d has a special hit test", event.window.windowID));
+				break;
+#endif
+			default:
+				(SDL_Log("Window %d got unknown event %d",
+				event.window.windowID, event.window.event));
+				break;
+			}
+			break;
+		case SDL_QUIT:
+			(printf("Quitting\n"));
+			break;
+		case SDL_MOUSEMOTION:
+
+			ug_input_mousemove(ctx, event.motion.x, event.motion.y);
+
+			break;
+		case SDL_MOUSEBUTTONDOWN:
+			ug_input_mousemove(ctx, event.button.x, event.button.y);
+			ug_input_mousedown(ctx, button_map[event.button.button & 0xff]);
+
+			break;
+		case SDL_MOUSEBUTTONUP:
+
+			ug_input_mousemove(ctx, event.button.x, event.button.y);
+			ug_input_mouseup(ctx, button_map[event.button.button & 0xff]);
+
+			break;
+		default:
+			(printf("Unknown event: %d\n", event.type));
+			break;
+		}
+
+
+		ug_frame_begin(ctx);
+
+		ug_container_floating(ctx, "stupid name", 
+		                      (ug_rect_t){.x = 0, .y = 0, .w = 100, .h = 300});
+		ug_container_floating(ctx, "better name", 
+		                      (ug_rect_t){.x = -20, .y = -10, .w = 100, .h = 200});
+
+		ug_frame_end(ctx);
+
+		// fill background
+		SDL_SetRenderDrawColor(r, 0, 0, 0, 0xff);
+		SDL_RenderClear(r);
+		for (int i = 0; i < ctx->cmd_stack.idx; i++) {
+			ug_cmd_t cmd = ctx->cmd_stack.items[i];
+			ug_color_t col = cmd.rect.color;
+			SDL_Rect sr = {
+				.x = cmd.rect.x,
+				.y = cmd.rect.y,
+				.w = cmd.rect.w,
+				.h = cmd.rect.h,
+			};
+			printf("DRAWING: x=%d, y=%d, w=%d, h=%d\n", sr.x, sr.y, sr.w, sr.h);
+			printf("COLOR: #%.8X\n", *((unsigned int *)&col));
+			SDL_SetRenderDrawColor(r, col.r, col.g, col.b, col.a);
+			SDL_RenderFillRect(r, &sr);
+		}
+		SDL_RenderPresent(r);
+
+		printf("-------------------FRAME DONE--------------------\n");
+
+	} while (event.type != SDL_QUIT);
+
+
+	ug_ctx_free(ctx);
+
+	SDL_DestroyRenderer(r);
+	SDL_DestroyWindow(w);
+	SDL_Quit();
+	return 0;
+}

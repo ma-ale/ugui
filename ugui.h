@@ -29,7 +29,7 @@ typedef enum {
 typedef struct {
 	ug_id_t id;
 	ug_unit_t unit;
-	ug_rect_t rect;
+	ug_rect_t rect, rect_abs;
 	ug_vec2_t max_size;
 	unsigned int flags;
 } ug_container_t;
@@ -57,6 +57,7 @@ typedef struct {
 		ug_color_t bg_color;
 		struct {
 			ug_size_t t, b, l, r;
+			ug_color_t color;
 		} border;
 		// titlebar only gets applied to movable containers
 		struct {
@@ -91,13 +92,30 @@ typedef struct {
 } ug_style_t;
 
 
+// render commands
+typedef struct {
+	unsigned int type;
+	union {
+		struct {
+			int x, y, w, h;
+			ug_color_t color;
+		} rect;
+	};
+} ug_cmd_t;
+
+typedef enum {
+	UG_CMD_NULL = 0,
+	UG_CMD_RECT,
+} ug_cmd_type_t;
+
+
 // mouse buttons
 enum {
-	UG_BTN_LEFT   = BIT(1),
+	UG_BTN_LEFT   = BIT(0),
 	UG_BTN_MIDDLE = BIT(1),
-	UG_BTN_RIGHT  = BIT(1),
-	UG_BTN_4      = BIT(1),
-	UG_BTN_5      = BIT(1),
+	UG_BTN_RIGHT  = BIT(2),
+	UG_BTN_4      = BIT(3),
+	UG_BTN_5      = BIT(4),
 };
 
 // context
@@ -116,6 +134,7 @@ typedef struct {
 	// which context and element we are hovering
 	struct {
 		ug_id_t cnt, elem;
+		ug_id_t cnt_last, elem_last;
 	} hover;
 	// the id of the "active" element, active means different things for
 	// different elements, for exaple active for a button means to be pressed,
@@ -147,12 +166,13 @@ typedef struct {
 	char input_text[32];
 	// stacks
 	UG_STACK(ug_container_t) cnt_stack;
+	UG_STACK(ug_cmd_t) cmd_stack;
 } ug_ctx_t;
 
 
 // context initialization
-ug_ctx_t *ug_new_ctx(void);
-void ug_free_ctx(ug_ctx_t *ctx);
+ug_ctx_t *ug_ctx_new(void);
+void ug_ctx_free(ug_ctx_t *ctx);
 // updates the context with user information
 int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi);
 int ug_ctx_set_drawableregion(ug_ctx_t *ctx, ug_vec2_t size);
@@ -176,6 +196,18 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, int width);
 // a body is a container that scales with the window, sits at it's center and cannot
 // be resized
 int ug_container_body(ug_ctx_t *ctx, const char *name);
+
+// Input functions
+int ug_input_mousemove(ug_ctx_t *ctx, int x, int y);
+int ug_input_mousedown(ug_ctx_t *ctx, unsigned int mask);
+int ug_input_mouseup(ug_ctx_t *ctx, unsigned int mask);
+int ug_input_scroll(ug_ctx_t *ctx, int x, int y);
+// TODO: other input functions
+
+// Frame handling
+int ug_frame_begin(ug_ctx_t *ctx);
+int ug_frame_end(ug_ctx_t *ctx);
+
 
 #undef UG_STACK
 #undef BIT

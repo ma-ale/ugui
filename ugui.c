@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <err.h>
@@ -16,6 +17,7 @@
 #define IS_VALID_UNIT(u)     (u==UG_UNIT_PX||u==UG_UNIT_MM||u==UG_UNIT_PT)
 #define UG_ERR(...)          err(errno, "__FUNCTION__: " __VA_ARGS__)
 #define BETWEEN(x, min, max) (x <= max && x >= min)
+#define INTERSECTS(v, r) (BETWEEN(v.x, r.x, r.x+r.w) && BETWEEN(v.y, r.y, r.y+r.h))
 
 
 // default style
@@ -28,11 +30,12 @@ static const ug_style_t default_style = {
 		.alt_size  = SIZE_PX(12),
 	},
 	.cnt = {
-		.bg_color          = RGB_FORMAT(0xaaaaaa),
+		.bg_color          = RGB_FORMAT(0x0000ff),
 		.border.t          = SIZE_PX(3),
 		.border.b          = SIZE_PX(3),
 		.border.l          = SIZE_PX(3),
 		.border.r          = SIZE_PX(3),
+		.border.color      = RGB_FORMAT(0x00ff00),
 		.titlebar.height   = SIZE_PX(20),
 		.titlebar.bg_color = RGB_FORMAT(0xbababa),
 	},
@@ -49,7 +52,7 @@ static ug_style_t style_cache = {0};
 
 
 // grow a stack
-#define grow(S)                                                                \
+#define GROW_STACK(S)                                                                \
 {                                                                              \
 	S.items = realloc(S.items, (S.size+STACK_STEP)*sizeof(*(S.items)));    \
 	if(!S.items)                                                           \
@@ -57,6 +60,25 @@ static ug_style_t style_cache = {0};
 	memset(&(S.items[S.size]), 0, STACK_STEP*sizeof(*(S.items)));          \
 	S.size += STACK_STEP;                                                  \
 }
+
+
+#define GET_FROM_STACK(S, c)                                                   \
+{                                                                              \
+	if (S.idx >= S.size)                                                   \
+		GROW_STACK(S);                                                 \
+	c = &(S.items[S.idx++]);                                               \
+}
+
+
+#define RESET_STACK(S)                                                         \
+{                                                                              \
+	memset(S.items, 0, S.idx*sizeof(*(S.items)));                          \
+	S.idx = 0;                                                             \
+}
+
+
+#define MOUSEDOWN(ctx, btn) (ctx->mouse.press_mask &  ctx->mouse.down_mask & btn)
+#define MOUSEUP(ctx, btn)   (ctx->mouse.press_mask & ~ctx->mouse.down_mask & btn)
 
 
 // https://en.wikipedia.org/wiki/Jenkins_hash_function
@@ -84,8 +106,8 @@ static ug_id_t hash(const void *data, unsigned int size)
 static void update_style_cache(ug_ctx_t *ctx)
 {
 	const ug_style_t *s = ctx->style;
-	// TODO: do this shit
-	(void)s;
+	// FIME: use the correct units and convert, for now assume default style
+	style_cache = *s;
 }
 
 
@@ -113,8 +135,17 @@ ug_rect_t rect_to_px(ug_ctx_t *ctx, ug_rect_t rect)
 }
 
 
-#define mousedown(ctx, btn) (ctx->mouse.press_mask &  ctx->mouse.down_mask & btn)
-#define mouseup(ctx, btn)   (ctx->mouse.press_mask & ~ctx->mouse.down_mask & btn)
+void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t color)
+{
+	ug_cmd_t *c;
+	GET_FROM_STACK(ctx->cmd_stack, c);
+	c->type       = UG_CMD_RECT;
+	c->rect.x     = rect->x;
+	c->rect.y     = rect->y;
+	c->rect.w     = rect->w;
+	c->rect.h     = rect->h;
+	c->rect.color = color;
+}
 
 
 /*=============================================================================*
@@ -123,7 +154,7 @@ ug_rect_t rect_to_px(ug_ctx_t *ctx, ug_rect_t rect)
 
 
 // creates a new context, fills with default values, ctx is ready for ug_start()
-ug_ctx_t *ug_new_ctx(void)
+ug_ctx_t *ug_ctx_new(void)
 {
 	ug_ctx_t *ctx = malloc(sizeof(ug_ctx_t));
 	if (!ctx)
@@ -144,14 +175,16 @@ ug_ctx_t *ug_new_ctx(void)
 }
 
 
-void ug_free_ctx(ug_ctx_t *ctx)
+void ug_ctx_free(ug_ctx_t *ctx)
 {
 	if (!ctx) {
 		warn("__FUNCTION__:" "Trying to free a null context");
 		return;
 	}
 
-	// TODO: free stacks
+	free(ctx->cmd_stack.items);
+	free(ctx->cnt_stack.items);
+
 	free(ctx);
 
 	// NOTE: do not free style since the default is statically allocated, let
@@ -236,11 +269,8 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 		}
 	}
 	// if the container was not already there allocate a new one
-	if (!c) {
-		if(ctx->cnt_stack.idx >= ctx->cnt_stack.size)
-			grow(ctx->cnt_stack);
-		c = &(ctx->cnt_stack.items[ctx->cnt_stack.idx++]);
-	}
+	if (!c)
+		GET_FROM_STACK(ctx->cnt_stack, c);
 
 	return c;
 }
@@ -263,7 +293,7 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// FIXME: this is the right place to do some optimization, what if the 
 	//        context didn't change?
 	// the absoulute position of the container
-	ug_rect_t rect_abs = cnt->rect;
+	cnt->rect_abs = cnt->rect;
 
 	/*
 	 * Container style:
@@ -296,63 +326,79 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	
 	const ug_style_t *s = ctx->style_px;
 	// 0 -> take all the space, <0 -> take absolute
-	if (rect_abs.w < 0)  rect_abs.w = -rect_abs.w;
-	if (rect_abs.h < 0)  rect_abs.h = -rect_abs.h;
+	if (cnt->rect_abs.w < 0)  cnt->rect_abs.w = -cnt->rect_abs.w;
+	if (cnt->rect_abs.h < 0)  cnt->rect_abs.h = -cnt->rect_abs.h;
 
-	if (rect_abs.w == 0) rect_abs.w = ctx->size.w          - 
+	if (cnt->rect_abs.w == 0) cnt->rect_abs.w = ctx->size.w          - 
 	                                  s->cnt.border.l.size -
 					  s->cnt.border.r.size ;
-	if (rect_abs.h == 0) rect_abs.h = ctx->size.h          -
+	if (cnt->rect_abs.h == 0) cnt->rect_abs.h = ctx->size.h          -
 	                                  s->cnt.border.t.size -
 					  s->cnt.border.b.size ;
         if (cnt->flags & UG_CNT_MOVABLE) 
-		rect_abs.h -= s->cnt.titlebar.height.size;
+		cnt->rect_abs.h += s->cnt.titlebar.height.size;
 
 	// <0 -> relative to the right margin
-	if (rect_abs.x < 0) rect_abs.x = ctx->size.x - rect_abs.w + rect_abs.x;
-	if (rect_abs.y < 0) rect_abs.y = ctx->size.y - rect_abs.h + rect_abs.y;
+	if (cnt->rect_abs.x < 0) 
+		cnt->rect_abs.x = ctx->size.x - cnt->rect_abs.w + cnt->rect_abs.x;
+	if (cnt->rect_abs.y < 0) 
+		cnt->rect_abs.y = ctx->size.y - cnt->rect_abs.h + cnt->rect_abs.y;
 
 	// if we had focus the frame before, then do shit
 	// FIXME: if this is a brand new container then do we need to handle user
 	//        inputs, since all inputs lag one frame, then it would make no sense
-	if (ctx->hover.cnt == cnt->id) {
+	if (ctx->hover.cnt_last == cnt->id) {
 		// mouse pressed handle resize, for simplicity containers can only 
 		// be resized from the bottom and right border
-		if (mousedown(ctx, UG_BTN_RIGHT)) {
+
+#define BIN_PATTERN "%c%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x80 ? '1' : '0'), \
+  (byte & 0x40 ? '1' : '0'), \
+  (byte & 0x20 ? '1' : '0'), \
+  (byte & 0x10 ? '1' : '0'), \
+  (byte & 0x08 ? '1' : '0'), \
+  (byte & 0x04 ? '1' : '0'), \
+  (byte & 0x02 ? '1' : '0'), \
+  (byte & 0x01 ? '1' : '0') 
+
+		printf("mousemask = "BIN_PATTERN"\n", BYTE_TO_BINARY(ctx->mouse.down_mask));
+		if (ctx->mouse.down_mask & UG_BTN_LEFT) {
+			printf("MOUSEDOWN\n");
 			ug_vec2_t mpos = ctx->mouse.pos;
 			int minx, maxx, miny, maxy;
 			
 			// handle movable windows
-			minx = rect_abs.x;
-			maxx = rect_abs.x + rect_abs.w - s->cnt.border.r.size;
-			miny = rect_abs.y;
-			maxy = rect_abs.y + s->cnt.titlebar.height.size;
+			minx = cnt->rect_abs.x;
+			maxx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.r.size;
+			miny = cnt->rect_abs.y;
+			maxy = cnt->rect_abs.y + s->cnt.titlebar.height.size;
 			if (cnt->flags & UG_CNT_MOVABLE &&
 			    BETWEEN(mpos.x, minx, maxx) &&
 			    BETWEEN(mpos.y, miny, maxy)) {
-				rect_abs.x  += ctx->mouse.delta.x;
-				rect_abs.y  += ctx->mouse.delta.y;
+				cnt->rect_abs.x  += ctx->mouse.delta.x;
+				cnt->rect_abs.y  += ctx->mouse.delta.y;
 				cnt->rect.x += ctx->mouse.delta.x;
 				cnt->rect.y += ctx->mouse.delta.y;
 			}
 
 			// right border resize
-			minx = rect_abs.x + rect_abs.w - s->cnt.border.r.size;
-			maxx = rect_abs.x + rect_abs.w;
-			miny = rect_abs.y;
-			maxy = rect_abs.y + rect_abs.h;
+			minx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.r.size;
+			maxx = cnt->rect_abs.x + cnt->rect_abs.w;
+			miny = cnt->rect_abs.y;
+			maxy = cnt->rect_abs.y + cnt->rect_abs.h;
 			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-				rect_abs.w  += ctx->mouse.delta.x;
+				cnt->rect_abs.w  += ctx->mouse.delta.x;
 				cnt->rect.w += ctx->mouse.delta.x;
 			}		
 
 			// bottom border resize
-			minx = rect_abs.x;
-			maxx = rect_abs.x + rect_abs.w;
-			miny = rect_abs.y + rect_abs.h - s->cnt.border.b.size;
-			maxy = rect_abs.y + rect_abs.h;
+			minx = cnt->rect_abs.x;
+			maxx = cnt->rect_abs.x + cnt->rect_abs.w;
+			miny = cnt->rect_abs.y + cnt->rect_abs.h - s->cnt.border.b.size;
+			maxy = cnt->rect_abs.y + cnt->rect_abs.h;
 			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-				rect_abs.h  += ctx->mouse.delta.y;
+				cnt->rect_abs.h  += ctx->mouse.delta.y;
 				cnt->rect.h += ctx->mouse.delta.y;
 			}
 		}
@@ -365,7 +411,29 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	}
 
 	// push the appropriate rectangles to the drawing stack
-	// TODO: ^ This ^
+	// push outline
+	push_rect_command(ctx, &cnt->rect_abs, s->cnt.border.color);
+	// push titlebar
+	ug_rect_t titlebar = {
+		.x = (cnt->rect_abs.x + s->cnt.border.l.size),
+		.y = (cnt->rect_abs.y + s->cnt.border.t.size),
+		.w = (cnt->rect_abs.w - s->cnt.border.r.size - s->cnt.border.l.size),
+		.h = s->cnt.titlebar.height.size,
+	};
+	push_rect_command(ctx, &titlebar, s->cnt.titlebar.bg_color);
+	// push main body
+	ug_rect_t body = {
+		.x = (cnt->rect_abs.x + s->cnt.border.l.size),
+		.y = (cnt->rect_abs.y + s->cnt.border.t.size),
+		.w = (cnt->rect_abs.w - s->cnt.border.l.size - s->cnt.border.r.size),
+		.h = (cnt->rect_abs.h - s->cnt.border.t.size - s->cnt.border.b.size),
+	};
+	if (cnt->flags & UG_CNT_MOVABLE) {
+		body.y += s->cnt.titlebar.height.size + s->cnt.border.t.size;
+		body.h -= s->cnt.titlebar.height.size + s->cnt.border.t.size;
+	}
+	push_rect_command(ctx, &body, s->cnt.bg_color);
+	// TODO: push other rects
 }
 
 
@@ -386,13 +454,108 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_rect_t rect)
 		cnt->max_size = max_size;
 		cnt->rect = rect;
 		cnt->unit = ctx->unit;
-		cnt->flags = UG_CNT_MOVABLE   |
-		             UG_CNT_RESIZABLE |
-			     UG_CNT_SCROLL_X  |
-			     UG_CNT_SCROLL_Y  ;
+		cnt->flags = UG_CNT_MOVABLE  | UG_CNT_RESIZABLE |
+			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
 	}
 
 	update_container(ctx, cnt);
 	
 	return 0;
 }
+
+
+/*=============================================================================*
+ *                            Input Handling                                   *
+ *=============================================================================*/
+
+
+int ug_input_mousemove(ug_ctx_t *ctx, int x, int y)
+{
+	TEST_CTX(ctx)
+	if (x < 0 || y < 0)
+		return 0;
+	
+	ctx->mouse.pos = (ug_vec2_t){.x = x, .y = y};
+
+	return 0;
+}
+
+
+int ug_input_mousedown(ug_ctx_t *ctx, unsigned int mask)
+{
+	TEST_CTX(ctx);
+
+	ctx->mouse.press_mask |= mask;
+	ctx->mouse.down_mask  |= mask;
+
+	return 0;
+}
+
+
+int ug_input_mouseup(ug_ctx_t *ctx, unsigned int mask)
+{
+	TEST_CTX(ctx);
+
+	ctx->mouse.down_mask &= ~mask;
+
+	return 0;
+}
+
+
+
+/*=============================================================================*
+ *                            Frame Handling                                   *
+ *=============================================================================*/
+
+
+// At the beginning of a frame assume that all input has been passed to the context
+// update the mouse delta and reset the command stack
+int ug_frame_begin(ug_ctx_t *ctx)
+{
+	TEST_CTX(ctx);
+
+	// TODO: add a way to mark a container for removal from the stack, and then
+	//       remove it here to save space
+
+	// update mouse delta
+	ctx->mouse.delta.x = ctx->mouse.pos.x - ctx->mouse.last_pos.x;
+	ctx->mouse.delta.y = ctx->mouse.pos.y - ctx->mouse.last_pos.y;
+	
+	// clear command stack
+	RESET_STACK(ctx->cmd_stack);
+
+	// update hover index
+	ug_vec2_t v = ctx->mouse.pos;
+//	printf("mouse: x=%d, y=%d\n", ctx->mouse.pos.x, ctx->mouse.pos.x);
+	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
+		ug_rect_t r = ctx->cnt_stack.items[i].rect_abs;
+		if (INTERSECTS(v, r)) {
+			ctx->hover.cnt = ctx->cnt_stack.items[i].id;
+//			printf("intersects! %.8x\n", ctx->hover.cnt);
+		}
+	}
+
+	return 0;
+}
+
+
+// At the end of a frame reset inputs
+int ug_frame_end(ug_ctx_t *ctx)
+{
+	TEST_CTX(ctx);
+
+	ctx->input_text[0]      = '\0';
+	ctx->key.press_mask     = 0;
+	ctx->mouse.press_mask   = 0;
+	ctx->mouse.scroll_delta = (ug_vec2_t){0};
+	ctx->mouse.last_pos     = ctx->mouse.pos;
+
+	// reset hover, it has to be calculated at frame beginning
+	ctx->hover.cnt_last  = ctx->hover.cnt;
+	ctx->hover.elem_last = ctx->hover.elem;
+	ctx->hover.cnt       = 0;
+	ctx->hover.elem      = 0;
+
+	return 0;
+}
+
