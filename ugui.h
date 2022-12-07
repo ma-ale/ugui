@@ -12,9 +12,15 @@
 // basic types
 typedef unsigned int                                     ug_id_t; 
 typedef struct { union {int x, w;}; union {int y, h;}; } ug_vec2_t;
-typedef struct { int x, y, w, h; }                       ug_rect_t;
 typedef struct { unsigned char a, b, g, r; }             ug_color_t;
 typedef struct { int size, unit; }                       ug_size_t;
+
+typedef struct { 
+	union {	int x; float fx; }; 
+	union {	int y; float fy; }; 
+	union {	int w; float fw; }; 
+	union {	int h; float fh; }; 
+} ug_rect_t;
 
 typedef enum { 
 	UG_UNIT_PX = 0,
@@ -126,8 +132,8 @@ typedef struct {
 	const ug_style_t *style_px;
 	// ppi: pixels per inch
 	// ppm: pixels per millimeter
-	// ppd: pixels per dot 
-	float scale, ppi, ppm, ppd;
+	// ppd: pixels per dot
+	float ppi, ppm, ppd;
 	// containers need to know how big the "main container" is so that all
 	// the relative positioning work
 	ug_vec2_t size;

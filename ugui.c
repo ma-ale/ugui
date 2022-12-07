@@ -3,6 +3,7 @@
 #include <string.h>
 #include <errno.h>
 #include <err.h>
+#include <math.h>
 
 #include "ugui.h"
 
@@ -112,30 +113,6 @@ static void update_style_cache(ug_ctx_t *ctx)
 }
 
 
-ug_rect_t rect_to_px(ug_ctx_t *ctx, ug_rect_t rect)
-{
-	float scale = 1.0;
-	
-	switch (ctx->unit) {
-	case UG_UNIT_PX:
-		return rect;
-	case UG_UNIT_MM:
-		scale = ctx->ppm;
-		break;
-	case UG_UNIT_PT:
-		scale = ctx->ppd;
-		break;
-	}
-
-	rect.x *= scale;
-	rect.y *= scale;
-	rect.w *= scale;
-	rect.h *= scale;
-
-	return rect;
-}
-
-
 void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t color)
 {
 	ug_cmd_t *c;
@@ -162,14 +139,10 @@ ug_ctx_t *ug_ctx_new(void)
 		err(errno, "__FUNCTION__:" "Could not allocate context: %s", strerror(errno));
 	memset(ctx, 0, sizeof(ug_ctx_t));
 
-	ctx->scale     = DEF_SCALE;
-	ctx->ppi       = DEF_PPI;
-	ctx->ppm       = PPI_PPM(DEF_SCALE, DEF_PPI);
-	ctx->ppd       = PPI_PPD(DEF_SCALE, DEF_PPI);
-	
 	ctx->unit      = UG_UNIT_PX;
 	ctx->style     = &default_style;
 	ctx->style_px  = &style_cache;
+	ug_ctx_set_displayinfo(ctx, DEF_SCALE, DEF_PPI);
 
 	// TODO: allocate stacks
 	return ctx;
@@ -203,7 +176,6 @@ int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi)
 	
 	ctx->ppm   = PPI_PPM(scale, ppi);
 	ctx->ppd   = PPI_PPM(scale, ppi);
-	ctx->scale = scale;
 	ctx->ppi   = ppi;
 	
 	update_style_cache(ctx);
@@ -281,20 +253,21 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 // also handle resizing, moving, ect. if allowed by the container
 static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
-	// if the container was just initialized the unit might not be pixels, this
-	// is a problem since all mouse events are in pixels and convering back
-	// and forth accumulates error and in heavy on the cpu
-	if (cnt->unit != UG_UNIT_PX) {
-		// FIXME: this takes the unit from the context but it should be fine
-		cnt->rect = rect_to_px(ctx, cnt->rect);
-		cnt->unit = UG_UNIT_PX;
+	// use millimeters as common screen-relative units
+	if (cnt->unit == UG_UNIT_PT) {
+		cnt->rect.fx *= ctx->ppd;
+		cnt->rect.fy *= ctx->ppd;
+		cnt->rect.fw *= ctx->ppd;
+		cnt->rect.fh *= ctx->ppd;
 	}
 
 	// recalculate position
-	// FIXME: this is the right place to do some optimization, what if the 
-	//        context didn't change?
-	// the absoulute position of the container
-	cnt->rect_abs = cnt->rect;
+	if (cnt->unit != UG_UNIT_PX) {
+		cnt->rect_abs.x = roundf(cnt->rect.fx * ctx->ppm);
+		cnt->rect_abs.y = roundf(cnt->rect.fy * ctx->ppm);
+		cnt->rect_abs.w = roundf(cnt->rect.fw * ctx->ppm);
+		cnt->rect_abs.h = roundf(cnt->rect.fh * ctx->ppm);
+	}
 
 	/*
 	 * Container style:
@@ -349,7 +322,6 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 
 	// the window may have been resized so cap the position to the window size
-	printf("window size: w=%d, h=%d\n", ctx->size.x, ctx->size.y);
 	if (cnt->rect_abs.x > ctx->size.w)
 		cnt->rect_abs.x = ctx->size.x - cnt->rect_abs.w;
 	if (cnt->rect_abs.y > ctx->size.h)
@@ -364,73 +336,85 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// if we had focus the frame before, then do shit
 	// FIXME: if this is a brand new container then do we need to handle user
 	//        inputs, since all inputs lag one frame, then it would make no sense
-	if (ctx->hover.cnt_last == cnt->id) {
-		// mouse pressed handle resize, for simplicity containers can only 
-		// be resized from the bottom and right border
+	if (ctx->hover.cnt_last != cnt->id)
+		goto cnt_draw;
 
-//#define BIN_PATTERN "%c%c%c%c%c%c%c%c"
-//#define BYTE_TO_BINARY(byte)  \
-//  (byte & 0x80 ? '1' : '0'), \
-//  (byte & 0x40 ? '1' : '0'), \
-//  (byte & 0x20 ? '1' : '0'), \
-//  (byte & 0x10 ? '1' : '0'), \
-//  (byte & 0x08 ? '1' : '0'), \
-//  (byte & 0x04 ? '1' : '0'), \
-//  (byte & 0x02 ? '1' : '0'), \
-//  (byte & 0x01 ? '1' : '0') 
+	// mouse pressed handle resize, for simplicity containers can only 
+	// be resized from the bottom and right border
+	if (!(ctx->mouse.down_mask & UG_BTN_LEFT) ||
+	    !(cnt->flags & (UG_CNT_RESIZABLE | UG_CNT_MOVABLE)))
+		goto cnt_draw;
+	
+	ug_vec2_t mpos = ctx->mouse.pos;
+	int minx, maxx, miny, maxy;
+	int delta_x = 0, delta_y = 0, delta_w = 0, delta_h = 0;
+	
+	// handle movable windows
+	if (cnt->flags & UG_CNT_MOVABLE) {
+		minx = cnt->rect_abs.x;
+		maxx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.l.size;
+		miny = cnt->rect_abs.y;
+		maxy = cnt->rect_abs.y + s->cnt.titlebar.height.size;
+		if (BETWEEN(mpos.x, minx, maxx) &&
+		    BETWEEN(mpos.y, miny, maxy)) {
+			cnt->rect_abs.x  += ctx->mouse.delta.x;
+			cnt->rect_abs.y  += ctx->mouse.delta.y;
 
-//		printf("mousemask = "BIN_PATTERN"\n", BYTE_TO_BINARY(ctx->mouse.down_mask));
-		if (ctx->mouse.down_mask & UG_BTN_LEFT) {
-//			printf("MOUSEDOWN\n");
-			ug_vec2_t mpos = ctx->mouse.pos;
-			int minx, maxx, miny, maxy;
-			
-			// handle movable windows
-			minx = cnt->rect_abs.x;
-			maxx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.l.size;
-			miny = cnt->rect_abs.y;
-			maxy = cnt->rect_abs.y + s->cnt.titlebar.height.size;
-			if (cnt->flags & UG_CNT_MOVABLE &&
-			    BETWEEN(mpos.x, minx, maxx) &&
-			    BETWEEN(mpos.y, miny, maxy)) {
-				cnt->rect_abs.x  += ctx->mouse.delta.x;
-				cnt->rect_abs.y  += ctx->mouse.delta.y;
-				cnt->rect.x      += ctx->mouse.delta.x;
-				cnt->rect.y      += ctx->mouse.delta.y;
-			}
-
-			// right border resize
-			minx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.r.size;
-			maxx = cnt->rect_abs.x + cnt->rect_abs.w;
-			miny = cnt->rect_abs.y;
-			maxy = cnt->rect_abs.y + cnt->rect_abs.h;
-			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-				cnt->rect_abs.w += ctx->mouse.delta.x;
-				cnt->rect.w     += ctx->mouse.delta.x;
-				CAP(cnt->rect_abs.w, 0);
-				CAP(cnt->rect.w, 0);
-			}		
-
-			// bottom border resize
-			minx = cnt->rect_abs.x;
-			maxx = cnt->rect_abs.x + cnt->rect_abs.w;
-			miny = cnt->rect_abs.y + cnt->rect_abs.h - s->cnt.border.b.size;
-			maxy = cnt->rect_abs.y + cnt->rect_abs.h;
-			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-				cnt->rect_abs.h += ctx->mouse.delta.y;
-				cnt->rect.h     += ctx->mouse.delta.y;
-				CAP(cnt->rect_abs.h, s->text.size.size);
-				CAP(cnt->rect.h, s->text.size.size);
-			}
+			delta_x = ctx->mouse.delta.x;
+			delta_y = ctx->mouse.delta.y;
 		}
-		// TODO: what if I want to close a floating container?
-		//       Maybe add a UG_CNT_CLOSABLE flag?
-
-		// TODO: what about scrolling? how do we know if we need to draw
-		//       a scroll bar? Maybe add that information inside the
-		//       container structure
 	}
 
+
+	if (cnt->flags & UG_CNT_RESIZABLE) {
+		// right border resize
+		minx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.r.size;
+		maxx = cnt->rect_abs.x + cnt->rect_abs.w;
+		miny = cnt->rect_abs.y;
+		maxy = cnt->rect_abs.y + cnt->rect_abs.h;
+		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+			cnt->rect_abs.w += ctx->mouse.delta.x;
+			CAP(cnt->rect_abs.w, 0);
+
+			delta_w = ctx->mouse.delta.x;
+		}		
+
+		// bottom border resize
+		minx = cnt->rect_abs.x;
+		maxx = cnt->rect_abs.x + cnt->rect_abs.w;
+		miny = cnt->rect_abs.y + cnt->rect_abs.h - s->cnt.border.b.size;
+		maxy = cnt->rect_abs.y + cnt->rect_abs.h;
+		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+			cnt->rect_abs.h += ctx->mouse.delta.y;
+			CAP(cnt->rect_abs.h, s->text.size.size);
+
+			delta_h = ctx->mouse.delta.y;
+		}
+	}
+
+	if (delta_x || delta_y || delta_w || delta_h) {
+		if (cnt->unit == UG_UNIT_PX) {
+			cnt->rect = cnt->rect_abs;
+		} else {
+			if (cnt->rect.fx < 0)
+				cnt->rect.fx = cnt->rect_abs.x / ctx->ppm;
+			if (cnt->rect.fy < 0)
+				cnt->rect.fy = cnt->rect_abs.y / ctx->ppm;
+			cnt->rect.fx += delta_x / ctx->ppm;
+			cnt->rect.fy += delta_y / ctx->ppm;
+			cnt->rect.fw += delta_w / ctx->ppm;
+			cnt->rect.fh += delta_h / ctx->ppm;
+		}
+	}
+
+	// TODO: what if I want to close a floating container?
+	//       Maybe add a UG_CNT_CLOSABLE flag?
+
+	// TODO: what about scrolling? how do we know if we need to draw
+	//       a scroll bar? Maybe add that information inside the
+	//       container structure
+
+	cnt_draw:
 	// push the appropriate rectangles to the drawing stack
 	// push outline
 	push_rect_command(ctx, &cnt->rect_abs, s->cnt.border.color);

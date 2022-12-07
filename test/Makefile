@@ -1,5 +1,5 @@
 CFLAGS  = -Wall -Wextra -Wpedantic -std=c11 -g
-LDFLAGS = -lSDL2
+LDFLAGS = -lSDL2 -lm
 
 test: main.c ../ugui.c ../ugui.h
 	gcc ${CFLAGS} -c ../ugui.c -o ugui.o

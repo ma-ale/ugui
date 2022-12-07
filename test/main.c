@@ -3,6 +3,13 @@
 
 #include "../ugui.h"
 
+
+SDL_Window *w;
+SDL_Renderer *r;
+ug_ctx_t *ctx;
+
+void cleanup(void);
+
 int main(void)
 {
 	SDL_DisplayMode dm;
@@ -22,7 +29,6 @@ int main(void)
 	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 #endif
 
-	SDL_Window *w;
 	w = SDL_CreateWindow("test", 
 	                     SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 	                     dm.w*0.8, dm.h*0.8, 
@@ -31,7 +37,6 @@ int main(void)
 
 	//SDL_Surface *s;
 	//s = SDL_GetWindowSurface(w);
-	SDL_Renderer *r;
 	r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);
 
 
@@ -47,10 +52,12 @@ int main(void)
 	SDL_GetDisplayDPI(idx, &dpi, NULL, NULL);
 
 
-	ug_ctx_t *ctx = ug_ctx_new();
+	ctx = ug_ctx_new();
 	ug_ctx_set_displayinfo(ctx, scale, dpi);
 	ug_ctx_set_drawableregion(ctx, dsize);
 
+
+//	atexit(cleanup);
 
 	SDL_Event event;
 
@@ -168,10 +175,11 @@ int main(void)
 
 		ug_frame_begin(ctx);
 
+		ug_ctx_set_unit(ctx, UG_UNIT_MM);
 		ug_container_floating(ctx, "stupid name", 
-		                      (ug_rect_t){.x = 0, .y = 0, .w = 100, .h = 300});
+		                      (ug_rect_t){.fx = 0, .fy = 0, .fw = 50, .fh = 50});
 		ug_container_floating(ctx, "better name", 
-		                      (ug_rect_t){.x = -20, .y = -10, .w = 100, .h = 200});
+		                      (ug_rect_t){.fx = -20, .fy = -10, .fw = 100, .fh = 30});
 
 		ug_frame_end(ctx);
 
@@ -187,8 +195,8 @@ int main(void)
 				.w = cmd.rect.w,
 				.h = cmd.rect.h,
 			};
-			printf("DRAWING: x=%d, y=%d, w=%d, h=%d\n", sr.x, sr.y, sr.w, sr.h);
-			printf("COLOR: #%.8X\n", *((unsigned int *)&col));
+			//printf("DRAWING: x=%d, y=%d, w=%d, h=%d\n", sr.x, sr.y, sr.w, sr.h);
+			//printf("COLOR: #%.8X\n", *((unsigned int *)&col));
 			SDL_SetRenderDrawColor(r, col.r, col.g, col.b, col.a);
 			SDL_RenderFillRect(r, &sr);
 		}
@@ -198,11 +206,15 @@ int main(void)
 
 	} while (event.type != SDL_QUIT);
 
+	cleanup();
 
+	return 0;
+}
+
+void cleanup(void)
+{
 	ug_ctx_free(ctx);
-
 	SDL_DestroyRenderer(r);
 	SDL_DestroyWindow(w);
 	SDL_Quit();
-	return 0;
 }
