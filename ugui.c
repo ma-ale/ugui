@@ -17,7 +17,8 @@
 #define IS_VALID_UNIT(u)     (u==UG_UNIT_PX||u==UG_UNIT_MM||u==UG_UNIT_PT)
 #define UG_ERR(...)          err(errno, "__FUNCTION__: " __VA_ARGS__)
 #define BETWEEN(x, min, max) (x <= max && x >= min)
-#define INTERSECTS(v, r) (BETWEEN(v.x, r.x, r.x+r.w) && BETWEEN(v.y, r.y, r.y+r.h))
+#define INTERSECTS(v, r)     (BETWEEN(v.x, r.x, r.x+r.w) && BETWEEN(v.y, r.y, r.y+r.h))
+#define CAP(x, s)            { if (x < s) x = s; }
 
 
 // default style
@@ -329,14 +330,30 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	if (cnt->rect_abs.w < 0)  cnt->rect_abs.w = -cnt->rect_abs.w;
 	if (cnt->rect_abs.h < 0)  cnt->rect_abs.h = -cnt->rect_abs.h;
 
-	if (cnt->rect_abs.w == 0) cnt->rect_abs.w = ctx->size.w          - 
-	                                  s->cnt.border.l.size -
-					  s->cnt.border.r.size ;
-	if (cnt->rect_abs.h == 0) cnt->rect_abs.h = ctx->size.h          -
-	                                  s->cnt.border.t.size -
-					  s->cnt.border.b.size ;
+	if (cnt->rect_abs.w == 0) {
+		cnt->rect_abs.w = ctx->size.w           - 
+	                          s->cnt.border.l.size  -
+		                  s->cnt.border.r.size  ;
+	} else {
+		cnt->rect_abs.w += s->cnt.border.r.size + s->cnt.border.l.size;
+	} 
+	if (cnt->rect_abs.h == 0) { 
+		cnt->rect_abs.h = ctx->size.h           -
+	                          s->cnt.border.t.size  -
+		                  s->cnt.border.b.size  ;
+	} else {
+		cnt->rect_abs.h += s->cnt.border.t.size + s->cnt.border.b.size;
+	}
         if (cnt->flags & UG_CNT_MOVABLE) 
 		cnt->rect_abs.h += s->cnt.titlebar.height.size;
+
+
+	// the window may have been resized so cap the position to the window size
+	printf("window size: w=%d, h=%d\n", ctx->size.x, ctx->size.y);
+	if (cnt->rect_abs.x > ctx->size.w)
+		cnt->rect_abs.x = ctx->size.x - cnt->rect_abs.w;
+	if (cnt->rect_abs.y > ctx->size.h)
+		cnt->rect_abs.y = ctx->size.y - cnt->rect_abs.h;
 
 	// <0 -> relative to the right margin
 	if (cnt->rect_abs.x < 0) 
@@ -351,26 +368,26 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		// mouse pressed handle resize, for simplicity containers can only 
 		// be resized from the bottom and right border
 
-#define BIN_PATTERN "%c%c%c%c%c%c%c%c"
-#define BYTE_TO_BINARY(byte)  \
-  (byte & 0x80 ? '1' : '0'), \
-  (byte & 0x40 ? '1' : '0'), \
-  (byte & 0x20 ? '1' : '0'), \
-  (byte & 0x10 ? '1' : '0'), \
-  (byte & 0x08 ? '1' : '0'), \
-  (byte & 0x04 ? '1' : '0'), \
-  (byte & 0x02 ? '1' : '0'), \
-  (byte & 0x01 ? '1' : '0') 
+//#define BIN_PATTERN "%c%c%c%c%c%c%c%c"
+//#define BYTE_TO_BINARY(byte)  \
+//  (byte & 0x80 ? '1' : '0'), \
+//  (byte & 0x40 ? '1' : '0'), \
+//  (byte & 0x20 ? '1' : '0'), \
+//  (byte & 0x10 ? '1' : '0'), \
+//  (byte & 0x08 ? '1' : '0'), \
+//  (byte & 0x04 ? '1' : '0'), \
+//  (byte & 0x02 ? '1' : '0'), \
+//  (byte & 0x01 ? '1' : '0') 
 
-		printf("mousemask = "BIN_PATTERN"\n", BYTE_TO_BINARY(ctx->mouse.down_mask));
+//		printf("mousemask = "BIN_PATTERN"\n", BYTE_TO_BINARY(ctx->mouse.down_mask));
 		if (ctx->mouse.down_mask & UG_BTN_LEFT) {
-			printf("MOUSEDOWN\n");
+//			printf("MOUSEDOWN\n");
 			ug_vec2_t mpos = ctx->mouse.pos;
 			int minx, maxx, miny, maxy;
 			
 			// handle movable windows
 			minx = cnt->rect_abs.x;
-			maxx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.r.size;
+			maxx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.l.size;
 			miny = cnt->rect_abs.y;
 			maxy = cnt->rect_abs.y + s->cnt.titlebar.height.size;
 			if (cnt->flags & UG_CNT_MOVABLE &&
@@ -378,8 +395,8 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 			    BETWEEN(mpos.y, miny, maxy)) {
 				cnt->rect_abs.x  += ctx->mouse.delta.x;
 				cnt->rect_abs.y  += ctx->mouse.delta.y;
-				cnt->rect.x += ctx->mouse.delta.x;
-				cnt->rect.y += ctx->mouse.delta.y;
+				cnt->rect.x      += ctx->mouse.delta.x;
+				cnt->rect.y      += ctx->mouse.delta.y;
 			}
 
 			// right border resize
@@ -388,8 +405,10 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 			miny = cnt->rect_abs.y;
 			maxy = cnt->rect_abs.y + cnt->rect_abs.h;
 			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-				cnt->rect_abs.w  += ctx->mouse.delta.x;
-				cnt->rect.w += ctx->mouse.delta.x;
+				cnt->rect_abs.w += ctx->mouse.delta.x;
+				cnt->rect.w     += ctx->mouse.delta.x;
+				CAP(cnt->rect_abs.w, 0);
+				CAP(cnt->rect.w, 0);
 			}		
 
 			// bottom border resize
@@ -398,8 +417,10 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 			miny = cnt->rect_abs.y + cnt->rect_abs.h - s->cnt.border.b.size;
 			maxy = cnt->rect_abs.y + cnt->rect_abs.h;
 			if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-				cnt->rect_abs.h  += ctx->mouse.delta.y;
-				cnt->rect.h += ctx->mouse.delta.y;
+				cnt->rect_abs.h += ctx->mouse.delta.y;
+				cnt->rect.h     += ctx->mouse.delta.y;
+				CAP(cnt->rect_abs.h, s->text.size.size);
+				CAP(cnt->rect.h, s->text.size.size);
 			}
 		}
 		// TODO: what if I want to close a floating container?
