@@ -150,14 +150,15 @@ typedef struct {
 		ug_id_t cnt, elem;
 		ug_id_t cnt_last, elem_last;
 	} hover;
+	// active is updated on mousedown and released on mouseup
 	// the id of the "active" element, active means different things for
 	// different elements, for exaple active for a button means to be pressed,
 	// and for a text box it means to be focused
-	ug_id_t active;
+	struct {
+		ug_id_t cnt, elem;
+	} active;
 	// count the frames for fun
 	unsigned long int frame;
-	// current measurement unit
-	ug_unit_t unit;
 	// mouse data
 	struct {
 		ug_vec2_t pos;
@@ -191,7 +192,6 @@ void ug_ctx_free(ug_ctx_t *ctx);
 int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi);
 int ug_ctx_set_drawableregion(ug_ctx_t *ctx, ug_vec2_t size);
 int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style);
-int ug_ctx_set_unit(ug_ctx_t *ctx, ug_unit_t unit);
 
 
 // define containers, name is used as a salt for the container id, all sizes are

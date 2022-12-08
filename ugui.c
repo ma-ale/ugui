@@ -17,6 +17,7 @@
                      UG_CNT_RESIZE_BOTTOM |                                    \
                      UG_CNT_RESIZE_LEFT   |                                    \
                      UG_CNT_RESIZE_TOP 
+#define BTN_ANY      UG_BTN_LEFT | UG_BTN_RIGHT | UG_BTN_MIDDLE | UG_BTN_4 | UG_BTN_5
 
 #define PPI_PPM(ppi, scale)  (ppi * scale * 0.03937008)
 #define PPI_PPD(ppi, scale)  (PPI_PPM(ppi, scale) * 0.3528)
@@ -24,7 +25,8 @@
 #define UG_ERR(...)          err(errno, "__FUNCTION__: " __VA_ARGS__)
 #define BETWEEN(x, min, max) (x <= max && x >= min)
 #define INTERSECTS(v, r)     (BETWEEN(v.x, r.x, r.x+r.w) && BETWEEN(v.y, r.y, r.y+r.h))
-#define CAP(x, s)            { if (x < s) x = s; }
+#define TEST(f, b)           (f & b)
+#define MAX(a, b)            (a > b ? a : b)
 
 
 // default style
@@ -40,7 +42,7 @@ static const ug_style_t default_style = {
 		.bg_color          = RGB_FORMAT(0x0000ff),
 		.border.t          = SIZE_PX(3),
 		.border.b          = SIZE_PX(3),
-		.border.l          = SIZE_PX(3),
+		.border.l          = SIZE_PX(10),
 		.border.r          = SIZE_PX(3),
 		.border.color      = RGB_FORMAT(0x00ff00),
 		.titlebar.height   = SIZE_PX(20),
@@ -166,7 +168,6 @@ ug_ctx_t *ug_ctx_new(void)
 		err(errno, "__FUNCTION__:" "Could not allocate context: %s", strerror(errno));
 	memset(ctx, 0, sizeof(ug_ctx_t));
 
-	ctx->unit      = UG_UNIT_PX;
 	ctx->style     = &default_style;
 	ctx->style_px  = &style_cache;
 	ug_ctx_set_displayinfo(ctx, DEF_SCALE, DEF_PPI);
@@ -241,18 +242,6 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
 	ctx->style = style;
 	update_style_cache(ctx);
 	
-	return 0;
-}
-
-
-int ug_ctx_set_unit(ug_ctx_t *ctx, ug_unit_t unit)
-{
-	TEST_CTX(ctx);
-	if (!IS_VALID_UNIT(unit))
-		return -1;
-	
-	ctx->unit = unit;
-
 	return 0;
 }
 
@@ -338,35 +327,34 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int cw = ctx->size.w;
 	int ch = ctx->size.h;
 
-	// 0 -> take all the space, <0 -> take absolute
-	if (rect->w < 0)  rca->w = -rect->w;
-	if (rect->h < 0)  rca->h = -rect->h;
-
-	// handle relative position
-	// and move to fit borders
+	// handle relative sizes
 	if (rect->w == 0) rca->w = cw;
 	else rca->w += bl + br;
 	if (rect->h == 0) rca->h = ch;
-	else if (cnt->flags & UG_CNT_MOVABLE) rca->h += hh + 2*bt + bb;
+	else if (TEST(cnt->flags, UG_CNT_MOVABLE)) rca->h += hh + 2*bt + bb;
 	else rca->h += bt + bb;
 
-	// <0 -> relative to the right margin
-	if (rect->x < 0) rca->x = cw - rca->w + rca->x;
-	if (rect->y < 0) rca->y = ch - rca->h + rca->y;
+	// if the container is not fixed than it can have positions outside of the
+	// main window, thus negative
+	if (!TEST(cnt->flags, UG_CNT_MOVABLE)) {
+		// <0 -> relative to the right margin
+		if (rect->x <= 0) rca->x = cw - rca->w + rca->x;
+		if (rect->y <= 0) rca->y = ch - rca->h + rca->y;
+	}
 }
 
 
 void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
 	// if we had focus the frame before, then do shit
-	if (ctx->hover.cnt_last != cnt->id)
+	if (ctx->active.cnt != cnt->id)
 		return;
 
 	// mouse pressed handle resize, for simplicity containers can only 
 	// be resized from the bottom and right border
 	// TODO: bring selected container to the top of the stack
-	if (!(ctx->mouse.down_mask & UG_BTN_LEFT) ||
-	    !(cnt->flags & (RESIZEALL | UG_CNT_MOVABLE)))
+	if (!TEST(ctx->mouse.down_mask, UG_BTN_LEFT) ||
+	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_MOVABLE)))
 		return;
 	
 	ug_rect_t *rect, *rca;
@@ -379,61 +367,57 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int bt = s->cnt.border.t.size.i;
 	int bb = s->cnt.border.b.size.i;
 	int hh = s->cnt.titlebar.height.size.i;
-	int cw = ctx->size.w;
-	int ch = ctx->size.h;
+
 	ug_vec2_t mpos = ctx->mouse.pos;
 	int minx, maxx, miny, maxy;
 	
 	// handle movable windows
-	if (cnt->flags & UG_CNT_MOVABLE) {
+	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		minx = rca->x + bl;
 		maxx = rca->x + rca->w - br;
 		miny = rca->y + bt;
 		maxy = rca->y + bt + hh;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			// if a relative container has been moved consider it no 
-			// longer relative
-			if (rect->x < 0)
-				rect->x = cw + rect->x - rect->w - bl - br;
-			if (rect->y < 0)
-				rect->y = ch + rect->y - rect->h - 2*bt - bb - hh;
-
 			rect->x += ctx->mouse.delta.x;
 			rect->y += ctx->mouse.delta.y;
-			rca->x += ctx->mouse.delta.x;
-			rca->y += ctx->mouse.delta.y;
+			rca->x  += ctx->mouse.delta.x;
+			rca->y  += ctx->mouse.delta.y;
 		}
 	}
 
 	// right border resize
-	if (cnt->flags & UG_CNT_RESIZE_RIGHT) {
+	if (TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
 		minx = rca->x + rca->w - br;
 		maxx = rca->x + rca->w;
 		miny = rca->y;
 		maxy = rca->y + rca->h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			rect->w += ctx->mouse.delta.x;
-			rca->w  += ctx->mouse.delta.x;
+			rect->w = MAX(10, rect->w + ctx->mouse.delta.x);
+			rca->w  = MAX(10, rca->w + ctx->mouse.delta.x);
 		}
 	}
 
 	// left border resize
-	if (cnt->flags & UG_CNT_RESIZE_LEFT) {
-		minx = rca->x - bl;
-		maxx = rca->x;
+	if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
+		minx = rca->x;
+		maxx = rca->x + bl;
 		miny = rca->y;
 		maxy = rca->y + rca->h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			rect->w -= ctx->mouse.delta.x;
-			rca->w  -= ctx->mouse.delta.x;
-			
-			rect->x += ctx->mouse.delta.x;
-			rca->x  += ctx->mouse.delta.x;
+			if (rect->w - ctx->mouse.delta.x >= 10) {
+				rect->w -= ctx->mouse.delta.x;
+				if (TEST(cnt->flags, UG_CNT_MOVABLE))
+					rect->x += ctx->mouse.delta.x;
+			}
+			if (rca->w - ctx->mouse.delta.x >= 10) {
+				rca->w  -= ctx->mouse.delta.x;
+				rca->x  += ctx->mouse.delta.x;
+			}			
 		}
 	}
 
 	// bottom border resize
-	if (cnt->flags & UG_CNT_RESIZE_BOTTOM) {
+	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM)) {
 		minx = rca->x;
 		maxx = rca->x + rca->w;
 		miny = rca->y + rca->h - bb;
@@ -445,17 +429,21 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	}
 
 	// top border resize
-	if (cnt->flags & UG_CNT_RESIZE_TOP) {
+	if (TEST(cnt->flags, UG_CNT_RESIZE_TOP)) {
 		minx = rca->x;
 		maxx = rca->x + rca->w;
-		miny = rca->y - bt;
-		maxy = rca->y;
+		miny = rca->y;
+		maxy = rca->y + bt;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			rect->h -= ctx->mouse.delta.y;
-			rca->h  -= ctx->mouse.delta.y;
-
-			rect->y += ctx->mouse.delta.y;
-			rca->y  += ctx->mouse.delta.y;
+			if (rect->h - ctx->mouse.delta.y >= 10) {
+				rect->h -= ctx->mouse.delta.y;
+				if (TEST(cnt->flags, UG_CNT_MOVABLE))
+					rect->y += ctx->mouse.delta.y;
+			}
+			if (rca->h - ctx->mouse.delta.y >= 10) {
+				rca->h  -= ctx->mouse.delta.y;
+				rca->y  += ctx->mouse.delta.y;
+			}
 		}
 	}
 
@@ -562,7 +550,7 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		case UG_SIDE_BOTTOM:
 			cnt->flags |= UG_CNT_RESIZE_TOP;
 			// FIXME: we do not support relative zero position yet
-			rect.y = -1;
+			rect.y = 0;
 			rect.h = size_to_px(ctx, size);
 			break;
 		case UG_SIDE_TOP:
@@ -571,7 +559,7 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 			break;
 		case UG_SIDE_RIGHT:  
 			cnt->flags |= UG_CNT_RESIZE_LEFT;
-			rect.x = -1;
+			rect.x = 0;
 			rect.w = size_to_px(ctx, size);
 			break;
 		case UG_SIDE_LEFT:
@@ -655,13 +643,18 @@ int ug_frame_begin(ug_ctx_t *ctx)
 
 	// update hover index
 	ug_vec2_t v = ctx->mouse.pos;
-//	printf("mouse: x=%d, y=%d\n", ctx->mouse.pos.x, ctx->mouse.pos.x);
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
 		ug_rect_t r = ctx->cnt_stack.items[i].rca;
 		if (INTERSECTS(v, r)) {
 			ctx->hover.cnt = ctx->cnt_stack.items[i].id;
-//			printf("intersects! %.8x\n", ctx->hover.cnt);
 		}
+	}
+
+	// update active container
+	if (MOUSEDOWN(ctx, UG_BTN_LEFT)) {
+		ctx->active.cnt = ctx->hover.cnt;
+	} else if (MOUSEUP(ctx, UG_BTN_LEFT)) {
+		ctx->active.cnt = 0;
 	}
 
 	return 0;
