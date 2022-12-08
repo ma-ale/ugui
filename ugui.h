@@ -35,7 +35,9 @@ typedef enum {
 typedef struct {
 	ug_id_t id;
 	ug_unit_t unit;
-	ug_rect_t rect, rect_abs;
+	ug_rect_t rect;
+	// absolute position rect
+	ug_rect_t rca;
 	ug_vec2_t max_size;
 	unsigned int flags;
 } ug_container_t;
@@ -134,6 +136,7 @@ typedef struct {
 	// ppm: pixels per millimeter
 	// ppd: pixels per dot
 	float ppi, ppm, ppd;
+	float last_ppi, last_ppm, last_ppd;
 	// containers need to know how big the "main container" is so that all
 	// the relative positioning work
 	ug_vec2_t size;

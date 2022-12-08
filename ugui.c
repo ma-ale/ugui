@@ -174,6 +174,10 @@ int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi)
 	if (scale <= 0 || ppi < 20.0)
 		return -1;
 	
+	ctx->last_ppi = ctx->ppi;
+	ctx->last_ppm = ctx->ppd;
+	ctx->last_ppd = ctx->ppm;
+
 	ctx->ppm   = PPI_PPM(scale, ppi);
 	ctx->ppd   = PPI_PPM(scale, ppi);
 	ctx->ppi   = ppi;
@@ -253,27 +257,37 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 // also handle resizing, moving, ect. if allowed by the container
 static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
-	// use millimeters as common screen-relative units
-	if (cnt->unit == UG_UNIT_PT) {
-		cnt->rect.fx *= ctx->ppd;
-		cnt->rect.fy *= ctx->ppd;
-		cnt->rect.fw *= ctx->ppd;
-		cnt->rect.fh *= ctx->ppd;
+	// if the container is new it has never been converted to pixels
+	if (cnt->unit != UG_UNIT_PX) {
+		float scale = 1.0;
+		switch (ctx->unit) {
+		case UG_UNIT_MM: scale = ctx->ppm; break;
+		case UG_UNIT_PT: scale = ctx->ppd; break;
+		default: break;
+		}
+		cnt->rect.x = roundf(cnt->rect.fx * scale);
+		cnt->rect.y = roundf(cnt->rect.fy * scale);
+		cnt->rect.w = roundf(cnt->rect.fw * scale);
+		cnt->rect.h = roundf(cnt->rect.fh * scale);
+
+		cnt->unit = UG_UNIT_PX;
+	} else if (ctx->ppi != ctx->last_ppi) {
+		// if the scale has been updated than we need to scale the container
+		// as well
+		float scale = ctx->ppi / ctx->last_ppi;
+		cnt->rect.x = roundf(cnt->rect.x * scale);
+		cnt->rect.y = roundf(cnt->rect.y * scale);
+		cnt->rect.w = roundf(cnt->rect.w * scale);
+		cnt->rect.h = roundf(cnt->rect.h * scale);
 	}
 
-	// recalculate position
-	if (cnt->unit != UG_UNIT_PX) {
-		cnt->rect_abs.x = roundf(cnt->rect.fx * ctx->ppm);
-		cnt->rect_abs.y = roundf(cnt->rect.fy * ctx->ppm);
-		cnt->rect_abs.w = roundf(cnt->rect.fw * ctx->ppm);
-		cnt->rect_abs.h = roundf(cnt->rect.fh * ctx->ppm);
-	}
+	cnt->rca = cnt->rect;
 
 	/*
 	 * Container style:
 	 * 
-	 * rect_abs(0,0)
-	 * v
+	 * rca
+	 * v 
 	 * +-----------------------------------------------+
 	 * |          Titlebar                             |
 	 * +-----------------------------------------------+
@@ -299,111 +313,83 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	 */
 	
 	const ug_style_t *s = ctx->style_px;
-	// 0 -> take all the space, <0 -> take absolute
-	if (cnt->rect_abs.w < 0)  cnt->rect_abs.w = -cnt->rect_abs.w;
-	if (cnt->rect_abs.h < 0)  cnt->rect_abs.h = -cnt->rect_abs.h;
+	int bl = s->cnt.border.l.size;
+	int br = s->cnt.border.r.size;
+	int bt = s->cnt.border.t.size;
+	int bb = s->cnt.border.b.size;
+	int hh = s->cnt.titlebar.height.size;
+	int cw = ctx->size.w;
+	int ch = ctx->size.h;
 
-	if (cnt->rect_abs.w == 0) {
-		cnt->rect_abs.w = ctx->size.w           - 
-	                          s->cnt.border.l.size  -
-		                  s->cnt.border.r.size  ;
-	} else {
-		cnt->rect_abs.w += s->cnt.border.r.size + s->cnt.border.l.size;
-	} 
-	if (cnt->rect_abs.h == 0) { 
-		cnt->rect_abs.h = ctx->size.h           -
-	                          s->cnt.border.t.size  -
-		                  s->cnt.border.b.size  ;
-	} else {
-		cnt->rect_abs.h += s->cnt.border.t.size + s->cnt.border.b.size;
-	}
-        if (cnt->flags & UG_CNT_MOVABLE) 
-		cnt->rect_abs.h += s->cnt.titlebar.height.size;
+	// 0 -> take all the space, <0 -> take absolute
+	if (cnt->rect.w < 0)  cnt->rca.w = -cnt->rect.w;
+	if (cnt->rect.h < 0)  cnt->rca.h = -cnt->rect.h;
+
+	// handle relative position
+	// and move to fit borders
+	if (cnt->rect.w == 0) cnt->rca.w = cw - br - bl;
+	else cnt->rca.w += bl + br;
+	if (cnt->rect.h == 0) cnt->rca.h = ch - bt - bb;
+	else if (cnt->flags & UG_CNT_MOVABLE) cnt->rca.h += hh + 2*bt + bb;
+	else cnt->rca.h += bt + bb;
 
 
 	// the window may have been resized so cap the position to the window size
-	if (cnt->rect_abs.x > ctx->size.w)
-		cnt->rect_abs.x = ctx->size.x - cnt->rect_abs.w;
-	if (cnt->rect_abs.y > ctx->size.h)
-		cnt->rect_abs.y = ctx->size.y - cnt->rect_abs.h;
+	// FIXME: is MAX(cw - bl, 0) better?
+	if (cnt->rect.x > cw) cnt->rca.x = cw;
+	if (cnt->rect.y > ch) cnt->rca.y = ch;
 
 	// <0 -> relative to the right margin
-	if (cnt->rect_abs.x < 0) 
-		cnt->rect_abs.x = ctx->size.x - cnt->rect_abs.w + cnt->rect_abs.x;
-	if (cnt->rect_abs.y < 0) 
-		cnt->rect_abs.y = ctx->size.y - cnt->rect_abs.h + cnt->rect_abs.y;
+	if (cnt->rect.x < 0) cnt->rca.x = cw - cnt->rca.w + cnt->rca.x;
+	if (cnt->rect.y < 0) cnt->rca.y = ch - cnt->rca.h + cnt->rca.y;
 
 	// if we had focus the frame before, then do shit
-	// FIXME: if this is a brand new container then do we need to handle user
-	//        inputs, since all inputs lag one frame, then it would make no sense
 	if (ctx->hover.cnt_last != cnt->id)
 		goto cnt_draw;
 
 	// mouse pressed handle resize, for simplicity containers can only 
 	// be resized from the bottom and right border
+	// TODO: bring selected container to the top of the stack
 	if (!(ctx->mouse.down_mask & UG_BTN_LEFT) ||
 	    !(cnt->flags & (UG_CNT_RESIZABLE | UG_CNT_MOVABLE)))
 		goto cnt_draw;
 	
 	ug_vec2_t mpos = ctx->mouse.pos;
 	int minx, maxx, miny, maxy;
-	int delta_x = 0, delta_y = 0, delta_w = 0, delta_h = 0;
 	
 	// handle movable windows
 	if (cnt->flags & UG_CNT_MOVABLE) {
-		minx = cnt->rect_abs.x;
-		maxx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.l.size;
-		miny = cnt->rect_abs.y;
-		maxy = cnt->rect_abs.y + s->cnt.titlebar.height.size;
-		if (BETWEEN(mpos.x, minx, maxx) &&
-		    BETWEEN(mpos.y, miny, maxy)) {
-			cnt->rect_abs.x  += ctx->mouse.delta.x;
-			cnt->rect_abs.y  += ctx->mouse.delta.y;
-
-			delta_x = ctx->mouse.delta.x;
-			delta_y = ctx->mouse.delta.y;
+		minx = cnt->rca.x;
+		maxx = cnt->rca.x + cnt->rca.w - br;
+		miny = cnt->rca.y;
+		maxy = cnt->rca.y + bt + hh;
+		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+			cnt->rect.x += ctx->mouse.delta.x;
+			cnt->rect.y += ctx->mouse.delta.y;
+			cnt->rca.x += ctx->mouse.delta.x;
+			cnt->rca.y += ctx->mouse.delta.y;
 		}
 	}
-
 
 	if (cnt->flags & UG_CNT_RESIZABLE) {
 		// right border resize
-		minx = cnt->rect_abs.x + cnt->rect_abs.w - s->cnt.border.r.size;
-		maxx = cnt->rect_abs.x + cnt->rect_abs.w;
-		miny = cnt->rect_abs.y;
-		maxy = cnt->rect_abs.y + cnt->rect_abs.h;
+		minx = cnt->rca.x + cnt->rca.w - br;
+		maxx = cnt->rca.x + cnt->rca.w;
+		miny = cnt->rca.y;
+		maxy = cnt->rca.y + cnt->rca.h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			cnt->rect_abs.w += ctx->mouse.delta.x;
-			CAP(cnt->rect_abs.w, 0);
-
-			delta_w = ctx->mouse.delta.x;
-		}		
+			cnt->rect.w += ctx->mouse.delta.x;
+			cnt->rca.w += ctx->mouse.delta.x;
+		}
 
 		// bottom border resize
-		minx = cnt->rect_abs.x;
-		maxx = cnt->rect_abs.x + cnt->rect_abs.w;
-		miny = cnt->rect_abs.y + cnt->rect_abs.h - s->cnt.border.b.size;
-		maxy = cnt->rect_abs.y + cnt->rect_abs.h;
+		minx = cnt->rca.x;
+		maxx = cnt->rca.x + cnt->rca.w;
+		miny = cnt->rca.y + cnt->rca.h - bb;
+		maxy = cnt->rca.y + cnt->rca.h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			cnt->rect_abs.h += ctx->mouse.delta.y;
-			CAP(cnt->rect_abs.h, s->text.size.size);
-
-			delta_h = ctx->mouse.delta.y;
-		}
-	}
-
-	if (delta_x || delta_y || delta_w || delta_h) {
-		if (cnt->unit == UG_UNIT_PX) {
-			cnt->rect = cnt->rect_abs;
-		} else {
-			if (cnt->rect.fx < 0)
-				cnt->rect.fx = cnt->rect_abs.x / ctx->ppm;
-			if (cnt->rect.fy < 0)
-				cnt->rect.fy = cnt->rect_abs.y / ctx->ppm;
-			cnt->rect.fx += delta_x / ctx->ppm;
-			cnt->rect.fy += delta_y / ctx->ppm;
-			cnt->rect.fw += delta_w / ctx->ppm;
-			cnt->rect.fh += delta_h / ctx->ppm;
+			cnt->rect.h += ctx->mouse.delta.y;
+			cnt->rca.h += ctx->mouse.delta.y;
 		}
 	}
 
@@ -414,30 +400,34 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	//       a scroll bar? Maybe add that information inside the
 	//       container structure
 
-	cnt_draw:
 	// push the appropriate rectangles to the drawing stack
+	ug_rect_t draw_rect;
+	cnt_draw:
+	
 	// push outline
-	push_rect_command(ctx, &cnt->rect_abs, s->cnt.border.color);
-	// push titlebar
-	ug_rect_t titlebar = {
-		.x = (cnt->rect_abs.x + s->cnt.border.l.size),
-		.y = (cnt->rect_abs.y + s->cnt.border.t.size),
-		.w = (cnt->rect_abs.w - s->cnt.border.r.size - s->cnt.border.l.size),
-		.h = s->cnt.titlebar.height.size,
-	};
-	push_rect_command(ctx, &titlebar, s->cnt.titlebar.bg_color);
-	// push main body
-	ug_rect_t body = {
-		.x = (cnt->rect_abs.x + s->cnt.border.l.size),
-		.y = (cnt->rect_abs.y + s->cnt.border.t.size),
-		.w = (cnt->rect_abs.w - s->cnt.border.l.size - s->cnt.border.r.size),
-		.h = (cnt->rect_abs.h - s->cnt.border.t.size - s->cnt.border.b.size),
-	};
+	draw_rect = cnt->rca;
+	push_rect_command(ctx, &draw_rect, s->cnt.border.color);
+	
+	// titlebar
 	if (cnt->flags & UG_CNT_MOVABLE) {
-		body.y += s->cnt.titlebar.height.size + s->cnt.border.t.size;
-		body.h -= s->cnt.titlebar.height.size + s->cnt.border.t.size;
+		draw_rect.x += bl;
+		draw_rect.y += bt;
+		draw_rect.w -= bl + br;
+		draw_rect.h  = hh;
+		push_rect_command(ctx, &draw_rect, s->cnt.titlebar.bg_color);
 	}
-	push_rect_command(ctx, &body, s->cnt.bg_color);
+	
+	// push main body
+	draw_rect = cnt->rca;
+	draw_rect.x += bl;
+	draw_rect.y += bt;
+	draw_rect.w -= bl + br;
+	draw_rect.h -= bt + bb;
+	if (cnt->flags & UG_CNT_MOVABLE) {
+		draw_rect.y += bt + hh;
+		draw_rect.h -= bt + hh;
+	}
+	push_rect_command(ctx, &draw_rect, s->cnt.bg_color);
 	// TODO: push other rects
 }
 
@@ -533,7 +523,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	ug_vec2_t v = ctx->mouse.pos;
 //	printf("mouse: x=%d, y=%d\n", ctx->mouse.pos.x, ctx->mouse.pos.x);
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
-		ug_rect_t r = ctx->cnt_stack.items[i].rect_abs;
+		ug_rect_t r = ctx->cnt_stack.items[i].rca;
 		if (INTERSECTS(v, r)) {
 			ctx->hover.cnt = ctx->cnt_stack.items[i].id;
 //			printf("intersects! %.8x\n", ctx->hover.cnt);
@@ -560,6 +550,12 @@ int ug_frame_end(ug_ctx_t *ctx)
 	ctx->hover.elem_last = ctx->hover.elem;
 	ctx->hover.cnt       = 0;
 	ctx->hover.elem      = 0;
+
+	ctx->last_ppi = ctx->ppi;
+	ctx->last_ppm = ctx->ppm;
+	ctx->last_ppd = ctx->ppd;
+
+	ctx->frame++;
 
 	return 0;
 }
