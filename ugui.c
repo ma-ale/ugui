@@ -257,6 +257,10 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 // also handle resizing, moving, ect. if allowed by the container
 static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
+	ug_rect_t *rect, *rca;
+	rect = &cnt->rect;
+	rca  = &cnt->rca;
+
 	// if the container is new it has never been converted to pixels
 	if (cnt->unit != UG_UNIT_PX) {
 		float scale = 1.0;
@@ -265,23 +269,23 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		case UG_UNIT_PT: scale = ctx->ppd; break;
 		default: break;
 		}
-		cnt->rect.x = roundf(cnt->rect.fx * scale);
-		cnt->rect.y = roundf(cnt->rect.fy * scale);
-		cnt->rect.w = roundf(cnt->rect.fw * scale);
-		cnt->rect.h = roundf(cnt->rect.fh * scale);
+		rect->x = roundf(rect->fx * scale);
+		rect->y = roundf(rect->fy * scale);
+		rect->w = roundf(rect->fw * scale);
+		rect->h = roundf(rect->fh * scale);
 
 		cnt->unit = UG_UNIT_PX;
 	} else if (ctx->ppi != ctx->last_ppi) {
 		// if the scale has been updated than we need to scale the container
 		// as well
 		float scale = ctx->ppi / ctx->last_ppi;
-		cnt->rect.x = roundf(cnt->rect.x * scale);
-		cnt->rect.y = roundf(cnt->rect.y * scale);
-		cnt->rect.w = roundf(cnt->rect.w * scale);
-		cnt->rect.h = roundf(cnt->rect.h * scale);
+		rect->x = roundf(rect->x * scale);
+		rect->y = roundf(rect->y * scale);
+		rect->w = roundf(rect->w * scale);
+		rect->h = roundf(rect->h * scale);
 	}
 
-	cnt->rca = cnt->rect;
+	*rca = *rect;
 
 	/*
 	 * Container style:
@@ -322,26 +326,20 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int ch = ctx->size.h;
 
 	// 0 -> take all the space, <0 -> take absolute
-	if (cnt->rect.w < 0)  cnt->rca.w = -cnt->rect.w;
-	if (cnt->rect.h < 0)  cnt->rca.h = -cnt->rect.h;
+	if (rect->w < 0)  rca->w = -rect->w;
+	if (rect->h < 0)  rca->h = -rect->h;
 
 	// handle relative position
 	// and move to fit borders
-	if (cnt->rect.w == 0) cnt->rca.w = cw - br - bl;
-	else cnt->rca.w += bl + br;
-	if (cnt->rect.h == 0) cnt->rca.h = ch - bt - bb;
-	else if (cnt->flags & UG_CNT_MOVABLE) cnt->rca.h += hh + 2*bt + bb;
-	else cnt->rca.h += bt + bb;
-
-
-	// the window may have been resized so cap the position to the window size
-	// FIXME: is MAX(cw - bl, 0) better?
-	if (cnt->rect.x > cw) cnt->rca.x = cw;
-	if (cnt->rect.y > ch) cnt->rca.y = ch;
+	if (rect->w == 0) rca->w = cw - br - bl;
+	else rca->w += bl + br;
+	if (rect->h == 0) rca->h = ch - bt - bb;
+	else if (cnt->flags & UG_CNT_MOVABLE) rca->h += hh + 2*bt + bb;
+	else rca->h += bt + bb;
 
 	// <0 -> relative to the right margin
-	if (cnt->rect.x < 0) cnt->rca.x = cw - cnt->rca.w + cnt->rca.x;
-	if (cnt->rect.y < 0) cnt->rca.y = ch - cnt->rca.h + cnt->rca.y;
+	if (rect->x < 0) rca->x = cw - rca->w + rca->x;
+	if (rect->y < 0) rca->y = ch - rca->h + rca->y;
 
 	// if we had focus the frame before, then do shit
 	if (ctx->hover.cnt_last != cnt->id)
@@ -359,37 +357,44 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	
 	// handle movable windows
 	if (cnt->flags & UG_CNT_MOVABLE) {
-		minx = cnt->rca.x;
-		maxx = cnt->rca.x + cnt->rca.w - br;
-		miny = cnt->rca.y;
-		maxy = cnt->rca.y + bt + hh;
+		minx = rca->x;
+		maxx = rca->x + rca->w - br;
+		miny = rca->y;
+		maxy = rca->y + bt + hh;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			cnt->rect.x += ctx->mouse.delta.x;
-			cnt->rect.y += ctx->mouse.delta.y;
-			cnt->rca.x += ctx->mouse.delta.x;
-			cnt->rca.y += ctx->mouse.delta.y;
+			// if a relative container has been moved consider it no 
+			// longer relative
+			if (rect->x < 0)
+				rect->x = cw + rect->x - rect->w - bl - br;
+			if (rect->y < 0)
+				rect->y = ch + rect->y - rect->h - 2*bt - bb - hh;
+
+			rect->x += ctx->mouse.delta.x;
+			rect->y += ctx->mouse.delta.y;
+			rca->x += ctx->mouse.delta.x;
+			rca->y += ctx->mouse.delta.y;
 		}
 	}
 
 	if (cnt->flags & UG_CNT_RESIZABLE) {
 		// right border resize
-		minx = cnt->rca.x + cnt->rca.w - br;
-		maxx = cnt->rca.x + cnt->rca.w;
-		miny = cnt->rca.y;
-		maxy = cnt->rca.y + cnt->rca.h;
+		minx = rca->x + rca->w - br;
+		maxx = rca->x + rca->w;
+		miny = rca->y;
+		maxy = rca->y + rca->h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			cnt->rect.w += ctx->mouse.delta.x;
-			cnt->rca.w += ctx->mouse.delta.x;
+			rect->w += ctx->mouse.delta.x;
+			rca->w += ctx->mouse.delta.x;
 		}
 
 		// bottom border resize
-		minx = cnt->rca.x;
-		maxx = cnt->rca.x + cnt->rca.w;
-		miny = cnt->rca.y + cnt->rca.h - bb;
-		maxy = cnt->rca.y + cnt->rca.h;
+		minx = rca->x;
+		maxx = rca->x + rca->w;
+		miny = rca->y + rca->h - bb;
+		maxy = rca->y + rca->h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
-			cnt->rect.h += ctx->mouse.delta.y;
-			cnt->rca.h += ctx->mouse.delta.y;
+			rect->h += ctx->mouse.delta.y;
+			rca->h += ctx->mouse.delta.y;
 		}
 	}
 
@@ -405,7 +410,7 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	cnt_draw:
 	
 	// push outline
-	draw_rect = cnt->rca;
+	draw_rect = *rca;
 	push_rect_command(ctx, &draw_rect, s->cnt.border.color);
 	
 	// titlebar
@@ -418,7 +423,7 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	}
 	
 	// push main body
-	draw_rect = cnt->rca;
+	draw_rect = *rca;
 	draw_rect.x += bl;
 	draw_rect.y += bt;
 	draw_rect.w -= bl + br;
