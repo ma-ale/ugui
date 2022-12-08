@@ -5,22 +5,18 @@
 #define BIT(n)         (1 << n)
 #define RGBA_FORMAT(x) { .a=x&0xff, .b=(x>>8)&0xff, .g=(x>>16)&0xff, .r=(x>>24)&0xff }
 #define RGB_FORMAT(x)  { .a=0xff, .b=x&0xff, .g=(x>>8)&0xff, .r=(x>>16)&0xff }
-#define SIZE_PX(x)     { .size=x, .unit=UG_UNIT_PX }
-#define SIZE_MM(x)     { .size=x, .unit=UG_UNIT_MM }
-#define SIZE_PT(x)     { .size=x, .unit=UG_UNIT_PT }
+#define SIZE_PX(x)     { .size.i=x, .unit=UG_UNIT_PX }
+#define SIZE_MM(x)     { .size.f=x, .unit=UG_UNIT_MM }
+#define SIZE_PT(x)     { .size.f=x, .unit=UG_UNIT_PT }
 
 // basic types
-typedef unsigned int                                     ug_id_t; 
-typedef struct { union {int x, w;}; union {int y, h;}; } ug_vec2_t;
-typedef struct { unsigned char a, b, g, r; }             ug_color_t;
-typedef struct { int size, unit; }                       ug_size_t;
-
-typedef struct { 
-	union {	int x; float fx; }; 
-	union {	int y; float fy; }; 
-	union {	int w; float fw; }; 
-	union {	int h; float fh; }; 
-} ug_rect_t;
+typedef unsigned int                                       ug_id_t; 
+typedef struct { union {int x, w;}; union {int y, h;}; }   ug_vec2_t;
+typedef struct { unsigned char a, b, g, r; }               ug_color_t;
+typedef struct { int x, y, w, h; }                         ug_rect_t;
+typedef struct { union {int i; float f;} size; int unit; } ug_size_t;
+// div has information about the phisical dimension
+typedef struct { ug_size_t x, y, w, h;}                    ug_div_t;
 
 typedef enum { 
 	UG_UNIT_PX = 0,
@@ -34,7 +30,6 @@ typedef enum {
 // the z index of a container is determined by it's position on the stack
 typedef struct {
 	ug_id_t id;
-	ug_unit_t unit;
 	ug_rect_t rect;
 	// absolute position rect
 	ug_rect_t rca;
@@ -194,7 +189,7 @@ int ug_ctx_set_unit(ug_ctx_t *ctx, ug_unit_t unit);
 
 // a floating container can be placed anywhere and can be resized, acts like a
 // window inside another window
-int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_rect_t rect);
+int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div);
 // like a floating container but cannot be resized
 int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_rect_t rect);
 // a menu bar is a container of fixed height, cannot be resized and sits at the

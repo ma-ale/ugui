@@ -104,6 +104,28 @@ static ug_id_t hash(const void *data, unsigned int size)
 }
 
 
+int size_to_px(ug_ctx_t *ctx, ug_size_t s)
+{
+	switch (s.unit) {
+	case UG_UNIT_MM: return roundf(s.size.f * ctx->ppm);
+	case UG_UNIT_PT: return roundf(s.size.f * ctx->ppd);
+	case UG_UNIT_PX: return s.size.i;
+	default: return 0;
+	}
+}
+
+
+ug_rect_t div_to_rect(ug_ctx_t *ctx, ug_div_t *div)
+{
+	ug_rect_t r;
+	r.x = size_to_px(ctx, div->x);
+	r.y = size_to_px(ctx, div->y);
+	r.w = size_to_px(ctx, div->w);
+	r.h = size_to_px(ctx, div->h);
+	return r;
+}
+
+
 // update the style cache with the correct sizes in pixels and colors
 static void update_style_cache(ug_ctx_t *ctx)
 {
@@ -261,21 +283,7 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	rect = &cnt->rect;
 	rca  = &cnt->rca;
 
-	// if the container is new it has never been converted to pixels
-	if (cnt->unit != UG_UNIT_PX) {
-		float scale = 1.0;
-		switch (ctx->unit) {
-		case UG_UNIT_MM: scale = ctx->ppm; break;
-		case UG_UNIT_PT: scale = ctx->ppd; break;
-		default: break;
-		}
-		rect->x = roundf(rect->fx * scale);
-		rect->y = roundf(rect->fy * scale);
-		rect->w = roundf(rect->fw * scale);
-		rect->h = roundf(rect->fh * scale);
-
-		cnt->unit = UG_UNIT_PX;
-	} else if (ctx->ppi != ctx->last_ppi) {
+	if (ctx->ppi != ctx->last_ppi) {
 		// if the scale has been updated than we need to scale the container
 		// as well
 		float scale = ctx->ppi / ctx->last_ppi;
@@ -317,11 +325,11 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	 */
 	
 	const ug_style_t *s = ctx->style_px;
-	int bl = s->cnt.border.l.size;
-	int br = s->cnt.border.r.size;
-	int bt = s->cnt.border.t.size;
-	int bb = s->cnt.border.b.size;
-	int hh = s->cnt.titlebar.height.size;
+	int bl = s->cnt.border.l.size.i;
+	int br = s->cnt.border.r.size.i;
+	int bt = s->cnt.border.t.size.i;
+	int bb = s->cnt.border.b.size.i;
+	int hh = s->cnt.titlebar.height.size.i;
 	int cw = ctx->size.w;
 	int ch = ctx->size.h;
 
@@ -439,12 +447,12 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 // a floating container can be placed anywhere and can be resized, acts like a
 // window inside another window
-int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_rect_t rect)
+int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 {	
 	TEST_CTX(ctx);
-	// TODO: verify rect
+	// TODO: verify div
 
-	ug_id_t id = name ? hash(name, strlen(name)) : hash(&rect, sizeof(ug_rect_t));
+	ug_id_t id = name ? hash(name, strlen(name)) : hash(&div, sizeof(ug_div_t));
 	ug_container_t *cnt = get_container(ctx, id);
 	
 	if (cnt->id) {
@@ -452,8 +460,7 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_rect_t rect)
 	} else {
 		cnt->id = id;
 		cnt->max_size = max_size;
-		cnt->rect = rect;
-		cnt->unit = ctx->unit;
+		cnt->rect = div_to_rect(ctx, &div);
 		cnt->flags = UG_CNT_MOVABLE  | UG_CNT_RESIZABLE |
 			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
 	}

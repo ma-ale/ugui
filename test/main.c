@@ -177,9 +177,9 @@ int main(void)
 
 		ug_ctx_set_unit(ctx, UG_UNIT_MM);
 		ug_container_floating(ctx, "stupid name", 
-		                      (ug_rect_t){.fx = 0, .fy = 0, .fw = 50, .fh = 50});
+		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 		ug_container_floating(ctx, "better name", 
-		                      (ug_rect_t){.fx = -20, .fy = -10, .fw = 100, .fh = 30});
+		                      (ug_div_t){.x=SIZE_PX(-10), .y=SIZE_PT(-16), .w=SIZE_MM(100), .h=SIZE_PX(15)});
 
 		ug_frame_end(ctx);
 
@@ -201,8 +201,6 @@ int main(void)
 			SDL_RenderFillRect(r, &sr);
 		}
 		SDL_RenderPresent(r);
-
-		printf("-------------------FRAME DONE--------------------\n");
 
 	} while (event.type != SDL_QUIT);
 
