@@ -282,7 +282,7 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 
 // update the container dimensions and position according to the context information,
 // also handle resizing, moving, ect. if allowed by the container
-static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
+static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
 	ug_rect_t *rect, *rca;
 	rect = &cnt->rect;
@@ -344,27 +344,43 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	// handle relative position
 	// and move to fit borders
-	if (rect->w == 0) rca->w = cw - br - bl;
+	if (rect->w == 0) rca->w = cw;
 	else rca->w += bl + br;
-	if (rect->h == 0) rca->h = ch - bt - bb;
+	if (rect->h == 0) rca->h = ch;
 	else if (cnt->flags & UG_CNT_MOVABLE) rca->h += hh + 2*bt + bb;
 	else rca->h += bt + bb;
 
 	// <0 -> relative to the right margin
 	if (rect->x < 0) rca->x = cw - rca->w + rca->x;
 	if (rect->y < 0) rca->y = ch - rca->h + rca->y;
+}
 
+
+void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
+{
 	// if we had focus the frame before, then do shit
 	if (ctx->hover.cnt_last != cnt->id)
-		goto cnt_draw;
+		return;
 
 	// mouse pressed handle resize, for simplicity containers can only 
 	// be resized from the bottom and right border
 	// TODO: bring selected container to the top of the stack
 	if (!(ctx->mouse.down_mask & UG_BTN_LEFT) ||
 	    !(cnt->flags & (RESIZEALL | UG_CNT_MOVABLE)))
-		goto cnt_draw;
+		return;
 	
+	ug_rect_t *rect, *rca;
+	rect = &cnt->rect;
+	rca  = &cnt->rca;
+
+	const ug_style_t *s = ctx->style_px;
+	int bl = s->cnt.border.l.size.i;
+	int br = s->cnt.border.r.size.i;
+	int bt = s->cnt.border.t.size.i;
+	int bb = s->cnt.border.b.size.i;
+	int hh = s->cnt.titlebar.height.size.i;
+	int cw = ctx->size.w;
+	int ch = ctx->size.h;
 	ug_vec2_t mpos = ctx->mouse.pos;
 	int minx, maxx, miny, maxy;
 	
@@ -451,11 +467,21 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	//       container structure
 
 	// push the appropriate rectangles to the drawing stack
+}
+
+
+void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
+{
 	ug_rect_t draw_rect;
-	cnt_draw:
+	const ug_style_t *s = ctx->style_px;
+	int bl = s->cnt.border.l.size.i;
+	int br = s->cnt.border.r.size.i;
+	int bt = s->cnt.border.t.size.i;
+	int bb = s->cnt.border.b.size.i;
+	int hh = s->cnt.titlebar.height.size.i;
 	
 	// push outline
-	draw_rect = *rca;
+	draw_rect = cnt->rca;
 	push_rect_command(ctx, &draw_rect, s->cnt.border.color);
 	
 	// titlebar
@@ -468,7 +494,7 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	}
 	
 	// push main body
-	draw_rect = *rca;
+	draw_rect = cnt->rca;
 	draw_rect.x += bl;
 	draw_rect.y += bt;
 	draw_rect.w -= bl + br;
@@ -502,7 +528,10 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
 	}
 
-	update_container(ctx, cnt);
+	// FIXME: floating containers should always stay on top
+	position_container(ctx, cnt);
+	handle_container(ctx, cnt);
+	draw_container(ctx, cnt);
 	
 	return 0;
 }
@@ -554,7 +583,9 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		cnt->rect = rect;
 	}
 
-	update_container(ctx, cnt);
+	position_container(ctx, cnt);
+	handle_container(ctx, cnt);
+	draw_container(ctx, cnt);
 	
 	// TODO: change available context space to reflect adding a sidebar
 
