@@ -13,6 +13,11 @@
 #define DEF_PPI      96.0
 #define STACK_STEP   64
 
+#define RESIZEALL    UG_CNT_RESIZE_RIGHT  |                                    \
+                     UG_CNT_RESIZE_BOTTOM |                                    \
+                     UG_CNT_RESIZE_LEFT   |                                    \
+                     UG_CNT_RESIZE_TOP 
+
 #define PPI_PPM(ppi, scale)  (ppi * scale * 0.03937008)
 #define PPI_PPD(ppi, scale)  (PPI_PPM(ppi, scale) * 0.3528)
 #define IS_VALID_UNIT(u)     (u==UG_UNIT_PX||u==UG_UNIT_MM||u==UG_UNIT_PT)
@@ -357,7 +362,7 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// be resized from the bottom and right border
 	// TODO: bring selected container to the top of the stack
 	if (!(ctx->mouse.down_mask & UG_BTN_LEFT) ||
-	    !(cnt->flags & (UG_CNT_RESIZABLE | UG_CNT_MOVABLE)))
+	    !(cnt->flags & (RESIZEALL | UG_CNT_MOVABLE)))
 		goto cnt_draw;
 	
 	ug_vec2_t mpos = ctx->mouse.pos;
@@ -365,9 +370,9 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	
 	// handle movable windows
 	if (cnt->flags & UG_CNT_MOVABLE) {
-		minx = rca->x;
+		minx = rca->x + bl;
 		maxx = rca->x + rca->w - br;
-		miny = rca->y;
+		miny = rca->y + bt;
 		maxy = rca->y + bt + hh;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
 			// if a relative container has been moved consider it no 
@@ -384,25 +389,57 @@ static void update_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		}
 	}
 
-	if (cnt->flags & UG_CNT_RESIZABLE) {
-		// right border resize
+	// right border resize
+	if (cnt->flags & UG_CNT_RESIZE_RIGHT) {
 		minx = rca->x + rca->w - br;
 		maxx = rca->x + rca->w;
 		miny = rca->y;
 		maxy = rca->y + rca->h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
 			rect->w += ctx->mouse.delta.x;
-			rca->w += ctx->mouse.delta.x;
+			rca->w  += ctx->mouse.delta.x;
 		}
+	}
 
-		// bottom border resize
+	// left border resize
+	if (cnt->flags & UG_CNT_RESIZE_LEFT) {
+		minx = rca->x - bl;
+		maxx = rca->x;
+		miny = rca->y;
+		maxy = rca->y + rca->h;
+		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+			rect->w -= ctx->mouse.delta.x;
+			rca->w  -= ctx->mouse.delta.x;
+			
+			rect->x += ctx->mouse.delta.x;
+			rca->x  += ctx->mouse.delta.x;
+		}
+	}
+
+	// bottom border resize
+	if (cnt->flags & UG_CNT_RESIZE_BOTTOM) {
 		minx = rca->x;
 		maxx = rca->x + rca->w;
 		miny = rca->y + rca->h - bb;
 		maxy = rca->y + rca->h;
 		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
 			rect->h += ctx->mouse.delta.y;
-			rca->h += ctx->mouse.delta.y;
+			rca->h  += ctx->mouse.delta.y;
+		}
+	}
+
+	// top border resize
+	if (cnt->flags & UG_CNT_RESIZE_TOP) {
+		minx = rca->x;
+		maxx = rca->x + rca->w;
+		miny = rca->y - bt;
+		maxy = rca->y;
+		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+			rect->h -= ctx->mouse.delta.y;
+			rca->h  -= ctx->mouse.delta.y;
+
+			rect->y += ctx->mouse.delta.y;
+			rca->y  += ctx->mouse.delta.y;
 		}
 	}
 
@@ -461,12 +498,66 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		cnt->id = id;
 		cnt->max_size = max_size;
 		cnt->rect = div_to_rect(ctx, &div);
-		cnt->flags = UG_CNT_MOVABLE  | UG_CNT_RESIZABLE |
+		cnt->flags = UG_CNT_MOVABLE  | RESIZEALL |
 			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
 	}
 
 	update_container(ctx, cnt);
 	
+	return 0;
+}
+
+
+int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int side)
+{
+	TEST_CTX(ctx);
+
+	ug_id_t id = 0; 
+	if (name) {
+		id = hash(name, strlen(name));
+	} else {
+		int blob[3] = { size.size.i, size.unit, side};
+		id = hash(blob, sizeof(blob));
+	}
+
+	ug_container_t *cnt = get_container(ctx, id);
+	
+	if (cnt->id) {
+		// nothing? maybe we can skip updating all dimensions and stuff
+	} else {
+		cnt->id = id;
+		cnt->max_size = max_size;
+		cnt->flags = UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y;
+		ug_rect_t rect = {0};
+		switch (side) {
+		case UG_SIDE_BOTTOM:
+			cnt->flags |= UG_CNT_RESIZE_TOP;
+			// FIXME: we do not support relative zero position yet
+			rect.y = -1;
+			rect.h = size_to_px(ctx, size);
+			break;
+		case UG_SIDE_TOP:
+			cnt->flags |= UG_CNT_RESIZE_BOTTOM;
+			rect.h = size_to_px(ctx, size);
+			break;
+		case UG_SIDE_RIGHT:  
+			cnt->flags |= UG_CNT_RESIZE_LEFT;
+			rect.x = -1;
+			rect.w = size_to_px(ctx, size);
+			break;
+		case UG_SIDE_LEFT:
+			cnt->flags |= UG_CNT_RESIZE_RIGHT;
+			rect.w = size_to_px(ctx, size);
+			break;
+		default: return -1;
+		}
+		cnt->rect = rect;
+	}
+
+	update_container(ctx, cnt);
+	
+	// TODO: change available context space to reflect adding a sidebar
+
 	return 0;
 }
 

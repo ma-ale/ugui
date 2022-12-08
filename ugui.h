@@ -39,10 +39,13 @@ typedef struct {
 
 // the container flags
 enum {
-	UG_CNT_MOVABLE   = BIT(0), // can be moved
-	UG_CNT_RESIZABLE = BIT(1), // can be resized
-	UG_CNT_SCROLL_X  = BIT(2), // can have horizontal scrolling
-	UG_CNT_SCROLL_Y  = BIT(3), // can have vertical scrolling
+	UG_CNT_MOVABLE       = BIT(0), // can be moved
+	UG_CNT_RESIZE_RIGHT  = BIT(1), // can be resized
+	UG_CNT_RESIZE_BOTTOM = BIT(2), // can be resized
+	UG_CNT_RESIZE_LEFT   = BIT(3), // can be resized
+	UG_CNT_RESIZE_TOP    = BIT(4), // can be resized
+	UG_CNT_SCROLL_X      = BIT(5), // can have horizontal scrolling
+	UG_CNT_SCROLL_Y      = BIT(6), // can have vertical scrolling
 };
 
 // style, defines default height, width, color, margins, borders, etc
@@ -111,6 +114,13 @@ typedef enum {
 	UG_CMD_RECT,
 } ug_cmd_type_t;
 
+// window side
+enum {
+	UG_SIDE_TOP = 0,
+	UG_SIDE_BOTTOM,
+	UG_SIDE_LEFT,
+	UG_SIDE_RIGHT,
+};
 
 // mouse buttons
 enum {
@@ -196,7 +206,7 @@ int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_rect_t rect);
 // top of the window
 int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, int height);
 // a sidebar is a variable size container anchored to one side of the window
-int ug_container_sidebar(ug_ctx_t *ctx, const char *name, int width);
+int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int side);
 // a body is a container that scales with the window, sits at it's center and cannot
 // be resized
 int ug_container_body(ug_ctx_t *ctx, const char *name);

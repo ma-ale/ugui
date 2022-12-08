@@ -180,7 +180,7 @@ int main(void)
 		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 		ug_container_floating(ctx, "better name", 
 		                      (ug_div_t){.x=SIZE_PX(-10), .y=SIZE_PT(-16), .w=SIZE_MM(100), .h=SIZE_PX(15)});
-
+		ug_container_sidebar(ctx, "Sidebar", (ug_size_t)SIZE_PX(300), UG_SIDE_BOTTOM);
 		ug_frame_end(ctx);
 
 		// fill background
