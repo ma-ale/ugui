@@ -13,11 +13,28 @@
 #define DEF_PPI      96.0
 #define STACK_STEP   64
 
-#define RESIZEALL    UG_CNT_RESIZE_RIGHT  |                                    \
-                     UG_CNT_RESIZE_BOTTOM |                                    \
-                     UG_CNT_RESIZE_LEFT   |                                    \
-                     UG_CNT_RESIZE_TOP 
-#define BTN_ANY      UG_BTN_LEFT | UG_BTN_RIGHT | UG_BTN_MIDDLE | UG_BTN_4 | UG_BTN_5
+#define RESIZEALL     (                                                        \
+                      UG_CNT_RESIZE_RIGHT  |                                   \
+                      UG_CNT_RESIZE_BOTTOM |                                   \
+                      UG_CNT_RESIZE_LEFT   |                                   \
+                      UG_CNT_RESIZE_TOP                                        \
+                      )
+
+#define BTN_ANY       (                                                        \
+                      UG_BTN_LEFT   |                                          \
+                      UG_BTN_RIGHT  |                                          \
+                      UG_BTN_MIDDLE |                                          \
+                      UG_BTN_4      |                                          \
+                      UG_BTN_5                                                 \
+                      )
+
+#define CNT_STATE_ALL (                                                        \
+                      CNT_STATE_MOVING   |                                     \
+		      CNT_STATE_RESIZE_T |                                     \
+                      CNT_STATE_RESIZE_B |                                     \
+                      CNT_STATE_RESIZE_L |                                     \
+                      CNT_STATE_RESIZE_R                                       \
+                      )
 
 #define PPI_PPM(ppi, scale)  (ppi * scale * 0.03937008)
 #define PPI_PPD(ppi, scale)  (PPI_PPM(ppi, scale) * 0.3528)
@@ -86,8 +103,9 @@ static ug_style_t style_cache = {0};
 }
 
 
-#define MOUSEDOWN(ctx, btn) (ctx->mouse.press_mask &  ctx->mouse.down_mask & btn)
-#define MOUSEUP(ctx, btn)   (ctx->mouse.press_mask & ~ctx->mouse.down_mask & btn)
+#define MOUSEDOWN(ctx, btn) (~(ctx->mouse.hold & btn) & (ctx->mouse.update & btn))
+#define MOUSEUP(ctx, btn)   ((ctx->mouse.hold & btn)  & (ctx->mouse.update & btn))
+#define HELD(ctx, btn)      (ctx->mouse.hold & btn)
 
 
 // https://en.wikipedia.org/wiki/Jenkins_hash_function
@@ -346,14 +364,17 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
-	// if we had focus the frame before, then do shit
-	if (ctx->active.cnt != cnt->id)
+	if (ctx->active.cnt != cnt->id) {
+		// if we are not the active container than definately we are not
+		// being moved or resized
+		cnt->flags &= ~CNT_STATE_ALL;
 		return;
+	}
 
 	// mouse pressed handle resize, for simplicity containers can only 
 	// be resized from the bottom and right border
 	// TODO: bring selected container to the top of the stack
-	if (!TEST(ctx->mouse.down_mask, UG_BTN_LEFT) ||
+	if (!HELD(ctx, UG_BTN_LEFT) ||
 	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_MOVABLE)))
 		return;
 	
@@ -371,13 +392,19 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	ug_vec2_t mpos = ctx->mouse.pos;
 	int minx, maxx, miny, maxy;
 	
+	printf("state: %x\n", (cnt->flags & CNT_STATE_ALL)>>16);
+
 	// handle movable windows
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		minx = rca->x + bl;
 		maxx = rca->x + rca->w - br;
 		miny = rca->y + bt;
 		maxy = rca->y + bt + hh;
-		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_MOVING ||
+		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
+		     BETWEEN(mpos.x, minx, maxx)                       &&
+		     BETWEEN(mpos.y, miny, maxy))) {
+			cnt->flags |= CNT_STATE_MOVING;
 			rect->x += ctx->mouse.delta.x;
 			rect->y += ctx->mouse.delta.y;
 			rca->x  += ctx->mouse.delta.x;
@@ -391,7 +418,11 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		maxx = rca->x + rca->w;
 		miny = rca->y;
 		maxy = rca->y + rca->h;
-		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_R ||
+		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
+		     BETWEEN(mpos.x, minx, maxx)                       &&
+		     BETWEEN(mpos.y, miny, maxy))) {
+			cnt->flags |= CNT_STATE_RESIZE_R;
 			rect->w = MAX(10, rect->w + ctx->mouse.delta.x);
 			rca->w  = MAX(10, rca->w + ctx->mouse.delta.x);
 		}
@@ -403,7 +434,12 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		maxx = rca->x + bl;
 		miny = rca->y;
 		maxy = rca->y + rca->h;
-		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_L ||
+		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
+		     BETWEEN(mpos.x, minx, maxx)                       &&
+		     BETWEEN(mpos.y, miny, maxy))) {
+			cnt->flags |= CNT_STATE_RESIZE_L;
+
 			if (rect->w - ctx->mouse.delta.x >= 10) {
 				rect->w -= ctx->mouse.delta.x;
 				if (TEST(cnt->flags, UG_CNT_MOVABLE))
@@ -422,7 +458,11 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		maxx = rca->x + rca->w;
 		miny = rca->y + rca->h - bb;
 		maxy = rca->y + rca->h;
-		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_B ||
+		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
+		     BETWEEN(mpos.x, minx, maxx)                       &&
+		     BETWEEN(mpos.y, miny, maxy))) {
+			cnt->flags |= CNT_STATE_RESIZE_B;
 			rect->h += ctx->mouse.delta.y;
 			rca->h  += ctx->mouse.delta.y;
 		}
@@ -434,7 +474,10 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		maxx = rca->x + rca->w;
 		miny = rca->y;
 		maxy = rca->y + bt;
-		if (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy)) {
+		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_T ||
+		    (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy))) {
+			cnt->flags |= CNT_STATE_RESIZE_T;
+
 			if (rect->h - ctx->mouse.delta.y >= 10) {
 				rect->h -= ctx->mouse.delta.y;
 				if (TEST(cnt->flags, UG_CNT_MOVABLE))
@@ -602,8 +645,7 @@ int ug_input_mousedown(ug_ctx_t *ctx, unsigned int mask)
 {
 	TEST_CTX(ctx);
 
-	ctx->mouse.press_mask |= mask;
-	ctx->mouse.down_mask  |= mask;
+	ctx->mouse.update  |= mask;
 
 	return 0;
 }
@@ -613,7 +655,7 @@ int ug_input_mouseup(ug_ctx_t *ctx, unsigned int mask)
 {
 	TEST_CTX(ctx);
 
-	ctx->mouse.down_mask &= ~mask;
+	ctx->mouse.update |= mask;
 
 	return 0;
 }
@@ -656,6 +698,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	} else if (MOUSEUP(ctx, UG_BTN_LEFT)) {
 		ctx->active.cnt = 0;
 	}
+	printf("active: %x\n", ctx->active.cnt);
 
 	return 0;
 }
@@ -667,8 +710,9 @@ int ug_frame_end(ug_ctx_t *ctx)
 	TEST_CTX(ctx);
 
 	ctx->input_text[0]      = '\0';
-	ctx->key.press_mask     = 0;
-	ctx->mouse.press_mask   = 0;
+	ctx->key.update         = 0;
+	ctx->mouse.hold        ^= ctx->mouse.update;
+	ctx->mouse.update       = 0;
 	ctx->mouse.scroll_delta = (ug_vec2_t){0};
 	ctx->mouse.last_pos     = ctx->mouse.pos;
 

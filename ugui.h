@@ -46,6 +46,12 @@ enum {
 	UG_CNT_RESIZE_TOP    = BIT(4), // can be resized
 	UG_CNT_SCROLL_X      = BIT(5), // can have horizontal scrolling
 	UG_CNT_SCROLL_Y      = BIT(6), // can have vertical scrolling
+	// container state
+	CNT_STATE_MOVING     = BIT(30),
+	CNT_STATE_RESIZE_T   = BIT(29),
+	CNT_STATE_RESIZE_B   = BIT(28),
+	CNT_STATE_RESIZE_L   = BIT(27),
+	CNT_STATE_RESIZE_R   = BIT(26),
 };
 
 // style, defines default height, width, color, margins, borders, etc
@@ -165,17 +171,15 @@ typedef struct {
 		ug_vec2_t last_pos;
 		ug_vec2_t delta;
 		ug_vec2_t scroll_delta;
-		// down/pressed masks get updated on mousedown, whereas down_mask
-		// only on mouseup, so the masks differ by the buttons that were
-		// released
-		// FIXME: is this the best way to approach this?
-		unsigned char down_mask;
-		unsigned char press_mask;
+		// mouse.update: a mask of the mouse buttons that are being updated
+		unsigned char update;
+		// mouse.hold: a mask of the buttons that are being held
+		unsigned char hold;
 	} mouse;
 	// keyboard key pressed
 	struct {
-		unsigned char down_mask;
-		unsigned char press_mask;
+		unsigned char update;
+		unsigned char hold;
 	} key;
 	// input text buffer
 	char input_text[32];
