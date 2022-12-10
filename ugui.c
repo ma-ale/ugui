@@ -323,9 +323,9 @@ static void sort_containers(ug_ctx_t *ctx)
 	ctx->cnt_stack.sorted = 1;
 }
 
-// update the container dimensions and position according to the context information,
-// also handle resizing, moving, ect. if allowed by the container
-static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
+
+// update the container position in the context area
+static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
 	ug_rect_t *rect, *rca;
 	rect = &cnt->rect;
@@ -394,6 +394,9 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// if the container is not fixed than it can have positions outside of the
 	// main window, thus negative
 	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
+		// if there is no space left propagate the error
+		if (!ctx->origin.w || !ctx->origin.h)
+			return -1;
 		// <0 -> relative to the right margin
 		if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
 		else rca->x = cx;
@@ -402,51 +405,18 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		
 		// if the container is fixed than update the available space in
 		// the context
-		if (rect->x >= 0 && rect->y >= 0) {
-			if (rect->w) {
-				ctx->origin.x = rca->x + rca->w;
-				ctx->origin.w -= rca->w;	
-			} else if (rect->h) {
-				ctx->origin.y = rca->y + rca->h;
-				ctx->origin.h -= rca->h;
-			} else printf("Huh?\n");
-
-		} else if (rect->x < 0 && rect->y >= 0) {
-			if (rect->w) {
-				ctx->origin.w -= rca->w;
-			} else if (rect->h) {
-				ctx->origin.y = rca->y + rca->h;
-				ctx->origin.h -= rca->h;
-			} else printf("Huh?\n");
-
-		} else if (rect->x >= 0 && rect->y < 0) {
-			printf("Really? %x\n", cnt->id);
-			if (rect->w) {
-				ctx->origin.x = rca->x + rca->w;
-				ctx->origin.w -= rca->w;
-			} else if (rect->h) {
-				ctx->origin.h -= rca->h;
-			} else printf("Huh?\n");
-		} else printf("What?\n");
-
-//		if (rect->y >= 0) {
-//			if (rect->x < 0) {
-//				ctx->origin.w = rca->x;
-//			} else {
-//				ctx->origin.x = rca->x + rca->w;
-//				ctx->origin.w -= rca->w;
-//			}
-//		}
-//
-//		if (rect->x >= 0) {
-//			if (rect->y < 0) {
-//				ctx->origin.h = rca->y;
-//			} else {
-//				ctx->origin.y = rca->y + rca->h;
-//				ctx->origin.y -= rca->h;
-//			}
-//		}
+		if (rect->w) {
+			ctx->origin.x = rect->x >= 0 ? rca->x + rca->w : ctx->origin.x;
+			ctx->origin.w -= rca->w;
+		} else if (rect->h) {
+			ctx->origin.y = rect->y >= 0 ? rca->y + rca->h : ctx->origin.y;
+			ctx->origin.h -= rca->h;
+		} else {
+			// width and height zero means fill everything
+			ctx->origin.w = ctx->origin.h = 0;
+		}
 	}
+	return 0;
 }
 
 
@@ -652,7 +622,9 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
 	}
 
-	position_container(ctx, cnt);
+	// TODO:  what about error codes and meaning?
+	if (position_container(ctx, cnt))
+		return -1;
 	handle_container(ctx, cnt);
 	
 	return 0;
@@ -705,7 +677,8 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		cnt->rect = rect;
 	}
 
-	position_container(ctx, cnt);
+	if (position_container(ctx, cnt))
+		return -1;
 	handle_container(ctx, cnt);
 
 	return 0;
@@ -738,10 +711,41 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 		cnt->rect = rect;
 	}
 
-	position_container(ctx, cnt);
+	if (position_container(ctx, cnt))
+		return -1;
 	handle_container(ctx, cnt);
 
-	printf("origin: x=%d y=%d w=%d h=%d\n", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
+	return 0;
+}
+
+
+int ug_container_body(ug_ctx_t *ctx, const char *name)
+{
+	TEST_CTX(ctx);
+
+	ug_id_t id = 0; 
+	if (name) {
+		id = hash(name, strlen(name));
+	} else {
+		// sorry but body must have a name
+		return -1;
+	}
+
+	ug_container_t *cnt = get_container(ctx, id);
+	
+	if (cnt->id) {
+		// nothing? maybe we can skip updating all dimensions and stuff
+	} else {
+		cnt->id = id;
+		cnt->max_size = max_size;
+		cnt->flags = 0;
+		cnt->rect = (ug_rect_t){0};
+	}
+
+	if (position_container(ctx, cnt))
+		return -1;
+	handle_container(ctx, cnt);
+
 	return 0;
 }
 

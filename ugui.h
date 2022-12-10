@@ -217,7 +217,7 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height);
 // a sidebar is a variable size container anchored to one side of the window
 int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int side);
 // a body is a container that scales with the window, sits at it's center and cannot
-// be resized
+// be resized, it also fills all the available space
 int ug_container_body(ug_ctx_t *ctx, const char *name);
 
 // Input functions
