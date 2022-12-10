@@ -283,8 +283,6 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 	// if the container was not already there allocate a new one
 	if (!c) {
 		GET_FROM_STACK(ctx->cnt_stack, c);
-		// the stack is not sorted
-		ctx->cnt_stack.sorted = 0;
 	}
 
 	return c;
@@ -295,9 +293,6 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 // the active floating conatiner i son top of everything
 static void sort_containers(ug_ctx_t *ctx)
 {
-	if (ctx->cnt_stack.sorted)
-		return;
-
 	int tot = ctx->cnt_stack.idx;
 	if (!tot)
 		return;
@@ -321,7 +316,6 @@ static void sort_containers(ug_ctx_t *ctx)
 			s[y-1] = c;
 		}
 	}
-	ctx->cnt_stack.sorted = 1;
 }
 
 // update the container dimensions and position according to the context information,
@@ -783,7 +777,6 @@ int ug_frame_end(ug_ctx_t *ctx)
 	TEST_CTX(ctx);
 
 	// before drawing floating contaners need to be drawn on top of the others
-	printf("sorted %d\n", ctx->cnt_stack.sorted);
 	sort_containers(ctx);
 	for (int i = 0; i < ctx->cnt_stack.idx; i++)
 		draw_container(ctx, &ctx->cnt_stack.items[i]);

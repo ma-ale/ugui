@@ -1,7 +1,7 @@
 #ifndef _UG_HEADER
 #define _UG_HEADER
 
-#define UG_STACK(T)    struct { T *items; int idx, size, sorted }
+#define UG_STACK(T)    struct { T *items; int idx, size, sorted; }
 #define BIT(n)         (1 << n)
 #define RGBA_FORMAT(x) { .a=x&0xff, .b=(x>>8)&0xff, .g=(x>>16)&0xff, .r=(x>>24)&0xff }
 #define RGB_FORMAT(x)  { .a=0xff, .b=x&0xff, .g=(x>>8)&0xff, .r=(x>>16)&0xff }
