@@ -175,6 +175,8 @@ int main(void)
 
 		ug_frame_begin(ctx);
 
+		ug_container_menu_bar(ctx, "Menu fichissimo", (ug_size_t)SIZE_PX(24));
+
 		ug_container_floating(ctx, "stupid name", 
 		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 

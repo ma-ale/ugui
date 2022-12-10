@@ -188,8 +188,8 @@ ug_ctx_t *ug_ctx_new(void)
 	memset(ctx, 0, sizeof(ug_ctx_t));
 
 	ctx->style     = &default_style;
-	ctx->style_px  = &style_cache;\
-	// NOTE: this fixes a bug where for the first frame the container stack\
+	ctx->style_px  = &style_cache;
+	// NOTE: this fixes a bug where for the first frame the container stack
 	//       doesn't get sorted, but it is kind of a botch
 	ctx->last_active.cnt = 1;
 	ug_ctx_set_displayinfo(ctx, DEF_SCALE, DEF_PPI);
@@ -402,23 +402,50 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		
 		// if the container is fixed than update the available space in
 		// the context
-		if (rect->y >= 0) {
-			if (rect->x < 0) {
-				ctx->origin.w = rca->x;
-			} else {
+		if (rect->x >= 0 && rect->y >= 0) {
+			if (rect->w) {
+				ctx->origin.x = rca->x + rca->w;
+				ctx->origin.w -= rca->w;	
+			} else if (rect->h) {
+				ctx->origin.y = rca->y + rca->h;
+				ctx->origin.h -= rca->h;
+			} else printf("Huh?\n");
+
+		} else if (rect->x < 0 && rect->y >= 0) {
+			if (rect->w) {
+				ctx->origin.w -= rca->w;
+			} else if (rect->h) {
+				ctx->origin.y = rca->y + rca->h;
+				ctx->origin.h -= rca->h;
+			} else printf("Huh?\n");
+
+		} else if (rect->x >= 0 && rect->y < 0) {
+			printf("Really? %x\n", cnt->id);
+			if (rect->w) {
 				ctx->origin.x = rca->x + rca->w;
 				ctx->origin.w -= rca->w;
-			}
-		}
+			} else if (rect->h) {
+				ctx->origin.h -= rca->h;
+			} else printf("Huh?\n");
+		} else printf("What?\n");
 
-		if (rect->x >= 0) {
-			if (rect->y < 0) {
-				ctx->origin.h = rca->y;
-			} else {
-				ctx->origin.y = rca->y + rca->h;
-				ctx->origin.y -= rca->h;
-			}
-		}
+//		if (rect->y >= 0) {
+//			if (rect->x < 0) {
+//				ctx->origin.w = rca->x;
+//			} else {
+//				ctx->origin.x = rca->x + rca->w;
+//				ctx->origin.w -= rca->w;
+//			}
+//		}
+//
+//		if (rect->x >= 0) {
+//			if (rect->y < 0) {
+//				ctx->origin.h = rca->y;
+//			} else {
+//				ctx->origin.y = rca->y + rca->h;
+//				ctx->origin.y -= rca->h;
+//			}
+//		}
 	}
 }
 
@@ -680,9 +707,41 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 
 	position_container(ctx, cnt);
 	handle_container(ctx, cnt);
-	
-	// TODO: change available context space to reflect adding a sidebar
 
+	return 0;
+}
+
+int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
+{
+	TEST_CTX(ctx);
+
+	ug_id_t id = 0; 
+	if (name) {
+		id = hash(name, strlen(name));
+	} else {
+		int blob[2] = { height.size.i, height.unit};
+		id = hash(blob, sizeof(blob));
+	}
+
+	ug_container_t *cnt = get_container(ctx, id);
+	
+	if (cnt->id) {
+		// nothing? maybe we can skip updating all dimensions and stuff
+	} else {
+		cnt->id = id;
+		cnt->max_size = max_size;
+		cnt->flags = 0;
+		ug_rect_t rect = {
+			.x = 0, .y = 0,
+			.w = 0, .h = size_to_px(ctx, height),
+		};
+		cnt->rect = rect;
+	}
+
+	position_container(ctx, cnt);
+	handle_container(ctx, cnt);
+
+	printf("origin: x=%d y=%d w=%d h=%d\n", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 	return 0;
 }
 
@@ -753,7 +812,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	ctx->origin.h = ctx->size.h;
 
 	// update hover index
-	printf("Container Stack:\n");
+	printf("Container Stack: active %x\n", ctx->active.cnt);
 	ug_vec2_t v = ctx->mouse.pos;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
 		printf("[%d]: %x\n", i, ctx->cnt_stack.items[i].id);

@@ -213,7 +213,7 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div);
 int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_rect_t rect);
 // a menu bar is a container of fixed height, cannot be resized and sits at the
 // top of the window
-int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, int height);
+int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height);
 // a sidebar is a variable size container anchored to one side of the window
 int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int side);
 // a body is a container that scales with the window, sits at it's center and cannot
