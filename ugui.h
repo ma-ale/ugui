@@ -151,6 +151,7 @@ typedef struct {
 	// containers need to know how big the "main container" is so that all
 	// the relative positioning work
 	ug_vec2_t size;
+	ug_rect_t origin;
 	// which context and element we are hovering
 	struct {
 		ug_id_t cnt, elem;
@@ -163,6 +164,9 @@ typedef struct {
 	struct {
 		ug_id_t cnt, elem;
 	} active;
+	struct {
+		ug_id_t cnt, elem;
+	} last_active;
 	// count the frames for fun
 	unsigned long int frame;
 	// mouse data

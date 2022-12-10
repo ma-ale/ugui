@@ -342,8 +342,10 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int bt = s->cnt.border.t.size.i;
 	int bb = s->cnt.border.b.size.i;
 	int hh = s->cnt.titlebar.height.size.i;
-	int cw = ctx->size.w;
-	int ch = ctx->size.h;
+	int cx = ctx->origin.x;
+	int cy = ctx->origin.y;
+	int cw = ctx->origin.w;
+	int ch = ctx->origin.h;
 
 	// handle relative sizes
 	if (rect->w == 0) rca->w = cw;
@@ -352,21 +354,46 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	else if (TEST(cnt->flags, UG_CNT_MOVABLE)) rca->h += hh + 2*bt + bb;
 	else rca->h += bt + bb;
 
+
 	// if the container is not fixed than it can have positions outside of the
 	// main window, thus negative
 	if (!TEST(cnt->flags, UG_CNT_MOVABLE)) {
+		printf("origin: x=%d y=%d w=%d h=%d\t", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 		// <0 -> relative to the right margin
-		if (rect->x <= 0) rca->x = cw - rca->w + rca->x;
-		if (rect->y <= 0) rca->y = ch - rca->h + rca->y;
+		if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
+		else rca->x = cx;
+		if (rect->y < 0) rca->y = cy + ch - rca->h + rca->y + 1;
+		else rca->y = cy;
+		
+		// if the container is fixed than update the available space in
+		// the context
+		if (rect->y >= 0) {
+			if (rect->x < 0) {
+				ctx->origin.w = rca->x;
+			} else {
+				ctx->origin.x = rca->x + rca->w;
+				ctx->origin.w -= rca->w;
+			}
+		}
+
+		if (rect->x >= 0) {
+			if (rect->y < 0) {
+				ctx->origin.h = rca->y;
+			} else {
+				ctx->origin.y = rca->y + rca->h;
+				ctx->origin.y -= rca->h;
+			}
+		}
+		printf("new origin: x=%d y=%d w=%d h=%d\n", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 	}
 }
 
 
 void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
+	// if we are not the currently active container than definately we are not
+	// being moved or resized
 	if (ctx->active.cnt != cnt->id) {
-		// if we are not the active container than definately we are not
-		// being moved or resized
 		cnt->flags &= ~CNT_STATE_ALL;
 		return;
 	}
@@ -392,8 +419,6 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	ug_vec2_t mpos = ctx->mouse.pos;
 	int minx, maxx, miny, maxy;
 	
-	printf("state: %x\n", (cnt->flags & CNT_STATE_ALL)>>16);
-
 	// handle movable windows
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		minx = rca->x + bl;
@@ -593,7 +618,7 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		case UG_SIDE_BOTTOM:
 			cnt->flags |= UG_CNT_RESIZE_TOP;
 			// FIXME: we do not support relative zero position yet
-			rect.y = 0;
+			rect.y = -1;
 			rect.h = size_to_px(ctx, size);
 			break;
 		case UG_SIDE_TOP:
@@ -602,7 +627,7 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 			break;
 		case UG_SIDE_RIGHT:  
 			cnt->flags |= UG_CNT_RESIZE_LEFT;
-			rect.x = 0;
+			rect.x = -1;
 			rect.w = size_to_px(ctx, size);
 			break;
 		case UG_SIDE_LEFT:
@@ -683,6 +708,12 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	// clear command stack
 	RESET_STACK(ctx->cmd_stack);
 
+	// update the origin
+	ctx->origin.x = 0;
+	ctx->origin.y = 0;
+	ctx->origin.w = ctx->size.w;
+	ctx->origin.h = ctx->size.h;
+
 	// update hover index
 	ug_vec2_t v = ctx->mouse.pos;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
@@ -696,9 +727,11 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	if (MOUSEDOWN(ctx, UG_BTN_LEFT)) {
 		ctx->active.cnt = ctx->hover.cnt;
 	} else if (MOUSEUP(ctx, UG_BTN_LEFT)) {
+		ctx->last_active.cnt = ctx->active.cnt;
 		ctx->active.cnt = 0;
 	}
-	printf("active: %x\n", ctx->active.cnt);
+
+	//printf("active (%x) last active (%x)\n",ctx->active.cnt, ctx->last_active.cnt);
 
 	return 0;
 }
