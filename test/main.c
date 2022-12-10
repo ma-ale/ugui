@@ -175,16 +175,20 @@ int main(void)
 
 		ug_frame_begin(ctx);
 
-//		ug_container_floating(ctx, "stupid name", 
-//		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
-//		
-//		ug_container_floating(ctx, "stupid er", 
-//		                      (ug_div_t){.x=SIZE_PX(150), .y=SIZE_PX(-100), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
-	
+		ug_container_floating(ctx, "stupid name", 
+		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+
+		ug_container_floating(ctx, "floating windoooooooow", 
+		                      (ug_div_t){.x=SIZE_PX(100), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+
 		ug_container_sidebar(ctx, "Right Sidebar", (ug_size_t)SIZE_PX(300), UG_SIDE_RIGHT);
 		ug_container_sidebar(ctx, "Left Sidebar", (ug_size_t)SIZE_PX(200), UG_SIDE_LEFT);
 		ug_container_sidebar(ctx, "Bottom Sidebar", (ug_size_t)SIZE_MM(10), UG_SIDE_BOTTOM);
 		ug_container_sidebar(ctx, "Top Sidebar", (ug_size_t)SIZE_MM(40), UG_SIDE_TOP);
+
+		ug_container_floating(ctx, "stupid er", 
+		                      (ug_div_t){.x=SIZE_PX(150), .y=SIZE_PX(-100), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+	
 
 		ug_frame_end(ctx);
 

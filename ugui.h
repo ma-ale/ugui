@@ -1,7 +1,7 @@
 #ifndef _UG_HEADER
 #define _UG_HEADER
 
-#define UG_STACK(T)    struct { T *items; int idx; int size; }
+#define UG_STACK(T)    struct { T *items; int idx, size, sorted }
 #define BIT(n)         (1 << n)
 #define RGBA_FORMAT(x) { .a=x&0xff, .b=(x>>8)&0xff, .g=(x>>16)&0xff, .r=(x>>24)&0xff }
 #define RGB_FORMAT(x)  { .a=0xff, .b=x&0xff, .g=(x>>8)&0xff, .r=(x>>16)&0xff }
@@ -39,7 +39,7 @@ typedef struct {
 
 // the container flags
 enum {
-	UG_CNT_MOVABLE       = BIT(0), // can be moved
+	UG_CNT_FLOATING      = BIT(0), // can be moved
 	UG_CNT_RESIZE_RIGHT  = BIT(1), // can be resized
 	UG_CNT_RESIZE_BOTTOM = BIT(2), // can be resized
 	UG_CNT_RESIZE_LEFT   = BIT(3), // can be resized
@@ -47,11 +47,12 @@ enum {
 	UG_CNT_SCROLL_X      = BIT(5), // can have horizontal scrolling
 	UG_CNT_SCROLL_Y      = BIT(6), // can have vertical scrolling
 	// container state
-	CNT_STATE_MOVING     = BIT(30),
-	CNT_STATE_RESIZE_T   = BIT(29),
-	CNT_STATE_RESIZE_B   = BIT(28),
-	CNT_STATE_RESIZE_L   = BIT(27),
-	CNT_STATE_RESIZE_R   = BIT(26),
+	CNT_STATE_NONE       = BIT(30),
+	CNT_STATE_MOVING     = BIT(29),
+	CNT_STATE_RESIZE_T   = BIT(28),
+	CNT_STATE_RESIZE_B   = BIT(27),
+	CNT_STATE_RESIZE_L   = BIT(26),
+	CNT_STATE_RESIZE_R   = BIT(25),
 };
 
 // style, defines default height, width, color, margins, borders, etc

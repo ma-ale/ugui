@@ -29,6 +29,7 @@
                       )
 
 #define CNT_STATE_ALL (                                                        \
+                      CNT_STATE_NONE     |                                     \
                       CNT_STATE_MOVING   |                                     \
 		      CNT_STATE_RESIZE_T |                                     \
                       CNT_STATE_RESIZE_B |                                     \
@@ -280,12 +281,48 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 		}
 	}
 	// if the container was not already there allocate a new one
-	if (!c)
+	if (!c) {
 		GET_FROM_STACK(ctx->cnt_stack, c);
+		// the stack is not sorted
+		ctx->cnt_stack.sorted = 0;
+	}
 
 	return c;
 }
 
+
+// sort the conatiner stack so that floating conatiners always stay on top and
+// the active floating conatiner i son top of everything
+static void sort_containers(ug_ctx_t *ctx)
+{
+	if (ctx->cnt_stack.sorted)
+		return;
+
+	int tot = ctx->cnt_stack.idx;
+	if (!tot)
+		return;
+	for (int i = 0; i < tot; i++) {
+		ug_container_t *cnt = &ctx->cnt_stack.items[i];
+		// move floating containers to the top
+		// FIXME: this is really shit
+		if (TEST(cnt->flags, UG_CNT_FLOATING)) {
+			int y = tot;
+
+			ug_container_t *s = ctx->cnt_stack.items;
+			ug_container_t c = *cnt;
+			
+			if (ctx->active.cnt != c.id)
+				for (; y > 0 && TEST(s[y-1].flags, UG_CNT_FLOATING); y--);
+			
+			if (i >= y)
+				break;
+			
+			memmove(&s[i], &s[i+1], (y - i) * sizeof(ug_container_t));
+			s[y-1] = c;
+		}
+	}
+	ctx->cnt_stack.sorted = 1;
+}
 
 // update the container dimensions and position according to the context information,
 // also handle resizing, moving, ect. if allowed by the container
@@ -351,14 +388,14 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	if (rect->w == 0) rca->w = cw;
 	else rca->w += bl + br;
 	if (rect->h == 0) rca->h = ch;
-	else if (TEST(cnt->flags, UG_CNT_MOVABLE)) rca->h += hh + 2*bt + bb;
+	else if (TEST(cnt->flags, UG_CNT_FLOATING)) rca->h += hh + 2*bt + bb;
 	else rca->h += bt + bb;
 
 
 	// if the container is not fixed than it can have positions outside of the
 	// main window, thus negative
-	if (!TEST(cnt->flags, UG_CNT_MOVABLE)) {
-		printf("origin: x=%d y=%d w=%d h=%d\t", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
+	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
+		//printf("origin: x=%d y=%d w=%d h=%d\t", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 		// <0 -> relative to the right margin
 		if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
 		else rca->x = cx;
@@ -384,7 +421,7 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 				ctx->origin.y -= rca->h;
 			}
 		}
-		printf("new origin: x=%d y=%d w=%d h=%d\n", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
+		//printf("new origin: x=%d y=%d w=%d h=%d\n", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 	}
 }
 
@@ -402,7 +439,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// be resized from the bottom and right border
 	// TODO: bring selected container to the top of the stack
 	if (!HELD(ctx, UG_BTN_LEFT) ||
-	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_MOVABLE)))
+	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_FLOATING)))
 		return;
 	
 	ug_rect_t *rect, *rca;
@@ -420,7 +457,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int minx, maxx, miny, maxy;
 	
 	// handle movable windows
-	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
+	if (TEST(cnt->flags, UG_CNT_FLOATING)) {
 		minx = rca->x + bl;
 		maxx = rca->x + rca->w - br;
 		miny = rca->y + bt;
@@ -467,7 +504,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 			if (rect->w - ctx->mouse.delta.x >= 10) {
 				rect->w -= ctx->mouse.delta.x;
-				if (TEST(cnt->flags, UG_CNT_MOVABLE))
+				if (TEST(cnt->flags, UG_CNT_FLOATING))
 					rect->x += ctx->mouse.delta.x;
 			}
 			if (rca->w - ctx->mouse.delta.x >= 10) {
@@ -505,7 +542,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 			if (rect->h - ctx->mouse.delta.y >= 10) {
 				rect->h -= ctx->mouse.delta.y;
-				if (TEST(cnt->flags, UG_CNT_MOVABLE))
+				if (TEST(cnt->flags, UG_CNT_FLOATING))
 					rect->y += ctx->mouse.delta.y;
 			}
 			if (rca->h - ctx->mouse.delta.y >= 10) {
@@ -514,6 +551,11 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 			}
 		}
 	}
+
+	// if we were not resized but we are still active it means we are doing 
+	// something to the contained elements, as such set state to none
+	if ((cnt->flags & CNT_STATE_ALL) == 0)
+		cnt->flags |= CNT_STATE_NONE;
 
 	// TODO: what if I want to close a floating container?
 	//       Maybe add a UG_CNT_CLOSABLE flag?
@@ -541,7 +583,7 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	push_rect_command(ctx, &draw_rect, s->cnt.border.color);
 	
 	// titlebar
-	if (cnt->flags & UG_CNT_MOVABLE) {
+	if (cnt->flags & UG_CNT_FLOATING) {
 		draw_rect.x += bl;
 		draw_rect.y += bt;
 		draw_rect.w -= bl + br;
@@ -555,7 +597,7 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	draw_rect.y += bt;
 	draw_rect.w -= bl + br;
 	draw_rect.h -= bt + bb;
-	if (cnt->flags & UG_CNT_MOVABLE) {
+	if (cnt->flags & UG_CNT_FLOATING) {
 		draw_rect.y += bt + hh;
 		draw_rect.h -= bt + hh;
 	}
@@ -580,14 +622,12 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		cnt->id = id;
 		cnt->max_size = max_size;
 		cnt->rect = div_to_rect(ctx, &div);
-		cnt->flags = UG_CNT_MOVABLE  | RESIZEALL |
+		cnt->flags = UG_CNT_FLOATING  | RESIZEALL |
 			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
 	}
 
-	// FIXME: floating containers should always stay on top
 	position_container(ctx, cnt);
 	handle_container(ctx, cnt);
-	draw_container(ctx, cnt);
 	
 	return 0;
 }
@@ -641,7 +681,6 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 
 	position_container(ctx, cnt);
 	handle_container(ctx, cnt);
-	draw_container(ctx, cnt);
 	
 	// TODO: change available context space to reflect adding a sidebar
 
@@ -717,6 +756,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	// update hover index
 	ug_vec2_t v = ctx->mouse.pos;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
+		printf("[%d]: %x\n", i, ctx->cnt_stack.items[i].id);
 		ug_rect_t r = ctx->cnt_stack.items[i].rca;
 		if (INTERSECTS(v, r)) {
 			ctx->hover.cnt = ctx->cnt_stack.items[i].id;
@@ -741,6 +781,13 @@ int ug_frame_begin(ug_ctx_t *ctx)
 int ug_frame_end(ug_ctx_t *ctx)
 {
 	TEST_CTX(ctx);
+
+	// before drawing floating contaners need to be drawn on top of the others
+	printf("sorted %d\n", ctx->cnt_stack.sorted);
+	sort_containers(ctx);
+	for (int i = 0; i < ctx->cnt_stack.idx; i++)
+		draw_container(ctx, &ctx->cnt_stack.items[i]);
+
 
 	ctx->input_text[0]      = '\0';
 	ctx->key.update         = 0;
