@@ -188,7 +188,10 @@ ug_ctx_t *ug_ctx_new(void)
 	memset(ctx, 0, sizeof(ug_ctx_t));
 
 	ctx->style     = &default_style;
-	ctx->style_px  = &style_cache;
+	ctx->style_px  = &style_cache;\
+	// NOTE: this fixes a bug where for the first frame the container stack\
+	//       doesn't get sorted, but it is kind of a botch
+	ctx->last_active.cnt = 1;
 	ug_ctx_set_displayinfo(ctx, DEF_SCALE, DEF_PPI);
 
 	// TODO: allocate stacks
@@ -244,9 +247,6 @@ int ug_ctx_set_drawableregion(ug_ctx_t *ctx, ug_vec2_t size)
 	ctx->size.w = size.w;
 	ctx->size.h = size.h;
 
-	// FIXME: do I need to do something like update_container_size() here?
-	//        maybe it is redundant since each frame not every conatiner is
-	//        re-added
 	return 0;
 }
 
@@ -283,6 +283,7 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 	// if the container was not already there allocate a new one
 	if (!c) {
 		GET_FROM_STACK(ctx->cnt_stack, c);
+		ctx->cnt_stack.sorted = 0;
 	}
 
 	return c;
@@ -293,9 +294,12 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 // the active floating conatiner i son top of everything
 static void sort_containers(ug_ctx_t *ctx)
 {
+	if (ctx->cnt_stack.sorted)
+		return;
 	int tot = ctx->cnt_stack.idx;
 	if (!tot)
 		return;
+
 	for (int i = 0; i < tot; i++) {
 		ug_container_t *cnt = &ctx->cnt_stack.items[i];
 		// move floating containers to the top
@@ -308,14 +312,15 @@ static void sort_containers(ug_ctx_t *ctx)
 			
 			if (ctx->active.cnt != c.id)
 				for (; y > 0 && TEST(s[y-1].flags, UG_CNT_FLOATING); y--);
-			
+
 			if (i >= y)
-				break;
+				continue;
 			
 			memmove(&s[i], &s[i+1], (y - i) * sizeof(ug_container_t));
 			s[y-1] = c;
 		}
 	}
+	ctx->cnt_stack.sorted = 1;
 }
 
 // update the container dimensions and position according to the context information,
@@ -389,7 +394,6 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// if the container is not fixed than it can have positions outside of the
 	// main window, thus negative
 	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
-		//printf("origin: x=%d y=%d w=%d h=%d\t", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 		// <0 -> relative to the right margin
 		if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
 		else rca->x = cx;
@@ -415,7 +419,6 @@ static void position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 				ctx->origin.y -= rca->h;
 			}
 		}
-		//printf("new origin: x=%d y=%d w=%d h=%d\n", ctx->origin.x, ctx->origin.y, ctx->origin.w, ctx->origin.h);
 	}
 }
 
@@ -531,7 +534,9 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		miny = rca->y;
 		maxy = rca->y + bt;
 		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_T ||
-		    (BETWEEN(mpos.x, minx, maxx) && BETWEEN(mpos.y, miny, maxy))) {
+		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
+		     BETWEEN(mpos.x, minx, maxx)                       &&
+		     BETWEEN(mpos.y, miny, maxy))) {
 			cnt->flags |= CNT_STATE_RESIZE_T;
 
 			if (rect->h - ctx->mouse.delta.y >= 10) {
@@ -748,6 +753,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	ctx->origin.h = ctx->size.h;
 
 	// update hover index
+	printf("Container Stack:\n");
 	ug_vec2_t v = ctx->mouse.pos;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
 		printf("[%d]: %x\n", i, ctx->cnt_stack.items[i].id);
@@ -756,6 +762,10 @@ int ug_frame_begin(ug_ctx_t *ctx)
 			ctx->hover.cnt = ctx->cnt_stack.items[i].id;
 		}
 	}
+	printf("\n");
+
+	if (ctx->last_active.cnt && ctx->active.cnt != ctx->last_active.cnt)
+		ctx->cnt_stack.sorted = 0;
 
 	// update active container
 	if (MOUSEDOWN(ctx, UG_BTN_LEFT)) {
@@ -764,8 +774,6 @@ int ug_frame_begin(ug_ctx_t *ctx)
 		ctx->last_active.cnt = ctx->active.cnt;
 		ctx->active.cnt = 0;
 	}
-
-	//printf("active (%x) last active (%x)\n",ctx->active.cnt, ctx->last_active.cnt);
 
 	return 0;
 }
