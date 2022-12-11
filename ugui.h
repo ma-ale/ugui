@@ -39,13 +39,14 @@ typedef struct {
 
 // the container flags
 enum {
-	UG_CNT_FLOATING      = BIT(0), // can be moved
-	UG_CNT_RESIZE_RIGHT  = BIT(1), // can be resized
-	UG_CNT_RESIZE_BOTTOM = BIT(2), // can be resized
-	UG_CNT_RESIZE_LEFT   = BIT(3), // can be resized
-	UG_CNT_RESIZE_TOP    = BIT(4), // can be resized
+	UG_CNT_FLOATING      = BIT(0), // is on top of everything else
+	UG_CNT_RESIZE_RIGHT  = BIT(1), // can be resized from the right border
+	UG_CNT_RESIZE_BOTTOM = BIT(2), // can be resized from the bottom border
+	UG_CNT_RESIZE_LEFT   = BIT(3), // can be resized from the left border
+	UG_CNT_RESIZE_TOP    = BIT(4), // can be resized from the top border
 	UG_CNT_SCROLL_X      = BIT(5), // can have horizontal scrolling
 	UG_CNT_SCROLL_Y      = BIT(6), // can have vertical scrolling
+	UG_CNT_MOVABLE       = BIT(7), // can be moved around
 	// container state
 	CNT_STATE_NONE       = BIT(30),
 	CNT_STATE_MOVING     = BIT(29),
@@ -53,6 +54,7 @@ enum {
 	CNT_STATE_RESIZE_B   = BIT(27),
 	CNT_STATE_RESIZE_L   = BIT(26),
 	CNT_STATE_RESIZE_R   = BIT(25),
+	CNT_STATE_DELETE     = BIT(24), // The container is marked for removal
 };
 
 // style, defines default height, width, color, margins, borders, etc
@@ -210,7 +212,7 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style);
 // window inside another window
 int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div);
 // like a floating container but cannot be resized
-int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_rect_t rect);
+int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_div_t div);
 // a menu bar is a container of fixed height, cannot be resized and sits at the
 // top of the window
 int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height);

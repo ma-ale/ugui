@@ -60,7 +60,7 @@ static const ug_style_t default_style = {
 		.bg_color          = RGB_FORMAT(0x0000ff),
 		.border.t          = SIZE_PX(3),
 		.border.b          = SIZE_PX(3),
-		.border.l          = SIZE_PX(10),
+		.border.l          = SIZE_PX(3),
 		.border.r          = SIZE_PX(3),
 		.border.color      = RGB_FORMAT(0x00ff00),
 		.titlebar.height   = SIZE_PX(20),
@@ -94,6 +94,17 @@ static ug_style_t style_cache = {0};
 	if (S.idx >= S.size)                                                   \
 		GROW_STACK(S);                                                 \
 	c = &(S.items[S.idx++]);                                               \
+}
+
+
+#define DELETE_FROM_STACK(S, c)                                                     \
+{                                                                                   \
+	for (int i = 0; i < S.idx; i++) {                                           \
+		if (c->id != S.items[i].id)                                         \
+			continue;                                                   \
+		memmove(&S.items[i], &S.items[i+1], (S.idx-i)*sizeof(S.items[0]));    \
+		memset(&S.items[S.idx--], 0, sizeof(S.items[0]));                    \
+	}                                                                           \
 }
 
 
@@ -139,7 +150,6 @@ int size_to_px(ug_ctx_t *ctx, ug_size_t s)
 	default: return 0;
 	}
 }
-
 
 ug_rect_t div_to_rect(ug_ctx_t *ctx, ug_div_t *div)
 {
@@ -211,12 +221,15 @@ void ug_ctx_free(ug_ctx_t *ctx)
 
 	free(ctx);
 
-	// NOTE: do not free style since the default is statically allocated, let
-	// the user take care of it instead
+	// NOTE: do not free style since the default style is statically allocated,
+	// let the user take care of it instead
 }
 
 
+// TODO: add error codes
 #define TEST_CTX(ctx) { if (!ctx) return -1; }
+#define TEST_STR(s)   { if (!s || !s[0]) return -1; }
+
 
 int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi)
 {
@@ -327,6 +340,11 @@ static void sort_containers(ug_ctx_t *ctx)
 // update the container position in the context area
 static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
+	if (!TEST(cnt->flags, UG_CNT_FLOATING))
+		// if there is no space left propagate the error
+		if (ctx->origin.w <= 0 || ctx->origin.h <= 0)
+			return -1;
+
 	ug_rect_t *rect, *rca;
 	rect = &cnt->rect;
 	rca  = &cnt->rca;
@@ -387,16 +405,13 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	if (rect->w == 0) rca->w = cw;
 	else rca->w += bl + br;
 	if (rect->h == 0) rca->h = ch;
-	else if (TEST(cnt->flags, UG_CNT_FLOATING)) rca->h += hh + 2*bt + bb;
+	else if (TEST(cnt->flags, UG_CNT_MOVABLE)) rca->h += hh + 2*bt + bb;
 	else rca->h += bt + bb;
 
 
 	// if the container is not fixed than it can have positions outside of the
 	// main window, thus negative
 	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
-		// if there is no space left propagate the error
-		if (!ctx->origin.w || !ctx->origin.h)
-			return -1;
 		// <0 -> relative to the right margin
 		if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
 		else rca->x = cx;
@@ -420,21 +435,24 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 }
 
 
-void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
+// TODO: make a set of fixed return values for the different states
+// handle moving and resizing, return 1 if it had focus, 0 otherwise, negative
+// return values represent errors
+static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
 	// if we are not the currently active container than definately we are not
 	// being moved or resized
 	if (ctx->active.cnt != cnt->id) {
 		cnt->flags &= ~CNT_STATE_ALL;
-		return;
+		return 0;
 	}
 
 	// mouse pressed handle resize, for simplicity containers can only 
 	// be resized from the bottom and right border
-	// TODO: bring selected container to the top of the stack
+	// TODO: change return value to indicate this case
 	if (!HELD(ctx, UG_BTN_LEFT) ||
-	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_FLOATING)))
-		return;
+	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_MOVABLE)))
+		return 1;
 	
 	ug_rect_t *rect, *rca;
 	rect = &cnt->rect;
@@ -451,7 +469,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int minx, maxx, miny, maxy;
 	
 	// handle movable windows
-	if (TEST(cnt->flags, UG_CNT_FLOATING)) {
+	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		minx = rca->x + bl;
 		maxx = rca->x + rca->w - br;
 		miny = rca->y + bt;
@@ -498,7 +516,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 			if (rect->w - ctx->mouse.delta.x >= 10) {
 				rect->w -= ctx->mouse.delta.x;
-				if (TEST(cnt->flags, UG_CNT_FLOATING))
+				if (TEST(cnt->flags, UG_CNT_MOVABLE))
 					rect->x += ctx->mouse.delta.x;
 			}
 			if (rca->w - ctx->mouse.delta.x >= 10) {
@@ -538,7 +556,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 			if (rect->h - ctx->mouse.delta.y >= 10) {
 				rect->h -= ctx->mouse.delta.y;
-				if (TEST(cnt->flags, UG_CNT_FLOATING))
+				if (TEST(cnt->flags, UG_CNT_MOVABLE))
 					rect->y += ctx->mouse.delta.y;
 			}
 			if (rca->h - ctx->mouse.delta.y >= 10) {
@@ -559,8 +577,7 @@ void handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// TODO: what about scrolling? how do we know if we need to draw
 	//       a scroll bar? Maybe add that information inside the
 	//       container structure
-
-	// push the appropriate rectangles to the drawing stack
+	return 1;
 }
 
 
@@ -579,7 +596,7 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	push_rect_command(ctx, &draw_rect, s->cnt.border.color);
 	
 	// titlebar
-	if (cnt->flags & UG_CNT_FLOATING) {
+	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		draw_rect.x += bl;
 		draw_rect.y += bt;
 		draw_rect.w -= bl + br;
@@ -593,7 +610,7 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	draw_rect.y += bt;
 	draw_rect.w -= bl + br;
 	draw_rect.h -= bt + bb;
-	if (cnt->flags & UG_CNT_FLOATING) {
+	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		draw_rect.y += bt + hh;
 		draw_rect.h -= bt + hh;
 	}
@@ -607,9 +624,10 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 {	
 	TEST_CTX(ctx);
+	TEST_STR(name);
 	// TODO: verify div
 
-	ug_id_t id = name ? hash(name, strlen(name)) : hash(&div, sizeof(ug_div_t));
+	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
 	if (cnt->id) {
@@ -618,32 +636,54 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		cnt->id = id;
 		cnt->max_size = max_size;
 		cnt->rect = div_to_rect(ctx, &div);
-		cnt->flags = UG_CNT_FLOATING  | RESIZEALL |
-			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y  ;
+		cnt->flags = UG_CNT_FLOATING | RESIZEALL | UG_CNT_MOVABLE |
+			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y;
 	}
 
 	// TODO:  what about error codes and meaning?
-	if (position_container(ctx, cnt))
+	if (position_container(ctx, cnt)) {
+		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
-	handle_container(ctx, cnt);
+	}
+	return handle_container(ctx, cnt);
+}
+
+
+int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_div_t div)
+{
+	TEST_CTX(ctx);
+	TEST_STR(name);
+	// TODO: verify div
+
+	ug_id_t id = hash(name, strlen(name));
+	ug_container_t *cnt = get_container(ctx, id);
 	
-	return 0;
+	if (cnt->id) {
+		// nothing? maybe we can skip updating all dimensions and stuff
+	} else {
+		cnt->id = id;
+		cnt->max_size = max_size;
+		cnt->rect = div_to_rect(ctx, &div);
+		cnt->flags = UG_CNT_FLOATING;
+	}
+
+	// TODO:  what about error codes and meaning?
+	if (position_container(ctx, cnt)) {
+		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
+		return -1;
+	}
+	return handle_container(ctx, cnt);
 }
 
 
 int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int side)
 {
 	TEST_CTX(ctx);
+	TEST_STR(name);
 
-	ug_id_t id = 0; 
-	if (name) {
-		id = hash(name, strlen(name));
-	} else {
-		int blob[3] = { size.size.i, size.unit, side};
-		id = hash(blob, sizeof(blob));
-	}
-
+	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
+
 	
 	if (cnt->id) {
 		// nothing? maybe we can skip updating all dimensions and stuff
@@ -677,25 +717,19 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		cnt->rect = rect;
 	}
 
-	if (position_container(ctx, cnt))
+	if (position_container(ctx, cnt)) {
+		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
-	handle_container(ctx, cnt);
-
-	return 0;
+	}
+	return handle_container(ctx, cnt);
 }
 
 int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 {
 	TEST_CTX(ctx);
+	TEST_STR(name);
 
-	ug_id_t id = 0; 
-	if (name) {
-		id = hash(name, strlen(name));
-	} else {
-		int blob[2] = { height.size.i, height.unit};
-		id = hash(blob, sizeof(blob));
-	}
-
+	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
 	if (cnt->id) {
@@ -711,26 +745,20 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 		cnt->rect = rect;
 	}
 
-	if (position_container(ctx, cnt))
+	if (position_container(ctx, cnt)) {
+		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
-	handle_container(ctx, cnt);
-
-	return 0;
+	}
+	return handle_container(ctx, cnt);
 }
 
 
 int ug_container_body(ug_ctx_t *ctx, const char *name)
 {
 	TEST_CTX(ctx);
+	TEST_STR(name);
 
-	ug_id_t id = 0; 
-	if (name) {
-		id = hash(name, strlen(name));
-	} else {
-		// sorry but body must have a name
-		return -1;
-	}
-
+	ug_id_t	id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
 	if (cnt->id) {
@@ -742,11 +770,11 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 		cnt->rect = (ug_rect_t){0};
 	}
 
-	if (position_container(ctx, cnt))
+	if (position_container(ctx, cnt)) {
+		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
-	handle_container(ctx, cnt);
-
-	return 0;
+	}
+	return handle_container(ctx, cnt);
 }
 
 
