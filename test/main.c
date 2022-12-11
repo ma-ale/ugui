@@ -3,10 +3,16 @@
 
 #include "../ugui.h"
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#define STB_TRUETYPE_IMPLEMENTATION
+#define STBTTF_IMPLEMENTATION
+#include "stbttf.h"
+
 
 SDL_Window *w;
 SDL_Renderer *r;
 ug_ctx_t *ctx;
+STBTTF_Font *font;
 
 void cleanup(void);
 
@@ -38,7 +44,7 @@ int main(void)
 	//SDL_Surface *s;
 	//s = SDL_GetWindowSurface(w);
 	r = SDL_CreateRenderer(w, -1, SDL_RENDERER_ACCELERATED);
-
+	SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
 
 	ug_vec2_t size, dsize;
 	SDL_GetWindowSize(w, &size.w, &size.h);
@@ -56,6 +62,8 @@ int main(void)
 	ug_ctx_set_displayinfo(ctx, scale, dpi);
 	ug_ctx_set_drawableregion(ctx, dsize);
 
+	// open font
+	font = STBTTF_OpenFont(r, "monospace.ttf", ctx->style_px->text.size.size.i);
 
 //	atexit(cleanup);
 
@@ -175,7 +183,11 @@ int main(void)
 
 		ug_frame_begin(ctx);
 
-		ug_container_menu_bar(ctx, "Menu fichissimo", (ug_size_t)SIZE_PX(24));
+		if (ctx->frame < 5000) {
+			ug_container_menu_bar(ctx, "Menu fichissimo", (ug_size_t)SIZE_PX(24));
+		} else if (ctx->frame == 5000) {
+			ug_container_remove(ctx, "Menu fichissimo");
+		}
 
 		ug_container_floating(ctx, "stupid name", 
 		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
@@ -203,17 +215,26 @@ int main(void)
 		SDL_RenderClear(r);
 		for (int i = 0; i < ctx->cmd_stack.idx; i++) {
 			ug_cmd_t cmd = ctx->cmd_stack.items[i];
-			ug_color_t col = cmd.rect.color;
-			SDL_Rect sr = {
-				.x = cmd.rect.x,
-				.y = cmd.rect.y,
-				.w = cmd.rect.w,
-				.h = cmd.rect.h,
-			};
-			//printf("DRAWING: x=%d, y=%d, w=%d, h=%d\n", sr.x, sr.y, sr.w, sr.h);
-			//printf("COLOR: #%.8X\n", *((unsigned int *)&col));
-			SDL_SetRenderDrawColor(r, col.r, col.g, col.b, col.a);
-			SDL_RenderFillRect(r, &sr);
+			switch (cmd.type) {
+			case UG_CMD_RECT:
+				{
+				ug_color_t col = cmd.rect.color;
+				SDL_Rect sr = {
+					.x = cmd.rect.x,
+					.y = cmd.rect.y,
+					.w = cmd.rect.w,
+					.h = cmd.rect.h,
+				};
+				SDL_SetRenderDrawColor(r, col.r, col.g, col.b, col.a);
+				SDL_RenderFillRect(r, &sr);
+				}
+				break;
+			case UG_CMD_TEXT:
+			SDL_SetRenderDrawColor(r, cmd.text.color.r, cmd.text.color.g, cmd.text.color.b, cmd.text.color.a);
+				STBTTF_RenderText(r, font, cmd.text.x, cmd.text.y, cmd.text.str);
+				break;
+			default: break;
+			}
 		}
 		SDL_RenderPresent(r);
 
@@ -227,6 +248,7 @@ int main(void)
 void cleanup(void)
 {
 	ug_ctx_free(ctx);
+	STBTTF_CloseFont(font);
 	SDL_DestroyRenderer(r);
 	SDL_DestroyWindow(w);
 	SDL_Quit();

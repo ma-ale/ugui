@@ -12,6 +12,7 @@
 #define DEF_SCALE    1.0
 #define DEF_PPI      96.0
 #define STACK_STEP   64
+#define SLICE_STEP   128
 
 #define RESIZEALL     (                                                        \
                       UG_CNT_RESIZE_RIGHT  |                                   \
@@ -68,8 +69,6 @@ static const ug_style_t default_style = {
 	},
 };
 
-static const ug_vec2_t max_size = {{10e6}, {10e6}};
-
 static ug_style_t style_cache = {0};
 
 
@@ -79,7 +78,7 @@ static ug_style_t style_cache = {0};
 
 
 // grow a stack
-#define GROW_STACK(S)                                                                \
+#define GROW_STACK(S)                                                          \
 {                                                                              \
 	S.items = realloc(S.items, (S.size+STACK_STEP)*sizeof(*(S.items)));    \
 	if(!S.items)                                                           \
@@ -102,8 +101,8 @@ static ug_style_t style_cache = {0};
 	for (int i = 0; i < S.idx; i++) {                                           \
 		if (c->id != S.items[i].id)                                         \
 			continue;                                                   \
-		memmove(&S.items[i], &S.items[i+1], (S.idx-i)*sizeof(S.items[0]));    \
-		memset(&S.items[S.idx--], 0, sizeof(S.items[0]));                    \
+		memmove(&S.items[i], &S.items[i+1], (S.idx-i)*sizeof(S.items[0]));  \
+		memset(&S.items[S.idx--], 0, sizeof(S.items[0]));                   \
 	}                                                                           \
 }
 
@@ -171,7 +170,12 @@ static void update_style_cache(ug_ctx_t *ctx)
 }
 
 
-void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t color)
+/*=============================================================================*
+ *                          Command Operations                                 *
+ *=============================================================================*/
+
+
+static void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t color)
 {
 	ug_cmd_t *c;
 	GET_FROM_STACK(ctx->cmd_stack, c);
@@ -181,6 +185,21 @@ void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t color)
 	c->rect.w     = rect->w;
 	c->rect.h     = rect->h;
 	c->rect.color = color;
+}
+
+
+// pushes a text command to the render command stack, str is a pointer to a valid
+// string offered by the user, it must be valid at least until rendering is done 
+static void push_text_command(ug_ctx_t *ctx, ug_vec2_t pos, int size, ug_color_t color, const char *str)
+{
+	ug_cmd_t *c;
+	GET_FROM_STACK(ctx->cmd_stack, c);
+	c->type       = UG_CMD_TEXT;
+	c->text.x     = pos.x;
+	c->text.y     = pos.y;
+	c->text.size  = size;
+	c->text.color = color;
+	c->text.str   = str;
 }
 
 
@@ -283,8 +302,8 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
  *=============================================================================*/
 
 
-// get a new or existing container handle
-static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
+// search a container by id int the stack and get it's address
+static ug_container_t *search_container(ug_ctx_t *ctx, ug_id_t id)
 {
 	ug_container_t *c = NULL;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
@@ -293,6 +312,14 @@ static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
 			break;
 		}
 	}
+	return c;
+}
+
+
+// get a new or existing container handle
+static ug_container_t *get_container(ug_ctx_t *ctx, ug_id_t id)
+{
+	ug_container_t *c = search_container(ctx, id);
 	// if the container was not already there allocate a new one
 	if (!c) {
 		GET_FROM_STACK(ctx->cnt_stack, c);
@@ -581,7 +608,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 }
 
 
-void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
+static void draw_container(ug_ctx_t *ctx, ug_container_t *cnt, const char *text)
 {
 	ug_rect_t draw_rect;
 	const ug_style_t *s = ctx->style_px;
@@ -590,6 +617,7 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int bt = s->cnt.border.t.size.i;
 	int bb = s->cnt.border.b.size.i;
 	int hh = s->cnt.titlebar.height.size.i;
+	int ts = s->text.size.size.i;
 	
 	// push outline
 	draw_rect = cnt->rca;
@@ -602,6 +630,13 @@ void draw_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		draw_rect.w -= bl + br;
 		draw_rect.h  = hh;
 		push_rect_command(ctx, &draw_rect, s->cnt.titlebar.bg_color);
+		if (text) {
+			// TODO: center the text horizontally
+			push_text_command(ctx,
+			                 (ug_vec2_t){.x = draw_rect.x + bl,
+					             .y = draw_rect.y + bt + ts},
+					 ts, s->text.color, text);
+		}
 	}
 	
 	// push main body
@@ -630,11 +665,12 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
+	// maybe the name address was changed so always overwrite it
+	cnt->name = name;
 	if (cnt->id) {
 		// nothing? maybe we can skip updating all dimensions and stuff
 	} else {
 		cnt->id = id;
-		cnt->max_size = max_size;
 		cnt->rect = div_to_rect(ctx, &div);
 		cnt->flags = UG_CNT_FLOATING | RESIZEALL | UG_CNT_MOVABLE |
 			     UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y;
@@ -658,11 +694,12 @@ int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_div_t div)
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
+	// maybe the name address was changed so always overwrite it
+	cnt->name = name;
 	if (cnt->id) {
 		// nothing? maybe we can skip updating all dimensions and stuff
 	} else {
 		cnt->id = id;
-		cnt->max_size = max_size;
 		cnt->rect = div_to_rect(ctx, &div);
 		cnt->flags = UG_CNT_FLOATING;
 	}
@@ -684,12 +721,12 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 
-	
+	// maybe the name address was changed so always overwrite it
+	cnt->name = name;
 	if (cnt->id) {
 		// nothing? maybe we can skip updating all dimensions and stuff
 	} else {
 		cnt->id = id;
-		cnt->max_size = max_size;
 		cnt->flags = UG_CNT_SCROLL_X | UG_CNT_SCROLL_Y;
 		ug_rect_t rect = {0};
 		switch (side) {
@@ -732,11 +769,12 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
+	// maybe the name address was changed so always overwrite it
+	cnt->name = name;
 	if (cnt->id) {
 		// nothing? maybe we can skip updating all dimensions and stuff
 	} else {
 		cnt->id = id;
-		cnt->max_size = max_size;
 		cnt->flags = 0;
 		ug_rect_t rect = {
 			.x = 0, .y = 0,
@@ -761,11 +799,12 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 	ug_id_t	id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
 	
+	// maybe the name address was changed so always overwrite it
+	cnt->name = name;
 	if (cnt->id) {
 		// nothing? maybe we can skip updating all dimensions and stuff
 	} else {
 		cnt->id = id;
-		cnt->max_size = max_size;
 		cnt->flags = 0;
 		cnt->rect = (ug_rect_t){0};
 	}
@@ -775,6 +814,21 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 		return -1;
 	}
 	return handle_container(ctx, cnt);
+}
+
+
+// TODO: return an error indicating that no container exists with that name 
+int ug_container_remove(ug_ctx_t *ctx, const char *name)
+{
+	TEST_CTX(ctx);
+	TEST_STR(name);
+
+	ug_id_t id = hash(name, strlen(name));
+	ug_container_t *c = search_container(ctx, id);
+	if (c) {
+		c->flags |= CNT_STATE_DELETE;
+		return 0;
+	} else return -1;
 }
 
 
@@ -827,9 +881,6 @@ int ug_frame_begin(ug_ctx_t *ctx)
 {
 	TEST_CTX(ctx);
 
-	// TODO: add a way to mark a container for removal from the stack, and then
-	//       remove it here to save space
-
 	// update mouse delta
 	ctx->mouse.delta.x = ctx->mouse.pos.x - ctx->mouse.last_pos.x;
 	ctx->mouse.delta.y = ctx->mouse.pos.y - ctx->mouse.last_pos.y;
@@ -847,11 +898,19 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	printf("Container Stack: active %x\n", ctx->active.cnt);
 	ug_vec2_t v = ctx->mouse.pos;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
-		printf("[%d]: %x\n", i, ctx->cnt_stack.items[i].id);
-		ug_rect_t r = ctx->cnt_stack.items[i].rca;
-		if (INTERSECTS(v, r)) {
-			ctx->hover.cnt = ctx->cnt_stack.items[i].id;
+		ug_container_t *c = &ctx->cnt_stack.items[i];
+
+		printf("[%d]: %x\n", i, c->id);
+		if (TEST(c->flags, CNT_STATE_DELETE)) {
+			DELETE_FROM_STACK(ctx->cnt_stack, c);
+			// FIXME: this should be fine since all elements in the
+			//        stack are moved back and c now points to the
+			//        container that would be next
 		}
+
+		ug_rect_t r = c->rca;
+		if (INTERSECTS(v, r))
+			ctx->hover.cnt = c->id;
 	}
 	printf("\n");
 
@@ -877,9 +936,10 @@ int ug_frame_end(ug_ctx_t *ctx)
 
 	// before drawing floating contaners need to be drawn on top of the others
 	sort_containers(ctx);
-	for (int i = 0; i < ctx->cnt_stack.idx; i++)
-		draw_container(ctx, &ctx->cnt_stack.items[i]);
-
+	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
+		ug_container_t *c = &ctx->cnt_stack.items[i];
+		draw_container(ctx, c, c->name);
+	}
 
 	ctx->input_text[0]      = '\0';
 	ctx->key.update         = 0;
@@ -902,4 +962,3 @@ int ug_frame_end(ug_ctx_t *ctx)
 
 	return 0;
 }
-

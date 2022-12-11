@@ -30,10 +30,10 @@ typedef enum {
 // the z index of a container is determined by it's position on the stack
 typedef struct {
 	ug_id_t id;
+	const char *name;
 	ug_rect_t rect;
 	// absolute position rect
 	ug_rect_t rca;
-	ug_vec2_t max_size;
 	unsigned int flags;
 } ug_container_t;
 
@@ -108,19 +108,21 @@ typedef struct {
 
 
 // render commands
+struct ug_cmd_rect { int x, y, w, h; ug_color_t color; };
+struct ug_cmd_text { int x, y, size; ug_color_t color; const char *str; };
+
 typedef struct {
 	unsigned int type;
 	union {
-		struct {
-			int x, y, w, h;
-			ug_color_t color;
-		} rect;
+		struct ug_cmd_rect rect;
+		struct ug_cmd_text text;
 	};
 } ug_cmd_t;
 
 typedef enum {
 	UG_CMD_NULL = 0,
 	UG_CMD_RECT,
+	UG_CMD_TEXT,
 } ug_cmd_type_t;
 
 // window side
@@ -193,6 +195,8 @@ typedef struct {
 	// stacks
 	UG_STACK(ug_container_t) cnt_stack;
 	UG_STACK(ug_cmd_t) cmd_stack;
+	// command stack iterator
+	int cmd_it;
 } ug_ctx_t;
 
 
@@ -221,6 +225,9 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 // a body is a container that scales with the window, sits at it's center and cannot
 // be resized, it also fills all the available space
 int ug_container_body(ug_ctx_t *ctx, const char *name);
+// mark a conatiner for removal, it will be freed at the next frame beginning
+int ug_container_remove(ug_ctx_t *ctx, const char *name);
+
 
 // Input functions
 int ug_input_mousemove(ug_ctx_t *ctx, int x, int y);
@@ -232,6 +239,10 @@ int ug_input_scroll(ug_ctx_t *ctx, int x, int y);
 // Frame handling
 int ug_frame_begin(ug_ctx_t *ctx);
 int ug_frame_end(ug_ctx_t *ctx);
+
+// Commands
+// get the next command, save iteration state inside 'iterator'
+ug_cmd_t *ug_cmd_next(ug_ctx_t *ctx);
 
 
 #undef UG_STACK
