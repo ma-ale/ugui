@@ -213,25 +213,24 @@ int main(void)
 		// fill background
 		SDL_SetRenderDrawColor(r, 0, 0, 0, 0xff);
 		SDL_RenderClear(r);
-		for (int i = 0; i < ctx->cmd_stack.idx; i++) {
-			ug_cmd_t cmd = ctx->cmd_stack.items[i];
-			switch (cmd.type) {
+		for (ug_cmd_t *cmd = NULL; (cmd = ug_cmd_next(ctx));) {
+			switch (cmd->type) {
 			case UG_CMD_RECT:
 				{
-				ug_color_t col = cmd.rect.color;
+				ug_color_t col = cmd->rect.color;
 				SDL_Rect sr = {
-					.x = cmd.rect.x,
-					.y = cmd.rect.y,
-					.w = cmd.rect.w,
-					.h = cmd.rect.h,
+					.x = cmd->rect.x,
+					.y = cmd->rect.y,
+					.w = cmd->rect.w,
+					.h = cmd->rect.h,
 				};
 				SDL_SetRenderDrawColor(r, col.r, col.g, col.b, col.a);
 				SDL_RenderFillRect(r, &sr);
 				}
 				break;
 			case UG_CMD_TEXT:
-			SDL_SetRenderDrawColor(r, cmd.text.color.r, cmd.text.color.g, cmd.text.color.b, cmd.text.color.a);
-				STBTTF_RenderText(r, font, cmd.text.x, cmd.text.y, cmd.text.str);
+			SDL_SetRenderDrawColor(r, cmd->text.color.r, cmd->text.color.g, cmd->text.color.b, cmd->text.color.a);
+				STBTTF_RenderText(r, font, cmd->text.x, cmd->text.y, cmd->text.str);
 				break;
 			default: break;
 			}

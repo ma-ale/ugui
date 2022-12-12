@@ -203,6 +203,16 @@ static void push_text_command(ug_ctx_t *ctx, ug_vec2_t pos, int size, ug_color_t
 }
 
 
+ug_cmd_t *ug_cmd_next(ug_ctx_t *ctx)
+{
+	if(!ctx)
+		return NULL;
+	if (ctx->cmd_it < ctx->cmd_stack.idx)
+		return &ctx->cmd_stack.items[ctx->cmd_it++];
+	return NULL;
+}
+
+
 /*=============================================================================*
  *                          Context Operations                                 *
  *=============================================================================*/
@@ -634,7 +644,7 @@ static void draw_container(ug_ctx_t *ctx, ug_container_t *cnt, const char *text)
 			// TODO: center the text horizontally
 			push_text_command(ctx,
 			                 (ug_vec2_t){.x = draw_rect.x + bl,
-					             .y = draw_rect.y + bt + ts},
+					             .y = draw_rect.y + bt + ts/2},
 					 ts, s->text.color, text);
 		}
 	}
@@ -959,6 +969,8 @@ int ug_frame_end(ug_ctx_t *ctx)
 	ctx->last_ppd = ctx->ppd;
 
 	ctx->frame++;
+
+	ctx->cmd_it = 0;
 
 	return 0;
 }

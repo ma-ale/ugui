@@ -172,6 +172,8 @@ typedef struct {
 	struct {
 		ug_id_t cnt, elem;
 	} last_active;
+	// id of the selected container, used for layout
+	ug_id_t selected_cnt;
 	// count the frames for fun
 	unsigned long int frame;
 	// mouse data
