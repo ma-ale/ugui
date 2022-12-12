@@ -691,6 +691,10 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
+	
+	// Select current conatiner
+	ctx->selected_cnt = id;
+
 	return handle_container(ctx, cnt);
 }
 
@@ -719,6 +723,10 @@ int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
+	
+	// Select current conatiner
+	ctx->selected_cnt = id;
+
 	return handle_container(ctx, cnt);
 }
 
@@ -768,6 +776,10 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
+	
+	// Select current conatiner
+	ctx->selected_cnt = id;
+
 	return handle_container(ctx, cnt);
 }
 
@@ -797,6 +809,10 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
+	
+	// Select current conatiner
+	ctx->selected_cnt = id;
+
 	return handle_container(ctx, cnt);
 }
 
@@ -823,6 +839,10 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
+	
+	// Select current conatiner
+	ctx->selected_cnt = id;
+
 	return handle_container(ctx, cnt);
 }
 
@@ -969,6 +989,9 @@ int ug_frame_end(ug_ctx_t *ctx)
 	ctx->last_ppd = ctx->ppd;
 
 	ctx->frame++;
+
+	// deselect container
+	ctx->selected_cnt = 0;
 
 	ctx->cmd_it = 0;
 
