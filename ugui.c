@@ -59,13 +59,14 @@ static const ug_style_t default_style = {
 	},
 	.cnt = {
 		.bg_color          = RGB_FORMAT(0x0000ff),
-		.border.t          = SIZE_PX(3),
-		.border.b          = SIZE_PX(3),
-		.border.l          = SIZE_PX(3),
-		.border.r          = SIZE_PX(3),
+		.border.t          = SIZE_PX(1),
+		.border.b          = SIZE_PX(1),
+		.border.l          = SIZE_PX(1),
+		.border.r          = SIZE_PX(1),
 		.border.color      = RGB_FORMAT(0x00ff00),
 		.titlebar.height   = SIZE_PX(20),
 		.titlebar.bg_color = RGB_FORMAT(0xbababa),
+		.margin            = SIZE_PX(3),
 	},
 };
 
@@ -402,36 +403,47 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	 * Container style:
 	 * 
 	 * rca
-	 * v 
-	 * +-----------------------------------------------+
-	 * |          Titlebar                             |
-	 * +-----------------------------------------------+
-	 * |+---------------------------------------------+|
-	 * ||\              ^ Border Top ^                ||
-	 * || \_ rect(0,0)                                ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * || < Border Left                               ||
-	 * ||                              Border Right > ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * ||                                             ||
-	 * |+---------------------------------------------+|
-	 * +-----------------------------------------------+
+	 * v                   v Border Top v
+	 * +--------------------------------------------------------+
+	 * +--------------------------------------------------------+
+	 * |                   Titlebar                             |
+	 * +--------------------------------------------------------+
+	 * |+------------------------------------------------------+|
+	 * || .................................................... ||
+	 * || .\                 ^ Border Top ^                  . ||
+	 * || . \_ rect(0,0)                                     . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || . < Border Left                                    . ||
+	 * || .   + Margin                         Border Right >. ||
+	 * || .                                     + Margin     . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .                                                  . ||
+	 * || .................................................... ||
+	 * |+------------------------------------------------------+|
+	 * +--------------------------------------------------------+
 	 *                  ^ Border Bottom ^ 
 	 */
 	
 	const ug_style_t *s = ctx->style_px;
-	int bl = s->cnt.border.l.size.i;
-	int br = s->cnt.border.r.size.i;
-	int bt = s->cnt.border.t.size.i;
-	int bb = s->cnt.border.b.size.i;
+	int bl = s->cnt.border.l.size.i + s->cnt.margin.size.i;
+	int br = s->cnt.border.r.size.i + s->cnt.margin.size.i;
+	int bt = s->cnt.border.t.size.i + s->cnt.margin.size.i;
+	int bb = s->cnt.border.b.size.i + s->cnt.margin.size.i;
 	int hh = s->cnt.titlebar.height.size.i;
 	int cx = ctx->origin.x;
 	int cy = ctx->origin.y;
@@ -496,10 +508,10 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	rca  = &cnt->rca;
 
 	const ug_style_t *s = ctx->style_px;
-	int bl = s->cnt.border.l.size.i;
-	int br = s->cnt.border.r.size.i;
-	int bt = s->cnt.border.t.size.i;
-	int bb = s->cnt.border.b.size.i;
+	int bl = s->cnt.border.l.size.i + s->cnt.margin.size.i;
+	int br = s->cnt.border.r.size.i + s->cnt.margin.size.i;
+	int bt = s->cnt.border.t.size.i + s->cnt.margin.size.i;
+	int bb = s->cnt.border.b.size.i + s->cnt.margin.size.i;
 	int hh = s->cnt.titlebar.height.size.i;
 
 	ug_vec2_t mpos = ctx->mouse.pos;

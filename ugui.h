@@ -74,6 +74,7 @@ typedef struct {
 			ug_size_t t, b, l, r;
 			ug_color_t color;
 		} border;
+		ug_size_t margin;
 		// titlebar only gets applied to movable containers
 		struct {
 			ug_size_t  height;
@@ -229,6 +230,10 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 int ug_container_body(ug_ctx_t *ctx, const char *name);
 // mark a conatiner for removal, it will be freed at the next frame beginning
 int ug_container_remove(ug_ctx_t *ctx, const char *name);
+
+
+// layouts
+
 
 
 // Input functions
