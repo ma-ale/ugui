@@ -171,6 +171,20 @@ static void update_style_cache(ug_ctx_t *ctx)
 }
 
 
+void scale_rect(ug_ctx_t *ctx, ug_rect_t *rect)
+{
+	if (ctx->ppi != ctx->last_ppi) {
+		// if the scale has been updated than we need to scale the container
+		// as well
+		float scale = ctx->ppi / ctx->last_ppi;
+		rect->x = roundf(rect->x * scale);
+		rect->y = roundf(rect->y * scale);
+		rect->w = roundf(rect->w * scale);
+		rect->h = roundf(rect->h * scale);
+	}
+}
+
+
 /*=============================================================================*
  *                          Command Operations                                 *
  *=============================================================================*/
@@ -378,24 +392,16 @@ static void sort_containers(ug_ctx_t *ctx)
 // update the container position in the context area
 static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
-	if (!TEST(cnt->flags, UG_CNT_FLOATING))
+	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
 		// if there is no space left propagate the error
 		if (ctx->origin.w <= 0 || ctx->origin.h <= 0)
 			return -1;
+	}
 
 	ug_rect_t *rect, *rca;
-	rect = &cnt->rect;
-	rca  = &cnt->rca;
-
-	if (ctx->ppi != ctx->last_ppi) {
-		// if the scale has been updated than we need to scale the container
-		// as well
-		float scale = ctx->ppi / ctx->last_ppi;
-		rect->x = roundf(rect->x * scale);
-		rect->y = roundf(rect->y * scale);
-		rect->w = roundf(rect->w * scale);
-		rect->h = roundf(rect->h * scale);
-	}
+	rect = &(cnt->rect);
+	rca  = &(cnt->rca);
+	scale_rect(ctx, rect);
 
 	*rca = *rect;
 
@@ -863,14 +869,33 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 int ug_container_remove(ug_ctx_t *ctx, const char *name)
 {
 	TEST_CTX(ctx);
-	TEST_STR(name);
 
-	ug_id_t id = hash(name, strlen(name));
+	ug_id_t id = ctx->selected_cnt;
+	if (name)
+		id = hash(name, strlen(name));
+
 	ug_container_t *c = search_container(ctx, id);
 	if (c) {
 		c->flags |= CNT_STATE_DELETE;
 		return 0;
 	} else return -1;
+}
+
+
+ug_rect_t ug_container_get_rect(ug_ctx_t *ctx, const char *name) 
+{
+	ug_rect_t r = {0};
+	if(!ctx)
+		return r;
+
+	ug_id_t id = ctx->selected_cnt;
+	if (name)
+		id = hash(name, strlen(name));
+
+	ug_container_t *c = search_container(ctx, id);
+	if (c)
+		r = c->rca;
+	return r;
 }
 
 
@@ -981,6 +1006,9 @@ int ug_frame_end(ug_ctx_t *ctx)
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
 		ug_container_t *c = &ctx->cnt_stack.items[i];
 		draw_container(ctx, c, c->name);
+		// TODO: draw elements
+		// reset the layout to row
+		c->flags &= ~(CNT_LAYOUT_COLUMN);
 	}
 
 	ctx->input_text[0]      = '\0';
@@ -1007,5 +1035,60 @@ int ug_frame_end(ug_ctx_t *ctx)
 
 	ctx->cmd_it = 0;
 
+	return 0;
+}
+
+
+/*=============================================================================*
+ *                                Layouting                                    *
+ *=============================================================================*/
+
+
+#define GET_SELECTED_CONTAINER(ctx, cp)                                        \
+{                                                                              \
+	cp = search_container(ctx, ctx->selected_cnt);                         \
+	if (!cp)                                                               \
+		return -1;                                                     \
+}
+
+
+// set the layout to row
+int ug_layout_row(ug_ctx_t *ctx)
+{
+	TEST_CTX(ctx);
+
+	ug_container_t *cp;
+	GET_SELECTED_CONTAINER(ctx, cp);
+	cp->flags &= ~CNT_LAYOUT_COLUMN;
+	return 0;
+}
+
+
+// set the layout to column
+int ug_layout_column(ug_ctx_t *ctx)
+{
+	TEST_CTX(ctx);
+
+	ug_container_t *cp;
+	GET_SELECTED_CONTAINER(ctx, cp);
+	cp->flags |= CNT_LAYOUT_COLUMN;
+	return 0;
+}
+
+
+/*=============================================================================*
+ *                                Elements                                     *
+ *=============================================================================*/
+
+
+int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t dim)
+{
+	TEST_CTX(ctx);
+	TEST_STR(name);
+
+	ug_container_t *cp;
+	GET_SELECTED_CONTAINER(ctx, cp);
+
+	// TODO: this
 	return 0;
 }

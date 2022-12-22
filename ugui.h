@@ -24,6 +24,30 @@ typedef enum {
 	UG_UNIT_PT,
 } ug_unit_t;
 
+
+// element type
+typedef struct {
+	ug_id_t id;
+	unsigned int type;
+	ug_rect_t rect, rca;
+	char *name, *content;
+} ug_element_t;
+
+enum {
+	UG_ELEM_BUTTON,    // button
+	UG_ELEM_TXTBTN,    // textual button, a button but without frame
+	UG_ELEM_CHECK,     // checkbox
+	UG_ELEM_RADIO,     // radio button
+	UG_ELEM_TOGGLE,    // toggle button
+	UG_ELEM_LABEL,     // simple text 
+	UG_ELEM_UPDOWN,    // text with two buttons up and down
+	UG_ELEM_TEXTINPUT, // text input box
+	UG_ELEM_TEXTBOX,   // text surrounded by a box
+	UG_ELEM_IMG,       // image, icon
+	UG_ELEM_SPACE,     // takes up space
+};
+
+
 // container type, a container is an entity that contains layouts, a container has
 // a haight a width and their maximum values, in essence a container is a rectangular
 // area that can be resized and sits somewhere on the drawable region
@@ -35,6 +59,10 @@ typedef struct {
 	// absolute position rect
 	ug_rect_t rca;
 	unsigned int flags;
+	// layouting and elements
+	ug_rect_t orig; // origin and space available
+	int r, c;       // row and column
+	UG_STACK(ug_element_t);
 } ug_container_t;
 
 // the container flags
@@ -55,6 +83,8 @@ enum {
 	CNT_STATE_RESIZE_L   = BIT(26),
 	CNT_STATE_RESIZE_R   = BIT(25),
 	CNT_STATE_DELETE     = BIT(24), // The container is marked for removal
+	// layouting
+	CNT_LAYOUT_COLUMN    = BIT(23),
 };
 
 // style, defines default height, width, color, margins, borders, etc
@@ -174,6 +204,8 @@ typedef struct {
 		ug_id_t cnt, elem;
 	} last_active;
 	// id of the selected container, used for layout
+	// NOTE: since the stacks can be relocated with realloc it is better not
+	//       to use a pointer here, even tough it would be better for efficiency 
 	ug_id_t selected_cnt;
 	// count the frames for fun
 	unsigned long int frame;
@@ -228,13 +260,24 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 // a body is a container that scales with the window, sits at it's center and cannot
 // be resized, it also fills all the available space
 int ug_container_body(ug_ctx_t *ctx, const char *name);
-// mark a conatiner for removal, it will be freed at the next frame beginning
+// mark a conatiner for removal, it will be freed at the next frame beginning if
+// name is NULL then use the selected container
 int ug_container_remove(ug_ctx_t *ctx, const char *name);
+// get the drawable area of the container, if name is NULL then use the selected
+// container
+ug_rect_t ug_container_get_rect(ug_ctx_t *ctx, const char *name);
 
+// layouting, the following functions define how different ui elements are placed
+// inside the selected container. A new element is aligned respective to the 
+// previous element and/or to the container, particularly elements can be placed
+// in a row or a column.
+int ug_layout_row(ug_ctx_t *ctx);
+int ug_layout_column(ug_ctx_t *ctx);
+int ug_layout_next_row(ug_ctx_t *ctx);
+int ug_layout_next_column(ug_ctx_t *ctx);
 
-// layouts
-
-
+// elements
+int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t dim);
 
 // Input functions
 int ug_input_mousemove(ug_ctx_t *ctx, int x, int y);
