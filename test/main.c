@@ -183,30 +183,34 @@ int main(void)
 
 		ug_frame_begin(ctx);
 
-		if (ctx->frame < 5000) {
-			ug_container_menu_bar(ctx, "Menu fichissimo", (ug_size_t)SIZE_PX(24));
-		} else if (ctx->frame == 5000) {
-			ug_container_remove(ctx, "Menu fichissimo");
-		}
+		//if (ctx->frame < 5000) {
+		//	ug_container_menu_bar(ctx, "Menu fichissimo", (ug_size_t)SIZE_PX(24));
+		//} else if (ctx->frame == 5000) {
+		//	ug_container_remove(ctx, "Menu fichissimo");
+		//}
 
-		ug_container_floating(ctx, "stupid name", 
-		                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+		//ug_container_floating(ctx, "stupid name", 
+		//                      (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
 		//ug_container_floating(ctx, "floating windoooooooow", 
-		//                      (ug_div_t){.x=SIZE_PX(100), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
-
-		ug_container_sidebar(ctx, "Right Sidebar", (ug_size_t)SIZE_PX(300), UG_SIDE_RIGHT);
-		ug_container_sidebar(ctx, "Left Sidebar", (ug_size_t)SIZE_PX(200), UG_SIDE_LEFT);
-		ug_container_sidebar(ctx, "Bottom Sidebar", (ug_size_t)SIZE_MM(10), UG_SIDE_BOTTOM);
-		ug_container_sidebar(ctx, "Top Sidebar", (ug_size_t)SIZE_MM(40), UG_SIDE_TOP);
+		//                      (ug_div_t){.x=SIZE_PX(100), .y=//SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+//
+		//ug_container_sidebar(ctx, "Right Sidebar", (ug_size_t)S//IZE_PX(300), UG_SIDE_RIGHT);
+		//ug_container_sidebar(ctx, "Left Sidebar", (ug_size_t)SIZE_PX(200), //UG_SIDE_LEFT);
+		//ug_container_sidebar(ctx, "Bottom Sidebar", (ug_size_t)SIZE_MM(10), UG_SIDE_BOTTOM);
+		//ug_container_sidebar(ctx, "Top Sidebar", (ug_size_t)SIZE_MM(40), UG_SIDE_TOP);
 
 		//ug_container_floating(ctx, "stupid er", 
 		//                      (ug_div_t){.x=SIZE_PX(150), .y=SIZE_PX(-100), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
-		ug_container_popup(ctx, "Annoying popup", (ug_div_t){.x=SIZE_MM(150), .y=SIZE_MM(150), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+		//ug_container_popup(ctx, "Annoying popup", (ug_div_t){.x=SIZE_MM(150), .y=SIZE_MM(150), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
 		ug_container_body(ctx, "Main Body");
-		if (ug_container_body(ctx, "Other Body"))
-			printf("No space!\n");
+		//if (ug_container_body(ctx, "Other Body"))
+		//	printf("No space!\n");
+
+		ug_layout_row(ctx);
+		if (ug_element_button(ctx, "button", "btn", (ug_div_t){.w=SIZE_PX(20),.h=SIZE_PX(20)}))
+			printf("nope\n");
 
 		ug_frame_end(ctx);
 

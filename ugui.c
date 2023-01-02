@@ -68,6 +68,11 @@ static const ug_style_t default_style = {
 		.titlebar.bg_color = RGB_FORMAT(0xbababa),
 		.margin            = SIZE_PX(3),
 	},
+	.button = {
+		.border = SIZE_PX(1),
+		.br_color = RGB_FORMAT(0xff0000),
+		.bg_color = RGB_FORMAT(0xffff00),
+	},
 };
 
 static ug_style_t style_cache = {0};
@@ -1044,6 +1049,39 @@ int ug_frame_end(ug_ctx_t *ctx)
  *=============================================================================*/
 
 
+/*
+ * Container layout:
+ * A partition in the space taken up by the conglomerate of elements in
+ * between calls to new_row or new_column (no backing state, just an idea)
+ * +--------------------------------------------------------+
+ * |                             .<- r_orig                 |
+ * |                             .                          |
+ * |   prev "partition"          .                          |
+ * |                             .                          |
+ * |..............................                          |
+ * |^                                                       |
+ * |c_orig                                                  |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * |                                                        |
+ * +--------------------------------------------------------+
+ * 
+*/
+
+
+
 #define GET_SELECTED_CONTAINER(ctx, cp)                                        \
 {                                                                              \
 	cp = search_container(ctx, ctx->selected_cnt);                         \
@@ -1076,9 +1114,106 @@ int ug_layout_column(ug_ctx_t *ctx)
 }
 
 
+int ug_layout_next_row(ug_ctx_t *ctx)
+{
+	TEST_CTX(ctx);
+
+	ug_container_t *cp;
+	GET_SELECTED_CONTAINER(ctx, cp);
+
+	cp->r_orig = cp->c_orig;
+
+	return 0;
+}
+
+
+int ug_layout_next_column(ug_ctx_t *ctx)
+{
+	TEST_CTX(ctx);
+
+	ug_container_t *cp;
+	GET_SELECTED_CONTAINER(ctx, cp);
+
+	cp->c_orig = cp->r_orig;
+
+	return 0;
+}
+
+
 /*=============================================================================*
  *                                Elements                                     *
  *=============================================================================*/
+
+// search an element by id in the container's element stack and get it's address
+static ug_element_t *search_element(ug_container_t *cnt, ug_id_t id)
+{
+	ug_element_t *e = NULL;
+	for (int i = 0; i < cnt->elem_stack.idx; i++) {
+		if (cnt->elem_stack.items[i].id == id) {
+			e = &(cnt->elem_stack.items[i]);
+			break;
+		}
+	}
+	return e;
+}
+
+
+// get a new or existing container handle
+static ug_element_t *get_element(ug_container_t *cnt, ug_id_t id)
+{
+	ug_element_t *e = search_element(cnt, id);
+	if (!e) {
+		GET_FROM_STACK(cnt->elem_stack, e);
+		cnt->elem_stack.sorted = 0;
+	}
+	return e;
+}
+
+
+// update the element's position in the container area
+static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
+{
+
+	ug_rect_t *rect, *rca;
+	rect = &(elem->rect);
+	rca  = &(elem->rca);
+	scale_rect(ctx, rect);
+
+	*rca = *rect;
+	
+	const ug_style_t *s = ctx->style_px;
+	int b = s->button.border.size.i;
+	int cx, cy, cw, ch;
+
+	// FIXME: this may not work
+	cw = MAX(cnt->rca.w - cnt->space.w, 0);
+	ch = MAX(cnt->rca.h - cnt->space.h, 0);
+	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
+		cx = cnt->c_orig.x;
+		cy = cnt->c_orig.y;
+	} else {
+		cx = cnt->r_orig.x;
+		cy = cnt->r_orig.y;
+	}
+
+	// handle relative sizes
+	if (rect->w == 0) rca->w = cw;
+	else rca->w += b;
+	if (rect->h == 0) rca->h = ch;
+	else rca->h += b;
+	// <0 -> relative to the right margin
+	if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
+	else rca->x = cx;
+	if (rect->y < 0) rca->y = cy + ch - rca->h + rca->y + 1;
+	else rca->y = cy;
+
+	cnt->c_orig.y += rca->h;
+	cnt->r_orig.x += rca->w;
+	cnt->space.w  += rca->w;
+	cnt->space.h  += rca->h;
+
+	return 0;
+}
 
 
 int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t dim)
@@ -1088,7 +1223,25 @@ int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t
 
 	ug_container_t *cp;
 	GET_SELECTED_CONTAINER(ctx, cp);
+	printf("selected: %x\n", ctx->selected_cnt);
 
-	// TODO: this
+	ug_id_t id = hash(name, strlen(name));
+	ug_element_t *elem = get_element(cp, id);
+
+	// FIXME: we don't always need to do everything
+	elem->id      = id;
+	elem->type    = UG_ELEM_BUTTON;
+	elem->rect    = div_to_rect(ctx, &dim);
+	elem->name    = name;
+	elem->btn.txt = txt;
+
+	// FIXME: what about error codes?
+	if (position_element(ctx, cp, elem)) {
+		DELETE_FROM_STACK(cp->elem_stack, elem);
+		return -1;
+	}
+
+	push_rect_command(ctx, &elem->rca, ctx->style_px->button.bg_color);
+
 	return 0;
 }

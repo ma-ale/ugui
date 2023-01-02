@@ -30,7 +30,12 @@ typedef struct {
 	ug_id_t id;
 	unsigned int type;
 	ug_rect_t rect, rca;
-	char *name, *content;
+	const char *name;
+	union {
+		struct {
+			const char *txt;
+		} btn;
+	};
 } ug_element_t;
 
 enum {
@@ -60,9 +65,9 @@ typedef struct {
 	ug_rect_t rca;
 	unsigned int flags;
 	// layouting and elements
-	ug_rect_t orig; // origin and space available
-	int r, c;       // row and column
-	UG_STACK(ug_element_t);
+	ug_vec2_t space; // total space used by elements
+	ug_vec2_t c_orig, r_orig; // origin for in-row and in-column elements
+	UG_STACK(ug_element_t) elem_stack;
 } ug_container_t;
 
 // the container flags
@@ -114,7 +119,8 @@ typedef struct {
 	
 	// a button should stand out, hence the different colors
 	struct {
-		ug_color_t bg_color, hover_color, active_color;
+		ug_size_t border;
+		ug_color_t br_color, bg_color, hover_color, active_color;
 	} button;
 
 	// a checkbox should be smaller than a button
