@@ -65,8 +65,11 @@ typedef struct {
 	ug_rect_t rca;
 	unsigned int flags;
 	// layouting and elements
-	ug_vec2_t space; // total space used by elements
-	ug_vec2_t c_orig, r_orig; // origin for in-row and in-column elements
+	// total space used by elements, x and y are the starting coordinates
+	// for elements
+	ug_rect_t space;
+	// origin for in-row and in-column elements
+	ug_vec2_t c_orig, r_orig;
 	UG_STACK(ug_element_t) elem_stack;
 } ug_container_t;
 
@@ -98,49 +101,20 @@ enum {
 // allocate space one can say that the default size of a region that allocates a
 // slider has the style's default dimensions for a slider
 typedef struct {
-	struct { 
-		ug_color_t color, alt_color;
-		ug_size_t size, alt_size;
-	} text;
-
-	struct { 
-		ug_color_t bg_color;
-		struct {
-			ug_size_t t, b, l, r;
-			ug_color_t color;
-		} border;
-		ug_size_t margin;
-		// titlebar only gets applied to movable containers
-		struct {
-			ug_size_t  height;
-			ug_color_t bg_color;
-		} titlebar;
-	} cnt;
-	
-	// a button should stand out, hence the different colors
+	struct { ug_color_t bg, fg; } color;
+	ug_size_t margin;
 	struct {
-		ug_size_t border;
-		ug_color_t br_color, bg_color, hover_color, active_color;
-	} button;
-
-	// a checkbox should be smaller than a button
+		ug_color_t color;
+		ug_size_t  size;
+	} border;
 	struct {
-		ug_size_t width, height, tick_size;
-		ug_color_t tick_color;
-	} checkbox;
-
-	// a slider can be thinner and generally wider than a button
+		struct { ug_color_t bg, fg; } color;
+		ug_size_t  height, font_size;
+	} title;
 	struct {
-		ug_size_t width, height;
-	} slider;
-
-	// the text color, dimension and the background of a text display can be
-	// different
-	struct {
-		ug_color_t text_color, bg_color;
-		ug_size_t text_size;
-	} textdisplay;
-
+		struct { ug_color_t active, bg, fg; } color;
+		ug_size_t font_size;
+	} btn;
 } ug_style_t;
 
 

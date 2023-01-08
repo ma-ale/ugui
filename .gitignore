@@ -1,3 +1,5 @@
 microgui
 *.o
 test/test
+**/compile_commands.json
+**/.cache
