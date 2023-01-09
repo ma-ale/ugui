@@ -1026,6 +1026,8 @@ int ug_frame_end(ug_ctx_t *ctx)
 		draw_elements(ctx, c);
 		// reset the layout to row
 		c->flags &= ~(CNT_LAYOUT_COLUMN);
+		// reset used space
+		c->space = (ug_rect_t){0};
 	}
 
 	ctx->input_text[0]      = '\0';
@@ -1222,7 +1224,18 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	rca->x = cx + rect->x;
 	rca->y = cy + rect->y;
 
-//	printf("rca: x=%d, y=%d, w=%d, h=%d\n", rca->x, rca->y, rca->w, rca->h);
+	// if there is no space for the element
+	if (cnt->space.w + rca->w > cnt->rca.w || cnt->space.h + rca->h > cnt->rca.h)
+		return -1;
+	// or the element was put outside of the container
+	if (rca->x >= cnt->rca.x + cnt->rca.w || rca->y >= cnt->rca.y + cnt->rca.h)
+		return -1;
+
+	// FIXME: crop element if it is partially outside, this shit introduces
+	//        all sorts of resizing bugs
+	if (rca->x < cnt->rca.x + cnt->rca.w &&  rca->x + rca->w > cnt->rca.x + cnt->rca.w)
+		rca->w = rca->x + rca->w - (cnt->rca.x + cnt->rca.w);
+
 
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
 		cnt->c_orig.y += rca->h + m;

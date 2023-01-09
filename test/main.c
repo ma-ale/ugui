@@ -202,7 +202,7 @@ int main(void)
 
 		// ug_container_popup(ctx, "Annoying popup", (ug_div_t){.x=SIZE_MM(150), .y=SIZE_MM(150), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
-		ug_container_body(ctx, "Main Body");
+		//ug_container_body(ctx, "Main Body");
 		//if (ug_container_body(ctx, "Other Body"))
 		//	printf("No space!\n");
 
