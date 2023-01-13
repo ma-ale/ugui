@@ -593,8 +593,8 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		     BETWEEN(mpos.x, minx, maxx)                       &&
 		     BETWEEN(mpos.y, miny, maxy))) {
 			cnt->flags |= CNT_STATE_RESIZE_B;
-			rect->h += ctx->mouse.delta.y;
-			rca->h  += ctx->mouse.delta.y;
+			rect->h = MAX(10, rect->h + ctx->mouse.delta.y);
+			rca->h  = MAX(10, rca->h + ctx->mouse.delta.y);
 		}
 	}
 
@@ -1022,6 +1022,9 @@ int ug_frame_end(ug_ctx_t *ctx)
 		ug_container_t *c = &ctx->cnt_stack.items[i];
 		// draw containers
 		draw_container(ctx, c, c->name);
+		// TODO: add a debug flag
+		// debug draw space used by elements
+		push_rect_command(ctx, &c->space, (ug_color_t)RGBA_FORMAT(0x0000abf0));
 		// draw elements
 		draw_elements(ctx, c);
 		// reset the layout to row
@@ -1183,9 +1186,29 @@ static ug_element_t *get_element(ug_container_t *cnt, ug_id_t id)
 }
 
 
+// TODO: move these to the top and use theme everywhere needed
 // update the element's position in the container area
+#define R_MARGIN(r, b) (r.x + r.w - b)
+#define L_MARGIN(r, b) (r.x + b)
+#define T_MARGIN(r, b) (r.y + b)
+#define B_MARGIN(r, b) (r.y + r.h - b)
+// check if ra is outside of rb
+#define OUTSIDE(ra, ba, rb, bb) (L_MARGIN(ra, ba) > R_MARGIN(rb, bb) ||        \
+                                 T_MARGIN(ra, ba) > B_MARGIN(rb, bb) ||        \
+				 R_MARGIN(ra, ba) < L_MARGIN(rb, bb) ||        \
+				 B_MARGIN(ra, ba) < T_MARGIN(rb, bb))
 static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
 {
+
+	// if there is no space then return
+	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
+		if (cnt->space.h >= cnt->rca.h)
+			return -1;
+	} else {
+		if (cnt->space.w >= cnt->rca.w)
+			return -1;
+	}
+
 
 	ug_rect_t *rect, *rca;
 	rect = &(elem->rect);
@@ -1200,8 +1223,10 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	const ug_style_t *s = ctx->style_px;
 	// FIXME: different border thickness
-	int b = SZ_INT(s->border.size);
-	int m = SZ_INT(s->margin);
+	int b  = SZ_INT(s->border.size);
+	int m  = SZ_INT(s->margin);
+	// TODO: element borders
+	int eb = 0; 
 	int cx, cy, cw, ch;
 
 	// FIXME: this may not work
@@ -1224,33 +1249,42 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	rca->x = cx + rect->x;
 	rca->y = cy + rect->y;
 
-	// if there is no space for the element
-	if (cnt->space.w + rca->w > cnt->rca.w || cnt->space.h + rca->h > cnt->rca.h)
-		return -1;
-	// or the element was put outside of the container
-	if (rca->x >= cnt->rca.x + cnt->rca.w || rca->y >= cnt->rca.y + cnt->rca.h)
+	// if the element was put outside of the container return, this can happen
+	// because of the element offset
+	// FIXME: can we do this check before?
+	if (OUTSIDE((*rca), eb, cnt->rca, b))
 		return -1;
 
-	// FIXME: crop element if it is partially outside, this shit introduces
-	//        all sorts of resizing bugs
-	if (rca->x < cnt->rca.x + cnt->rca.w &&  rca->x + rca->w > cnt->rca.x + cnt->rca.w)
-		rca->w = rca->x + rca->w - (cnt->rca.x + cnt->rca.w);
+	if (R_MARGIN((*rca), eb) > R_MARGIN(cnt->rca, b))
+		rca->w = R_MARGIN(cnt->rca, b) - L_MARGIN((*rca), eb);
 
+	if (L_MARGIN((*rca), eb) < L_MARGIN(cnt->rca, b)) {
+		rca->x = L_MARGIN(cnt->rca, b);
+		rca->w -= L_MARGIN(cnt->rca, b) - L_MARGIN((*rca), eb);
+	}
+
+	if (T_MARGIN((*rca), eb) < T_MARGIN(cnt->rca, b)) {
+		rca->y = T_MARGIN(cnt->rca, b);
+		rca->h -= T_MARGIN(cnt->rca, b) - T_MARGIN((*rca), eb);
+	}
+	
+	if (B_MARGIN((*rca), eb) > B_MARGIN(cnt->rca, b))
+		rca->h = B_MARGIN(cnt->rca, b) - T_MARGIN((*rca), eb);
+	
 
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
 		cnt->c_orig.y += rca->h + m;
 		cnt->r_orig.y += rca->h + m;
-		cnt->space.h  += rca->h;
-		if ((cnt->space.x + cnt->space.w) < (rca->x + rca->w))
-			cnt->space.w += cnt->space.x + cnt->space.w - rca->x - rca->w;
+
 	} else {
 		cnt->r_orig.x += rca->w + m;
 		cnt->c_orig.x += rca->w + m;
-		cnt->space.w  += rca->w;
-		if ((cnt->space.y + cnt->space.h) < (rca->y + rca->h))
-			cnt->space.h += cnt->space.y + cnt->space.h - rca->y - rca->h;
 	}
-
+	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), eb))
+		cnt->space.h = B_MARGIN((*rca), eb) - T_MARGIN(cnt->space, 0);
+	if (R_MARGIN(cnt->space, 0) < R_MARGIN((*rca), eb))
+		cnt->space.w = R_MARGIN((*rca), eb) - L_MARGIN(cnt->space, 0);
+	
 	return 0;
 }
 
@@ -1276,7 +1310,6 @@ int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t
 
 	ug_container_t *cp;
 	GET_SELECTED_CONTAINER(ctx, cp);
-	printf("selected: %x\n", ctx->selected_cnt);
 
 	ug_id_t id = hash(name, strlen(name));
 	ug_element_t *elem = get_element(cp, id);
