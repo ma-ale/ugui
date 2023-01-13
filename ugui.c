@@ -47,6 +47,15 @@
 #define INTERSECTS(v, r)     (BETWEEN(v.x, r.x, r.x+r.w) && BETWEEN(v.y, r.y, r.y+r.h))
 #define TEST(f, b)           (f & b)
 #define MAX(a, b)            (a > b ? a : b)
+#define R_MARGIN(r, b) (r.x + r.w - b)
+#define L_MARGIN(r, b) (r.x + b)
+#define T_MARGIN(r, b) (r.y + b)
+#define B_MARGIN(r, b) (r.y + r.h - b)
+// check if ra is outside of rb
+#define OUTSIDE(ra, ba, rb, bb) (L_MARGIN(ra, ba) > R_MARGIN(rb, bb) ||        \
+                                 T_MARGIN(ra, ba) > B_MARGIN(rb, bb) ||        \
+				 R_MARGIN(ra, ba) < L_MARGIN(rb, bb) ||        \
+				 B_MARGIN(ra, ba) < T_MARGIN(rb, bb))
 
 
 static ug_style_t style_cache = {0};
@@ -305,6 +314,8 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
  *                          Container Operations                               *
  *=============================================================================*/
 
+#define STATEIS(cnt, f) ((cnt->flags & CNT_STATE_ALL) == f)
+
 /*
 * Container style:
 * 
@@ -481,8 +492,8 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	}
 
 	// set the correct element origin
-	cnt->c_orig.x = cnt->r_orig.x = cnt->space.x = rca->x + b;
-	cnt->c_orig.y = cnt->r_orig.y = cnt->space.y = rca->y + b;
+	cnt->c_orig.x = cnt->r_orig.x = cnt->space.x = L_MARGIN((*rca), b);
+	cnt->c_orig.y = cnt->r_orig.y = cnt->space.y = T_MARGIN((*rca),b);
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		cnt->c_orig.y += hh + SZ_INT(s->border.size);
 		cnt->r_orig.y += hh + SZ_INT(s->border.size);
@@ -521,18 +532,18 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	int hh = SZ_INT(s->title.height);
 
 	ug_vec2_t mpos = ctx->mouse.pos;
-	int minx, maxx, miny, maxy;
+	ug_rect_t clip;
 	
 	// handle movable windows
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
-		minx = rca->x + b;
-		maxx = rca->x + rca->w - b;
-		miny = rca->y + b;
-		maxy = rca->y + b + hh;
-		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_MOVING ||
-		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
-		     BETWEEN(mpos.x, minx, maxx)                       &&
-		     BETWEEN(mpos.y, miny, maxy))) {
+		clip = (ug_rect_t){
+			.x = L_MARGIN((*rca), b),
+			.y = T_MARGIN((*rca), b),
+			.w = rca->w - 2*b,
+			.h = hh,
+		};
+		if (STATEIS(cnt, CNT_STATE_MOVING) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
 			cnt->flags |= CNT_STATE_MOVING;
 			rect->x += ctx->mouse.delta.x;
 			rect->y += ctx->mouse.delta.y;
@@ -544,14 +555,14 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// FIXME: allow for corner resize
 	// right border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
-		minx = rca->x + rca->w - b;
-		maxx = rca->x + rca->w;
-		miny = rca->y;
-		maxy = rca->y + rca->h;
-		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_R ||
-		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
-		     BETWEEN(mpos.x, minx, maxx)                       &&
-		     BETWEEN(mpos.y, miny, maxy))) {
+		clip = (ug_rect_t){
+			.x = R_MARGIN((*rca), b),
+			.y = rca->y,
+			.w = b,
+			.h = rca->h,
+		};
+		if (STATEIS(cnt, CNT_STATE_RESIZE_R) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
 			cnt->flags |= CNT_STATE_RESIZE_R;
 			rect->w = MAX(10, rect->w + ctx->mouse.delta.x);
 			rca->w  = MAX(10, rca->w + ctx->mouse.delta.x);
@@ -560,14 +571,14 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	// left border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
-		minx = rca->x;
-		maxx = rca->x + b;
-		miny = rca->y;
-		maxy = rca->y + rca->h;
-		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_L ||
-		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
-		     BETWEEN(mpos.x, minx, maxx)                       &&
-		     BETWEEN(mpos.y, miny, maxy))) {
+		clip = (ug_rect_t){
+			.x = L_MARGIN((*rca), 0),
+			.y = rca->y,
+			.w = b,
+			.h = rca->h,
+		};
+		if (STATEIS(cnt, CNT_STATE_RESIZE_L) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))){
 			cnt->flags |= CNT_STATE_RESIZE_L;
 
 			if (rect->w - ctx->mouse.delta.x >= 10) {
@@ -584,14 +595,14 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	// bottom border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM)) {
-		minx = rca->x;
-		maxx = rca->x + rca->w;
-		miny = rca->y + rca->h - b;
-		maxy = rca->y + rca->h;
-		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_B ||
-		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
-		     BETWEEN(mpos.x, minx, maxx)                       &&
-		     BETWEEN(mpos.y, miny, maxy))) {
+		clip = (ug_rect_t){
+			.x = rca->x,
+			.y = B_MARGIN((*rca), b),
+			.w = rca->w,
+			.h = b,
+		};
+		if (STATEIS(cnt, CNT_STATE_RESIZE_B) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
 			cnt->flags |= CNT_STATE_RESIZE_B;
 			rect->h = MAX(10, rect->h + ctx->mouse.delta.y);
 			rca->h  = MAX(10, rca->h + ctx->mouse.delta.y);
@@ -600,14 +611,14 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	// top border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_TOP)) {
-		minx = rca->x;
-		maxx = rca->x + rca->w;
-		miny = rca->y;
-		maxy = rca->y + b;
-		if ((cnt->flags & CNT_STATE_ALL) == CNT_STATE_RESIZE_T ||
-		    ((cnt->flags & CNT_STATE_ALL) == 0                 &&
-		     BETWEEN(mpos.x, minx, maxx)                       &&
-		     BETWEEN(mpos.y, miny, maxy))) {
+		clip = (ug_rect_t){
+			.x = rca->x,
+			.y = rca->y,
+			.w = rca->w,
+			.h = b,
+		};
+		if (STATEIS(cnt, CNT_STATE_RESIZE_T) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
 			cnt->flags |= CNT_STATE_RESIZE_T;
 
 			if (rect->h - ctx->mouse.delta.y >= 10) {
@@ -624,7 +635,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	// if we were not resized but we are still active it means we are doing 
 	// something to the contained elements, as such set state to none
-	if ((cnt->flags & CNT_STATE_ALL) == 0)
+	if (STATEIS(cnt, 0))
 		cnt->flags |= CNT_STATE_NONE;
 
 	// TODO: what if I want to close a floating container?
@@ -1188,17 +1199,7 @@ static ug_element_t *get_element(ug_container_t *cnt, ug_id_t id)
 }
 
 
-// TODO: move these to the top and use theme everywhere needed
 // update the element's position in the container area
-#define R_MARGIN(r, b) (r.x + r.w - b)
-#define L_MARGIN(r, b) (r.x + b)
-#define T_MARGIN(r, b) (r.y + b)
-#define B_MARGIN(r, b) (r.y + r.h - b)
-// check if ra is outside of rb
-#define OUTSIDE(ra, ba, rb, bb) (L_MARGIN(ra, ba) > R_MARGIN(rb, bb) ||        \
-                                 T_MARGIN(ra, ba) > B_MARGIN(rb, bb) ||        \
-				 R_MARGIN(ra, ba) < L_MARGIN(rb, bb) ||        \
-				 B_MARGIN(ra, ba) < T_MARGIN(rb, bb))
 static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
 {
 
@@ -1219,12 +1220,7 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	*rca = *rect;
 
-//	printf("cnt->r_orig: x=%d, y=%d\n", cnt->r_orig.x, cnt->r_orig.y);
-//	printf("cnt->c_orig: x=%d, y=%d\n", cnt->c_orig.x, cnt->c_orig.y);
-//	printf("rca: x=%d, y=%d, w=%d, h=%d\n", rca->x, rca->y, rca->w, rca->h);
-
 	const ug_style_t *s = ctx->style_px;
-	// FIXME: different border thickness
 	int b  = SZ_INT(s->border.size);
 	int m  = SZ_INT(s->margin);
 	// TODO: element borders
@@ -1253,7 +1249,6 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	// if the element was put outside of the container return, this can happen
 	// because of the element offset
-	// FIXME: can we do this check before?
 	if (OUTSIDE((*rca), eb, cnt->rca, b))
 		return -1;
 

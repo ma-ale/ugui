@@ -8,6 +8,7 @@
 #define SIZE_PX(x)     { .size.i=x, .unit=UG_UNIT_PX }
 #define SIZE_MM(x)     { .size.f=x, .unit=UG_UNIT_MM }
 #define SIZE_PT(x)     { .size.f=x, .unit=UG_UNIT_PT }
+#define SQUARE(x)      .w = x, .h = x
 
 // basic types
 typedef unsigned int                                       ug_id_t; 
