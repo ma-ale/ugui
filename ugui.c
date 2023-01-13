@@ -1150,7 +1150,8 @@ int ug_layout_next_row(ug_ctx_t *ctx)
 	ug_container_t *cp;
 	GET_SELECTED_CONTAINER(ctx, cp);
 
-	cp->r_orig = cp->c_orig;
+	cp->c_orig.x = cp->r_orig.x = L_MARGIN(cp->space, 0);
+	cp->c_orig.y = cp->r_orig.y = B_MARGIN(cp->space, -SZ_INT(ctx->style_px->margin));
 
 	return 0;
 }
@@ -1163,7 +1164,8 @@ int ug_layout_next_column(ug_ctx_t *ctx)
 	ug_container_t *cp;
 	GET_SELECTED_CONTAINER(ctx, cp);
 
-	cp->c_orig = cp->r_orig;
+	cp->c_orig.x = cp->r_orig.x = R_MARGIN(cp->space, -SZ_INT(ctx->style_px->margin));
+	cp->c_orig.y = cp->r_orig.y = T_MARGIN(cp->space, 0);
 
 	return 0;
 }
@@ -1271,11 +1273,13 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
 		cnt->c_orig.y += rca->h + m;
-		cnt->r_orig.y += rca->h + m;
+		cnt->r_orig.x = R_MARGIN((*rca), eb) + m;
+		cnt->r_orig.y = T_MARGIN((*rca), eb);
 
 	} else {
 		cnt->r_orig.x += rca->w + m;
-		cnt->c_orig.x += rca->w + m;
+		cnt->c_orig.x = L_MARGIN((*rca), eb);
+		cnt->c_orig.y = B_MARGIN((*rca), eb) + m;
 	}
 	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), eb))
 		cnt->space.h = B_MARGIN((*rca), eb) - T_MARGIN(cnt->space, 0);
