@@ -71,6 +71,7 @@ typedef struct {
 	// origin for in-row and in-column elements
 	ug_vec2_t c_orig, r_orig;
 	UG_STACK(ug_element_t) elem_stack;
+	ug_id_t selected_elem, hover_elem;
 } ug_container_t;
 
 // the container flags

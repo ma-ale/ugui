@@ -25,7 +25,7 @@ static const ug_style_t default_style = {
 	},
 	.btn = {
 		.color = {
-			.active = RGB_FORMAT(0x44ff44),
+			.active = RGB_FORMAT(0x440044),
 			.bg     = RGB_FORMAT(0x00ff00),
 			.fg     = RGB_FORMAT(0xffff00),
 		},

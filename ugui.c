@@ -96,7 +96,7 @@ static ug_style_t style_cache = {0};
 
 #define MOUSEDOWN(ctx, btn) (~(ctx->mouse.hold & btn) & (ctx->mouse.update & btn))
 #define MOUSEUP(ctx, btn)   ((ctx->mouse.hold & btn)  & (ctx->mouse.update & btn))
-#define HELD(ctx, btn)      (ctx->mouse.hold & btn)
+#define MOUSEHELD(ctx, btn) (ctx->mouse.hold & btn)
 
 
 // https://en.wikipedia.org/wiki/Jenkins_hash_function
@@ -508,7 +508,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// mouse pressed handle resize, for simplicity containers can only 
 	// be resized from the bottom and right border
 	// TODO: change return value to indicate this case
-	if (!HELD(ctx, UG_BTN_LEFT) ||
+	if (!MOUSEHELD(ctx, UG_BTN_LEFT) ||
 	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_MOVABLE)))
 		return 1;
 	
@@ -1027,6 +1027,8 @@ int ug_frame_end(ug_ctx_t *ctx)
 		push_rect_command(ctx, &c->space, (ug_color_t)RGBA_FORMAT(0x0000abf0));
 		// draw elements
 		draw_elements(ctx, c);
+		// reset the hover element
+		c->hover_elem = 0;
 		// reset the layout to row
 		c->flags &= ~(CNT_LAYOUT_COLUMN);
 		// reset used space
@@ -1289,13 +1291,38 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 }
 
 
+// TODO: have a map of function pointers for each element type instead of this
+//       generic function
+int handle_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
+{
+	if (INTERSECTS(ctx->mouse.pos, elem->rca)) {
+		cnt->hover_elem = elem->id;
+		if (MOUSEDOWN(ctx, BTN_ANY))
+			cnt->selected_elem = elem->id;
+	} else {
+		if (cnt->selected_elem != elem->id)
+			return 0;
+	}
+	// TODO: handle different types of elements
+
+	// TODO: return which button was held
+	return 1;
+}
+
+
 void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 {
+	const ug_style_t *s = ctx->style_px;
+
 	for (int i = 0; i < cnt->elem_stack.idx; i++) {
 		ug_element_t *e = &(cnt->elem_stack.items[i]);
+		ug_color_t col = RGB_FORMAT(0);
+
 		switch (e->type) {
 		case UG_ELEM_BUTTON:
-			push_rect_command(ctx, &e->rca, ctx->style_px->btn.color.bg);
+			// TODO: draw borders, different color for selected element
+			col = cnt->hover_elem == e->id ? s->btn.color.active : s->btn.color.bg;
+			push_rect_command(ctx, &e->rca, col);
 			break;
 		default: break;
 		}
@@ -1327,5 +1354,5 @@ int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t
 		return -1;
 	}
 
-	return 0;
+	return handle_element(ctx, cp, elem);
 }
