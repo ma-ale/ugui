@@ -191,7 +191,7 @@ int main(void)
 		//	ug_container_remove(ctx, "Menu fichissimo");
 		//}
 
-		ug_container_floating(ctx, "stupid name", (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
+		//ug_container_floating(ctx, "stupid name", (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
 		//ug_container_floating(ctx, "floating windoooooooow", (ug_div_t){.x=SIZE_PX(100), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
@@ -208,11 +208,13 @@ int main(void)
 
 		ug_layout_row(ctx);
 		
+		ug_layout_row(ctx);
 		ug_element_button(ctx, "button 1", "", (ug_div_t){SQUARE(SIZE_MM(10))});
 		ug_element_button(ctx, "button 2", "", (ug_div_t){SQUARE(SIZE_MM(10))});
-		//ug_element_button(ctx, "button 3", "", (ug_div_t){SQUARE(SIZE_MM(10))});
-		ug_layout_column(ctx);
+		ug_layout_next_row(ctx);
+		ug_element_button(ctx, "button 3", "", (ug_div_t){SQUARE(SIZE_MM(10))});
 		ug_element_button(ctx, "button 4", "", (ug_div_t){SQUARE(SIZE_MM(10))});
+		ug_layout_next_row(ctx);
 		ug_element_button(ctx, "button 5", "", (ug_div_t){SQUARE(SIZE_MM(10))});
 		//ug_element_button(ctx, "button 6", "", (ug_div_t){SQUARE(SIZE_MM(10)),.x=SIZE_PX(-10)});
 

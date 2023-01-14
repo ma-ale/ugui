@@ -25,11 +25,14 @@ static const ug_style_t default_style = {
 	},
 	.btn = {
 		.color = {
-			.active = RGB_FORMAT(0x440044),
-			.bg     = RGB_FORMAT(0x00ff00),
-			.fg     = RGB_FORMAT(0xffff00),
+			.act = RGB_FORMAT(0x440044),
+			.bg  = RGB_FORMAT(0x006600),
+			.fg  = RGB_FORMAT(0xffff00),
+			.sel = RGB_FORMAT(0xff0000),
+			.br  = RGB_FORMAT(0xff00ff),
 		},
 		.font_size = SIZE_PX(10),
+		.border    = SIZE_PX(11),
 	},
 };
 

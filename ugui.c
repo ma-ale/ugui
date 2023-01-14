@@ -1225,9 +1225,14 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	const ug_style_t *s = ctx->style_px;
 	int b  = SZ_INT(s->border.size);
 	int m  = SZ_INT(s->margin);
-	// TODO: element borders
-	int eb = 0; 
+	// TODO: different element borders
 	int cx, cy, cw, ch;
+	int eb = 0;
+	
+	switch (elem->type) {
+	case UG_ELEM_BUTTON: eb = SZ_INT(s->btn.border); break;
+	default: break;
+	} 
 
 	// FIXME: this may not work
 	cw = MAX(cnt->rca.w - cnt->space.w, 0);
@@ -1242,49 +1247,49 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	// handle relative sizes
 	if (rect->w == 0) rca->w = cw;
-	else rca->w += b;
+	else rca->w += 2*eb;
 	if (rect->h == 0) rca->h = ch;
-	else rca->h += b;
+	else rca->h += 2*eb;
 	// for elements x and y are offsets	
 	rca->x = cx + rect->x;
 	rca->y = cy + rect->y;
 
 	// if the element was put outside of the container return, this can happen
 	// because of the element offset
-	if (OUTSIDE((*rca), eb, cnt->rca, b))
+	if (OUTSIDE((*rca), 0, cnt->rca, b))
 		return -1;
 
-	if (R_MARGIN((*rca), eb) > R_MARGIN(cnt->rca, b))
-		rca->w = R_MARGIN(cnt->rca, b) - L_MARGIN((*rca), eb);
+	if (R_MARGIN((*rca), 0) > R_MARGIN(cnt->rca, b))
+		rca->w = R_MARGIN(cnt->rca, b) - L_MARGIN((*rca), 0);
 
-	if (L_MARGIN((*rca), eb) < L_MARGIN(cnt->rca, b)) {
+	if (L_MARGIN((*rca), 0) < L_MARGIN(cnt->rca, b)) {
 		rca->x = L_MARGIN(cnt->rca, b);
-		rca->w -= L_MARGIN(cnt->rca, b) - L_MARGIN((*rca), eb);
+		rca->w -= L_MARGIN(cnt->rca, b) - L_MARGIN((*rca), 0);
 	}
 
-	if (T_MARGIN((*rca), eb) < T_MARGIN(cnt->rca, b)) {
+	if (T_MARGIN((*rca), 0) < T_MARGIN(cnt->rca, b)) {
 		rca->y = T_MARGIN(cnt->rca, b);
-		rca->h -= T_MARGIN(cnt->rca, b) - T_MARGIN((*rca), eb);
+		rca->h -= T_MARGIN(cnt->rca, b) - T_MARGIN((*rca), 0);
 	}
 	
-	if (B_MARGIN((*rca), eb) > B_MARGIN(cnt->rca, b))
-		rca->h = B_MARGIN(cnt->rca, b) - T_MARGIN((*rca), eb);
+	if (B_MARGIN((*rca), 0) > B_MARGIN(cnt->rca, b))
+		rca->h = B_MARGIN(cnt->rca, b) - T_MARGIN((*rca), 0);
 	
 
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
 		cnt->c_orig.y += rca->h + m;
-		cnt->r_orig.x = R_MARGIN((*rca), eb) + m;
-		cnt->r_orig.y = T_MARGIN((*rca), eb);
+		cnt->r_orig.x = R_MARGIN((*rca), 0) + m;
+		cnt->r_orig.y = T_MARGIN((*rca), 0);
 
 	} else {
 		cnt->r_orig.x += rca->w + m;
-		cnt->c_orig.x = L_MARGIN((*rca), eb);
-		cnt->c_orig.y = B_MARGIN((*rca), eb) + m;
+		cnt->c_orig.x = L_MARGIN((*rca), 0);
+		cnt->c_orig.y = B_MARGIN((*rca), 0) + m;
 	}
-	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), eb))
-		cnt->space.h = B_MARGIN((*rca), eb) - T_MARGIN(cnt->space, 0);
-	if (R_MARGIN(cnt->space, 0) < R_MARGIN((*rca), eb))
-		cnt->space.w = R_MARGIN((*rca), eb) - L_MARGIN(cnt->space, 0);
+	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), 0))
+		cnt->space.h = B_MARGIN((*rca), 0) - T_MARGIN(cnt->space, 0);
+	if (R_MARGIN(cnt->space, 0) < R_MARGIN((*rca), 0))
+		cnt->space.w = R_MARGIN((*rca), 0) - L_MARGIN(cnt->space, 0);
 	
 	return 0;
 }
@@ -1315,13 +1320,23 @@ void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	for (int i = 0; i < cnt->elem_stack.idx; i++) {
 		ug_element_t *e = &(cnt->elem_stack.items[i]);
-		ug_color_t col = RGB_FORMAT(0);
+		ug_color_t col = RGB_FORMAT(0), bcol = RGB_FORMAT(0);
+		ug_rect_t r = e->rca;
+		int eb;
 
 		switch (e->type) {
 		case UG_ELEM_BUTTON:
 			// TODO: draw borders, different color for selected element
-			col = cnt->hover_elem == e->id ? s->btn.color.active : s->btn.color.bg;
-			push_rect_command(ctx, &e->rca, col);
+			col  = cnt->hover_elem == e->id ? s->btn.color.act : s->btn.color.bg;
+			bcol = cnt->selected_elem == e->id ? s->btn.color.sel : s->btn.color.br;
+			eb = SZ_INT(ctx->style_px->btn.border);
+
+			push_rect_command(ctx, &r, bcol);
+			r.x += eb;
+			r.y += eb;
+			r.w -= 2*eb;
+			r.h -= 2*eb; 
+			push_rect_command(ctx, &r, col);
 			break;
 		default: break;
 		}

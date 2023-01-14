@@ -114,8 +114,8 @@ typedef struct {
 		ug_size_t  height, font_size;
 	} title;
 	struct {
-		struct { ug_color_t active, bg, fg; } color;
-		ug_size_t font_size;
+		struct { ug_color_t act, bg, fg, sel, br; } color;
+		ug_size_t font_size, border;
 	} btn;
 } ug_style_t;
 
