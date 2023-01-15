@@ -260,6 +260,7 @@ int ug_layout_next_column(ug_ctx_t *ctx);
 
 // elements
 int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t dim);
+int ug_element_textbtn(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t dim);
 
 // Input functions
 int ug_input_mousemove(ug_ctx_t *ctx, int x, int y);

@@ -1283,24 +1283,47 @@ void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 	for (int i = 0; i < cnt->elem_stack.idx; i++) {
 		ug_element_t *e = &(cnt->elem_stack.items[i]);
 		ug_color_t col = RGB_FORMAT(0), bcol = RGB_FORMAT(0);
+		ug_color_t txtcol = RGB_FORMAT(0);
 		ug_rect_t r = e->rca;
-		int eb;
+		int eb = 0, ts = 0;
+		unsigned char draw_bg = 0, draw_fg = 0, draw_txt = 0;
 
 		switch (e->type) {
 		case UG_ELEM_BUTTON:
 			// TODO: draw borders, different color for selected element
 			col  = cnt->hover_elem == e->id ? s->btn.color.act : s->btn.color.bg;
 			bcol = cnt->selected_elem == e->id ? s->btn.color.sel : s->btn.color.br;
+			txtcol = s->btn.color.fg;
+			ts = SZ_INT(s->btn.font_size);
 			eb = SZ_INT(ctx->style_px->btn.border);
+			draw_bg = draw_fg = draw_txt = 1;
+			break;
+		case UG_ELEM_TXTBTN:
+			ts = SZ_INT(s->btn.font_size);
+			txtcol = s->color.fg;
+			draw_txt = 1;
+		default: break;
+		}
 
+		if (draw_bg)
 			push_rect_command(ctx, &r, bcol);
+		if (draw_fg) {
+			r = e->rca;
 			r.x += eb;
 			r.y += eb;
 			r.w -= 2*eb;
 			r.h -= 2*eb; 
 			push_rect_command(ctx, &r, col);
-			break;
-		default: break;
+		}
+		if (draw_txt) {
+			push_text_command(ctx, 
+			                 (ug_vec2_t){
+						.x = e->rca.x,
+						.y = e->rca.y+e->rca.h/2
+					 },
+					 ts,
+					 txtcol,
+					 e->btn.txt);
 		}
 	}
 }
@@ -1320,6 +1343,36 @@ int ug_element_button(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t
 	// FIXME: we don't always need to do everything
 	elem->id      = id;
 	elem->type    = UG_ELEM_BUTTON;
+	elem->rect    = div_to_rect(ctx, &dim);
+	elem->name    = name;
+	elem->btn.txt = txt;
+
+	// FIXME: what about error codes?
+	if (position_element(ctx, cp, elem)) {
+		DELETE_FROM_STACK(cp->elem_stack, elem);
+		return -1;
+	}
+
+	return handle_element(ctx, cp, elem);
+}
+
+
+// text-only button
+int ug_element_textbtn(ug_ctx_t *ctx, const char *name, const char *txt, ug_div_t dim)
+{
+	TEST_CTX(ctx);
+	TEST_STR(name);
+	TEST_STR(txt);
+
+	ug_container_t *cp;
+	GET_SELECTED_CONTAINER(ctx, cp);
+
+	ug_id_t id = hash(name, strlen(name));
+	ug_element_t *elem = get_element(cp, id);
+
+	// FIXME: we don't always need to do everything
+	elem->id      = id;
+	elem->type    = UG_ELEM_TXTBTN;
 	elem->rect    = div_to_rect(ctx, &dim);
 	elem->name    = name;
 	elem->btn.txt = txt;

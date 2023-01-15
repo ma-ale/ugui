@@ -28,11 +28,11 @@ static const ug_style_t default_style = {
 			.act = RGB_FORMAT(0x440044),
 			.bg  = RGB_FORMAT(0x006600),
 			.fg  = RGB_FORMAT(0xffff00),
-			.sel = RGB_FORMAT(0xff0000),
+			.sel = RGB_FORMAT(0x0a0aff),
 			.br  = RGB_FORMAT(0xff00ff),
 		},
 		.font_size = SIZE_PX(10),
-		.border    = SIZE_PX(11),
+		.border    = SIZE_PX(1),
 	},
 };
 
