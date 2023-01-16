@@ -1018,8 +1018,17 @@ int ug_frame_begin(ug_ctx_t *ctx)
 
 		ug_rect_t r = c->rca;
 		EXPAND(r, SZ_INT(ctx->style_px->border.size));
-		if (INTERSECTS(v, r))
+		if (INTERSECTS(v, r)) {
 			ctx->hover_cnt = c->id;
+			// update element hover for the hovered container
+			for (int i = 0; i < c->elem_stack.idx; i++) {
+				ug_element_t *e = &c->elem_stack.items[i];
+				if (INTERSECTS(ctx->mouse.pos, e->rca)) {
+					c->hover_elem = e->id;
+					break;
+				}
+			}
+		}
 	}
 	printf("\n");
 
@@ -1307,9 +1316,11 @@ int handle_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
 	// floating cont. over bodies
 	if (ctx->hover_cnt != cnt->id)
 		return 0;
+	// if the element is not selected nor hovered then do nothing
+	if (cnt->hover_elem != elem->id && cnt->selected_elem != elem->id)
+		return 0;
 
-	if (INTERSECTS(ctx->mouse.pos, elem->rca)) {
-		cnt->hover_elem = elem->id;
+	if (cnt->hover_elem == elem->id) {
 		if (MOUSEDOWN(ctx, BTN_ANY))
 			cnt->selected_elem = elem->id;
 	} else {
