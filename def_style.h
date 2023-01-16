@@ -6,7 +6,7 @@
 #define SZ_INT(x)            x.size.i
 
 static const ug_style_t default_style = {
-	.color  = { 
+	.color  = {
 		.bg   = RGB_FORMAT(0x131313),
 		.fg   = RGB_FORMAT(0xffffff),
 	},

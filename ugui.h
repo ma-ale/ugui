@@ -11,7 +11,7 @@
 #define SQUARE(x)      .w = x, .h = x
 
 // basic types
-typedef unsigned int                                       ug_id_t; 
+typedef unsigned int                                       ug_id_t;
 typedef struct { union {int x, w;}; union {int y, h;}; }   ug_vec2_t;
 typedef struct { unsigned char a, b, g, r; }               ug_color_t;
 typedef struct { int x, y, w, h; }                         ug_rect_t;
@@ -19,7 +19,7 @@ typedef struct { union {int i; float f;} size; int unit; } ug_size_t;
 // div has information about the phisical dimension
 typedef struct { ug_size_t x, y, w, h;}                    ug_div_t;
 
-typedef enum { 
+typedef enum {
 	UG_UNIT_PX = 0,
 	UG_UNIT_MM,
 	UG_UNIT_PT,
@@ -46,7 +46,7 @@ enum {
 	UG_ELEM_CHECK,     // checkbox
 	UG_ELEM_RADIO,     // radio button
 	UG_ELEM_TOGGLE,    // toggle button
-	UG_ELEM_LABEL,     // simple text 
+	UG_ELEM_LABEL,     // simple text
 	UG_ELEM_UPDOWN,    // text with two buttons up and down
 	UG_ELEM_TEXTINPUT, // text input box
 	UG_ELEM_TEXTBOX,   // text surrounded by a box
@@ -185,7 +185,7 @@ typedef struct {
 	ug_id_t active_cnt, last_active_cnt;
 	// id of the selected container, used for layout
 	// NOTE: since the stacks can be relocated with realloc it is better not
-	//       to use a pointer here, even tough it would be better for efficiency 
+	//       to use a pointer here, even tough it would be better for efficiency
 	ug_id_t selected_cnt;
 	// count the frames for fun
 	unsigned long int frame;
@@ -248,7 +248,7 @@ int ug_container_remove(ug_ctx_t *ctx, const char *name);
 ug_rect_t ug_container_get_rect(ug_ctx_t *ctx, const char *name);
 
 // layouting, the following functions define how different ui elements are placed
-// inside the selected container. A new element is aligned respective to the 
+// inside the selected container. A new element is aligned respective to the
 // previous element and/or to the container, particularly elements can be placed
 // in a row or a column.
 int ug_layout_row(ug_ctx_t *ctx);

@@ -125,7 +125,7 @@ static ug_id_t hash(const void *data, unsigned int size)
 	hash += hash << 3;
   	hash ^= hash >> 11;
   	hash += hash << 15;
-	
+
 	return hash;
 }
 
@@ -218,7 +218,7 @@ static void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t c
 
 
 // pushes a text command to the render command stack, str is a pointer to a valid
-// string offered by the user, it must be valid at least until rendering is done 
+// string offered by the user, it must be valid at least until rendering is done
 static void push_text_command(ug_ctx_t *ctx, ug_vec2_t pos, int size, ug_color_t color, const char *str)
 {
 	ug_cmd_t *c;
@@ -294,7 +294,7 @@ int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi)
 	TEST_CTX(ctx);
 	if (scale <= 0 || ppi < 20.0)
 		return -1;
-	
+
 	ctx->last_ppi = ctx->ppi;
 	ctx->last_ppm = ctx->ppd;
 	ctx->last_ppd = ctx->ppm;
@@ -302,7 +302,7 @@ int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi)
 	ctx->ppm   = PPI_PPM(scale, ppi);
 	ctx->ppd   = PPI_PPM(scale, ppi);
 	ctx->ppi   = ppi;
-	
+
 	update_style_cache(ctx);
 
 	return 0;
@@ -314,7 +314,7 @@ int ug_ctx_set_drawableregion(ug_ctx_t *ctx, ug_vec2_t size)
 	TEST_CTX(ctx);
 	if (size.w <= 0 || size.h <= 0)
 		return -1;
-	
+
 	ctx->size.w = size.w;
 	ctx->size.h = size.h;
 
@@ -331,7 +331,7 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
 
 	ctx->style = style;
 	update_style_cache(ctx);
-	
+
 	return 0;
 }
 
@@ -345,7 +345,7 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
 /*
  * Container style: rca stands for absolute rectangle, it delimits the total
  * drawable area, as such it does not include borders
- *   
+ *
  *   rca                  v Border Top v
  * +-v--------------------------------------------------------+
  * | +------------------------------------------------------+ |
@@ -379,7 +379,7 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
  * | | .................................................... | |
  * | +------------------------------------------------------+ |
  * +----------------------------------------------------------+
- *                  ^ Border Bottom ^ 
+ *                  ^ Border Bottom ^
  */
 
 
@@ -430,13 +430,13 @@ static void sort_containers(ug_ctx_t *ctx)
 
 			ug_container_t *s = ctx->cnt_stack.items;
 			ug_container_t c = *cnt;
-			
+
 			if (ctx->active_cnt != c.id)
 				for (; y > 0 && TEST(s[y-1].flags, UG_CNT_FLOATING); y--);
 
 			if (i >= y)
 				continue;
-			
+
 			memmove(&s[i], &s[i+1], (y - i) * sizeof(ug_container_t));
 			s[y-1] = c;
 		}
@@ -503,7 +503,7 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		else rca->x = L_MARGIN(c, 0);
 		if (rect->y < 0) rca->y = B_MARGIN(c, 0) - B_MARGIN((*rca), -1);
 		else rca->y = T_MARGIN(c, 0);
-		
+
 		// if the container is fixed than update the available space in
 		// the context
 		if (rect->w) {
@@ -545,13 +545,13 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		return 0;
 	}
 
-	// mouse pressed handle resize, for simplicity containers can only 
+	// mouse pressed handle resize, for simplicity containers can only
 	// be resized from the bottom and right border
 	// TODO: change return value to indicate this case
 	if (!MOUSEHELD(ctx, UG_BTN_LEFT) ||
 	    !TEST(cnt->flags, (RESIZEALL | UG_CNT_MOVABLE)))
 		return 1;
-	
+
 	ug_rect_t *rect, *rca;
 	rect = &cnt->rect;
 	rca  = &cnt->rca;
@@ -563,7 +563,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 
 	ug_vec2_t mpos = ctx->mouse.pos;
 	ug_rect_t clip;
-	
+
 	// handle movable windows
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		clip = (ug_rect_t){
@@ -636,7 +636,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 			if (rca->w - ctx->mouse.delta.x >= 10) {
 				rca->w  -= ctx->mouse.delta.x;
 				rca->x  += ctx->mouse.delta.x;
-			}			
+			}
 		}
 	}
 
@@ -680,7 +680,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		}
 	}
 
-	// if we were not resized but we are still active it means we are doing 
+	// if we were not resized but we are still active it means we are doing
 	// something to the contained elements, as such set state to none
 	if (STATEIS(cnt, 0))
 		cnt->flags |= CNT_STATE_NONE;
@@ -708,7 +708,7 @@ static void draw_container(ug_ctx_t *ctx, ug_container_t *cnt, const char *text)
 	rect = cnt->rca;
 	EXPAND(rect, b);
 	push_rect_command(ctx, &rect, s->color.bg);
-	
+
 	// push outline
 	if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
 		rect = cnt->rca;
@@ -765,14 +765,14 @@ static void draw_container(ug_ctx_t *ctx, ug_container_t *cnt, const char *text)
 // a floating container can be placed anywhere and can be resized, acts like a
 // window inside another window
 int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
-{	
+{
 	TEST_CTX(ctx);
 	TEST_STR(name);
 	// TODO: verify div
 
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
-	
+
 	// maybe the name address was changed so always overwrite it
 	cnt->name = name;
 	if (cnt->id) {
@@ -789,7 +789,7 @@ int ug_container_floating(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
-	
+
 	// Select current conatiner
 	ctx->selected_cnt = id;
 
@@ -805,7 +805,7 @@ int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_div_t div)
 
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
-	
+
 	// maybe the name address was changed so always overwrite it
 	cnt->name = name;
 	if (cnt->id) {
@@ -821,7 +821,7 @@ int ug_container_popup(ug_ctx_t *ctx, const char *name, ug_div_t div)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
-	
+
 	// Select current conatiner
 	ctx->selected_cnt = id;
 
@@ -855,7 +855,7 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 			cnt->flags |= UG_CNT_RESIZE_BOTTOM;
 			rect.h = size_to_px(ctx, size);
 			break;
-		case UG_SIDE_RIGHT:  
+		case UG_SIDE_RIGHT:
 			cnt->flags |= UG_CNT_RESIZE_LEFT;
 			rect.x = -1;
 			rect.w = size_to_px(ctx, size);
@@ -873,7 +873,7 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
-	
+
 	// Select current conatiner
 	ctx->selected_cnt = id;
 
@@ -887,7 +887,7 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 
 	ug_id_t id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
-	
+
 	// maybe the name address was changed so always overwrite it
 	cnt->name = name;
 	if (cnt->id) {
@@ -906,7 +906,7 @@ int ug_container_menu_bar(ug_ctx_t *ctx, const char *name, ug_size_t height)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
-	
+
 	// Select current conatiner
 	ctx->selected_cnt = id;
 
@@ -921,7 +921,7 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 
 	ug_id_t	id = hash(name, strlen(name));
 	ug_container_t *cnt = get_container(ctx, id);
-	
+
 	// maybe the name address was changed so always overwrite it
 	cnt->name = name;
 	if (cnt->id) {
@@ -936,7 +936,7 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 		DELETE_FROM_STACK(ctx->cnt_stack, cnt);
 		return -1;
 	}
-	
+
 	// Select current conatiner
 	ctx->selected_cnt = id;
 
@@ -944,7 +944,7 @@ int ug_container_body(ug_ctx_t *ctx, const char *name)
 }
 
 
-// TODO: return an error indicating that no container exists with that name 
+// TODO: return an error indicating that no container exists with that name
 int ug_container_remove(ug_ctx_t *ctx, const char *name)
 {
 	TEST_CTX(ctx);
@@ -961,7 +961,7 @@ int ug_container_remove(ug_ctx_t *ctx, const char *name)
 }
 
 
-ug_rect_t ug_container_get_rect(ug_ctx_t *ctx, const char *name) 
+ug_rect_t ug_container_get_rect(ug_ctx_t *ctx, const char *name)
 {
 	ug_rect_t r = {0};
 	if(!ctx)
@@ -992,7 +992,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	// update mouse delta
 	ctx->mouse.delta.x = ctx->mouse.pos.x - ctx->mouse.last_pos.x;
 	ctx->mouse.delta.y = ctx->mouse.pos.y - ctx->mouse.last_pos.y;
-	
+
 	// clear command stack
 	RESET_STACK(ctx->cmd_stack);
 
@@ -1122,10 +1122,10 @@ int ug_frame_end(ug_ctx_t *ctx)
  * |                                                        |
  * |                                                        |
  * +--------------------------------------------------------+
- * 
+ *
  * Element Style:
- * 
- *   rca             margin 
+ *
+ *   rca             margin
  * +-v--------------+<--->+----------------+
  * | +------------+ |     | +------------+ |
  * | |            | |     | |            | |
@@ -1254,11 +1254,11 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	int m  = SZ_INT(s->margin);
 	int cx, cy, cw, ch;
 	int eb = 0;
-	
+
 	switch (elem->type) {
 	case UG_ELEM_BUTTON: eb = SZ_INT(s->btn.border); break;
 	default: break;
-	} 
+	}
 
 	// FIXME: this does not work
 	cw = MAX(cnt->rca.w - cnt->space.w, 0);
@@ -1274,7 +1274,7 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	// handle relative sizes
 	if (rect->w == 0) rca->w = cw - 2*eb;
 	if (rect->h == 0) rca->h = ch - 2*eb;
-	// for elements x and y are offsets	
+	// for elements x and y are offsets
 	rca->x = cx + rect->x + eb + m;
 	rca->y = cy + rect->y + eb + m;
 
@@ -1285,7 +1285,7 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	elem->flags &= ~(ELEM_CLIPPED);
 	if (crop_rect(rca, &cnt->rca))
-		elem->flags |= ELEM_CLIPPED; 
+		elem->flags |= ELEM_CLIPPED;
 
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
 		cnt->c_orig.y = B_MARGIN((*rca), 0) + eb;
@@ -1297,13 +1297,13 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 		cnt->c_orig.x = L_MARGIN((*rca), 0) + eb;
 		cnt->c_orig.y = B_MARGIN((*rca), 0) + eb;
 	}
-	
+
 	// expand used space
 	if (R_MARGIN(cnt->space, 0) < R_MARGIN((*rca), -eb))
 		cnt->space.w = R_MARGIN((*rca), -eb) - L_MARGIN(cnt->space, 0);
 	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), -eb))
 		cnt->space.h = B_MARGIN((*rca), -eb) - T_MARGIN(cnt->space, 0);
-	
+
 	return 0;
 }
 
@@ -1378,7 +1378,7 @@ void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 			push_rect_command(ctx, &r, col);
 		}
 		if (draw_txt) {
-			push_text_command(ctx, 
+			push_text_command(ctx,
 			                 (ug_vec2_t){
 						.x = e->rca.x+eb,
 						.y = e->rca.y+eb+e->rca.h/2

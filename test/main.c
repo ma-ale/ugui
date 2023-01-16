@@ -24,7 +24,7 @@ int main(void)
 
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	SDL_EnableScreenSaver();
-	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);	
+	SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
 	SDL_EventState(SDL_DROPTEXT, SDL_ENABLE);
 
 	SDL_GetDesktopDisplayMode(0, &dm);
@@ -37,9 +37,9 @@ int main(void)
 	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 #endif
 
-	w = SDL_CreateWindow("test", 
+	w = SDL_CreateWindow("test",
 	                     SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-	                     dm.w*0.8, dm.h*0.8, 
+	                     dm.w*0.8, dm.h*0.8,
 			     SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI |
 	                     SDL_WINDOW_OPENGL );
 
@@ -53,7 +53,7 @@ int main(void)
 	SDL_GL_GetDrawableSize(w, &dsize.w, &dsize.h);
 	float scale = 1.0;
 	scale = ((float)(size.w+size.h)/2)/((float)(dsize.w+dsize.h)/2);
-	
+
 	float dpi;
 	int idx;
 	idx = SDL_GetWindowDisplayIndex(w);
@@ -72,13 +72,13 @@ int main(void)
 	SDL_Event event;
 
 	char button_map[] = {
-		[SDL_BUTTON_LEFT   & 0xff] = UG_BTN_LEFT, 
-		[SDL_BUTTON_MIDDLE & 0xff] = UG_BTN_MIDDLE, 
-		[SDL_BUTTON_RIGHT  & 0xff] = UG_BTN_RIGHT, 
-		[SDL_BUTTON_X1     & 0xff] = UG_BTN_4, 
-		[SDL_BUTTON_X2     & 0xff] = UG_BTN_5, 
+		[SDL_BUTTON_LEFT   & 0xff] = UG_BTN_LEFT,
+		[SDL_BUTTON_MIDDLE & 0xff] = UG_BTN_MIDDLE,
+		[SDL_BUTTON_RIGHT  & 0xff] = UG_BTN_RIGHT,
+		[SDL_BUTTON_X1     & 0xff] = UG_BTN_4,
+		[SDL_BUTTON_X2     & 0xff] = UG_BTN_5,
 	};
-	
+
 	do {
 	SDL_WaitEvent(&event);
 
@@ -192,7 +192,7 @@ int main(void)
 		//}
 
 		ug_container_floating(ctx, "stupid name", (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
-		ug_element_button(ctx, "float", "", (ug_div_t){SQUARE(SIZE_MM(5))});
+		ug_element_button(ctx, "float", "X", (ug_div_t){SQUARE(SIZE_MM(5))});
 		//ug_container_floating(ctx, "floating windoooooooow", (ug_div_t){.x=SIZE_PX(100), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
 		//ug_container_sidebar(ctx, "Right Sidebar", (ug_size_t)SIZE_PX(300), UG_SIDE_RIGHT);
@@ -207,7 +207,7 @@ int main(void)
 		//	printf("No space!\n");
 
 		ug_layout_row(ctx);
-		
+
 		ug_layout_column(ctx);
 		ug_element_button(ctx, "button 1", "hey", (ug_div_t){SQUARE(SIZE_MM(10))});
 		//ug_element_button(ctx, "button 2", "lol", (ug_div_t){SQUARE(SIZE_MM(10))});
@@ -218,7 +218,7 @@ int main(void)
 		ug_element_button(ctx, "button 5", "lmao", (ug_div_t){SQUARE(SIZE_MM(10))});
 		//ug_element_textbtn(ctx, "text button 1", "foo", (ug_div_t){.w = 0, .h = SIZE_PX(30)});
 		//ug_element_button(ctx, "button 6", "", (ug_div_t){SQUARE(SIZE_MM(10)),.x=SIZE_PX(-10)});
-		
+
 		ug_container_body(ctx, "fill body");
 
 		ug_frame_end(ctx);
