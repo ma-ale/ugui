@@ -13,7 +13,7 @@ static const ug_style_t default_style = {
 	.margin = SIZE_PX(3),
 	.border = {
 		.color = RGB_FORMAT(0xf50a00),
-		.size  = SIZE_PX(10),
+		.size  = SIZE_PX(2),
 	},
 	.title = {
 		.color = {

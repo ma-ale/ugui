@@ -192,7 +192,7 @@ int main(void)
 		//}
 
 		ug_container_floating(ctx, "stupid name", (ug_div_t){.x=SIZE_PX(0), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
-
+		ug_element_button(ctx, "float", "", (ug_div_t){SQUARE(SIZE_MM(5))});
 		//ug_container_floating(ctx, "floating windoooooooow", (ug_div_t){.x=SIZE_PX(100), .y=SIZE_PX(0), .w=SIZE_PX(100), .h=SIZE_MM(75.0)});
 
 		//ug_container_sidebar(ctx, "Right Sidebar", (ug_size_t)SIZE_PX(300), UG_SIDE_RIGHT);

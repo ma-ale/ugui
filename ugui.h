@@ -177,20 +177,12 @@ typedef struct {
 	ug_vec2_t size;
 	ug_rect_t origin;
 	// which context and element we are hovering
-	struct {
-		ug_id_t cnt, elem;
-		ug_id_t cnt_last, elem_last;
-	} hover;
+	ug_id_t hover_cnt;
 	// active is updated on mousedown and released on mouseup
 	// the id of the "active" element, active means different things for
 	// different elements, for exaple active for a button means to be pressed,
 	// and for a text box it means to be focused
-	struct {
-		ug_id_t cnt, elem;
-	} active;
-	struct {
-		ug_id_t cnt, elem;
-	} last_active;
+	ug_id_t active_cnt, last_active_cnt;
 	// id of the selected container, used for layout
 	// NOTE: since the stacks can be relocated with realloc it is better not
 	//       to use a pointer here, even tough it would be better for efficiency 

@@ -259,7 +259,7 @@ ug_ctx_t *ug_ctx_new(void)
 	ctx->style_px  = &style_cache;
 	// NOTE: this fixes a bug where for the first frame the container stack
 	//       doesn't get sorted, but it is kind of a botch
-	ctx->last_active.cnt = 1;
+	ctx->last_active_cnt = 1;
 	ug_ctx_set_displayinfo(ctx, DEF_SCALE, DEF_PPI);
 
 	// TODO: allocate stacks
@@ -431,7 +431,7 @@ static void sort_containers(ug_ctx_t *ctx)
 			ug_container_t *s = ctx->cnt_stack.items;
 			ug_container_t c = *cnt;
 			
-			if (ctx->active.cnt != c.id)
+			if (ctx->active_cnt != c.id)
 				for (; y > 0 && TEST(s[y-1].flags, UG_CNT_FLOATING); y--);
 
 			if (i >= y)
@@ -540,7 +540,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
 	// if we are not the currently active container than definately we are not
 	// being moved or resized
-	if (ctx->active.cnt != cnt->id) {
+	if (ctx->active_cnt != cnt->id) {
 		cnt->flags &= ~CNT_STATE_ALL;
 		return 0;
 	}
@@ -579,6 +579,24 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 			rect->y += ctx->mouse.delta.y;
 			rca->x  += ctx->mouse.delta.x;
 			rca->y  += ctx->mouse.delta.y;
+		}
+	}
+
+	// lower diagonal resize
+	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM) && TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
+		clip = (ug_rect_t){
+			.x = R_MARGIN((*rca), m),
+			.y = B_MARGIN((*rca), m),
+			.w = b + m,
+			.h = b + m,
+		};
+		if (STATEIS(cnt, CNT_STATE_RESIZE_D) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
+			cnt->flags |= CNT_STATE_RESIZE_D;
+			rect->h = MAX(10, rect->h + ctx->mouse.delta.y);
+			rca->h  = MAX(10, rca->h + ctx->mouse.delta.y);
+			rect->w = MAX(10, rect->w + ctx->mouse.delta.x);
+			rca->w  = MAX(10, rca->w + ctx->mouse.delta.x);
 		}
 	}
 
@@ -659,24 +677,6 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 				rca->h  -= ctx->mouse.delta.y;
 				rca->y  += ctx->mouse.delta.y;
 			}
-		}
-	}
-
-	// lower diagonal resize
-	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM | UG_CNT_RESIZE_RIGHT)) {
-		clip = (ug_rect_t){
-			.x = R_MARGIN((*rca), -m),
-			.y = B_MARGIN((*rca), m),
-			.w = b + m,
-			.h = b + m,
-		};
-		if (STATEIS(cnt, CNT_STATE_RESIZE_D) ||
-		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
-			cnt->flags |= CNT_STATE_RESIZE_D;
-			rect->h = MAX(10, rect->h + ctx->mouse.delta.y);
-			rca->h  = MAX(10, rca->h + ctx->mouse.delta.y);
-			rect->w = MAX(10, rect->w + ctx->mouse.delta.x);
-			rca->w  = MAX(10, rca->w + ctx->mouse.delta.x);
 		}
 	}
 
@@ -1003,7 +1003,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 	ctx->origin.h = ctx->size.h;
 
 	// update hover index
-	printf("Container Stack: active %x\n", ctx->active.cnt);
+	printf("Container Stack: active %x\n", ctx->active_cnt);
 	ug_vec2_t v = ctx->mouse.pos;
 	for (int i = 0; i < ctx->cnt_stack.idx; i++) {
 		ug_container_t *c = &ctx->cnt_stack.items[i];
@@ -1019,19 +1019,19 @@ int ug_frame_begin(ug_ctx_t *ctx)
 		ug_rect_t r = c->rca;
 		EXPAND(r, SZ_INT(ctx->style_px->border.size));
 		if (INTERSECTS(v, r))
-			ctx->hover.cnt = c->id;
+			ctx->hover_cnt = c->id;
 	}
 	printf("\n");
 
-	if (ctx->last_active.cnt && ctx->active.cnt != ctx->last_active.cnt)
+	if (ctx->last_active_cnt && ctx->active_cnt != ctx->last_active_cnt)
 		ctx->cnt_stack.sorted = 0;
 
 	// update active container
 	if (MOUSEDOWN(ctx, UG_BTN_LEFT)) {
-		ctx->active.cnt = ctx->hover.cnt;
+		ctx->active_cnt = ctx->hover_cnt;
 	} else if (MOUSEUP(ctx, UG_BTN_LEFT)) {
-		ctx->last_active.cnt = ctx->active.cnt;
-		ctx->active.cnt = 0;
+		ctx->last_active_cnt = ctx->active_cnt;
+		ctx->active_cnt = 0;
 	}
 
 	return 0;
@@ -1072,10 +1072,8 @@ int ug_frame_end(ug_ctx_t *ctx)
 	ctx->mouse.last_pos     = ctx->mouse.pos;
 
 	// reset hover, it has to be calculated at frame beginning
-	ctx->hover.cnt_last  = ctx->hover.cnt;
-	ctx->hover.elem_last = ctx->hover.elem;
-	ctx->hover.cnt       = 0;
-	ctx->hover.elem      = 0;
+	// FIXME: reeeeeally?
+	//ctx->hover_cnt       = 0;
 
 	ctx->last_ppi = ctx->ppi;
 	ctx->last_ppm = ctx->ppm;
@@ -1307,7 +1305,7 @@ int handle_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
 {
 	// if the contaniner is not the current hover then do nothing, think about
 	// floating cont. over bodies
-	if (ctx->hover.cnt != cnt->id)
+	if (ctx->hover_cnt != cnt->id)
 		return 0;
 
 	if (INTERSECTS(ctx->mouse.pos, elem->rca)) {
@@ -1340,7 +1338,7 @@ void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 		switch (e->type) {
 		case UG_ELEM_BUTTON:
 			col  = cnt->hover_elem == e->id ? s->btn.color.act : s->btn.color.bg;
-			bcol = cnt->selected_elem == e->id ? s->btn.color.sel : s->btn.color.br;
+			bcol = cnt->selected_elem == e->id && ctx->hover_cnt == cnt->id ? s->btn.color.sel : s->btn.color.br;
 			txtcol = s->btn.color.fg;
 			ts = SZ_INT(s->btn.font_size);
 			eb = SZ_INT(ctx->style_px->btn.border);
