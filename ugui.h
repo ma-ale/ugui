@@ -29,7 +29,8 @@ typedef enum {
 // element type
 typedef struct {
 	ug_id_t id;
-	unsigned int type;
+	unsigned short int type;
+	unsigned short int flags;
 	ug_rect_t rect, rca;
 	const char *name;
 	union {
@@ -51,6 +52,10 @@ enum {
 	UG_ELEM_TEXTBOX,   // text surrounded by a box
 	UG_ELEM_IMG,       // image, icon
 	UG_ELEM_SPACE,     // takes up space
+};
+
+enum {
+	ELEM_CLIPPED = BIT(0),
 };
 
 
@@ -92,9 +97,10 @@ enum {
 	CNT_STATE_RESIZE_B   = BIT(27),
 	CNT_STATE_RESIZE_L   = BIT(26),
 	CNT_STATE_RESIZE_R   = BIT(25),
-	CNT_STATE_DELETE     = BIT(24), // The container is marked for removal
+	CNT_STATE_RESIZE_D   = BIT(24),
+	CNT_STATE_DELETE     = BIT(23), // The container is marked for removal
 	// layouting
-	CNT_LAYOUT_COLUMN    = BIT(23),
+	CNT_LAYOUT_COLUMN    = BIT(22),
 };
 
 // style, defines default height, width, color, margins, borders, etc

@@ -36,7 +36,8 @@
 		      CNT_STATE_RESIZE_T |                                     \
                       CNT_STATE_RESIZE_B |                                     \
                       CNT_STATE_RESIZE_L |                                     \
-                      CNT_STATE_RESIZE_R                                       \
+                      CNT_STATE_RESIZE_R |                                     \
+                      CNT_STATE_RESIZE_D                                       \
                       )
 
 #define PPI_PPM(ppi, scale)  (ppi * scale * 0.03937008)
@@ -45,7 +46,7 @@
 #define UG_ERR(...)          err(errno, "__FUNCTION__: " __VA_ARGS__)
 #define BETWEEN(x, min, max) (x <= max && x >= min)
 #define INTERSECTS(v, r)     (BETWEEN(v.x, r.x, r.x+r.w) && BETWEEN(v.y, r.y, r.y+r.h))
-#define TEST(f, b)           (f & b)
+#define TEST(f, b)           (f & (b))
 #define MAX(a, b)            (a > b ? a : b)
 #define R_MARGIN(r, b) (r.x + r.w - b)
 #define L_MARGIN(r, b) (r.x + b)
@@ -170,6 +171,31 @@ void scale_rect(ug_ctx_t *ctx, ug_rect_t *rect)
 		rect->w = roundf(rect->w * scale);
 		rect->h = roundf(rect->h * scale);
 	}
+}
+
+
+int crop_rect(ug_rect_t *ra, ug_rect_t *rb)
+{
+	int cropped = 0;
+	if (L_MARGIN((*ra), 0) < L_MARGIN((*rb), 0)) {
+		ra->w -= L_MARGIN((*rb), 0) - L_MARGIN((*ra), 0);
+		ra->x = rb->x;
+		cropped = 1;
+	}
+	if (R_MARGIN((*ra), 0) > R_MARGIN((*rb), 0)) {
+		ra->w -= R_MARGIN((*ra), 0) - R_MARGIN((*rb), 0);
+		cropped = 1;
+	}
+	if (T_MARGIN((*ra), 0) < T_MARGIN((*rb), 0)) {
+		ra->h -= T_MARGIN((*rb), 0) - T_MARGIN((*ra), 0);
+		ra->y = rb->y;
+		cropped = 1;
+	}
+	if (B_MARGIN((*ra), 0) > B_MARGIN((*rb), 0)) {
+		ra->h -= B_MARGIN((*ra), 0)- B_MARGIN((*rb), 0);
+		cropped = 1;
+	}
+	return cropped;
 }
 
 
@@ -317,44 +343,44 @@ int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style)
 #define STATEIS(cnt, f) ((cnt->flags & CNT_STATE_ALL) == f)
 
 /*
-* Container style:
-* 
-* rca
-* v                   v Border Top v
-* +--------------------------------------------------------+
-* +--------------------------------------------------------+
-* |                   Titlebar                             |
-* +--------------------------------------------------------+
-* |+------------------------------------------------------+|
-* || .................................................... ||
-* || .\                 ^ Border Top ^                  . ||
-* || . \_ rect(0,0)                                     . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || . < Border Left                                    . ||
-* || .   + Margin                         Border Right >. ||
-* || .                                     + Margin     . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .                                                  . ||
-* || .................................................... ||
-* |+------------------------------------------------------+|
-* +--------------------------------------------------------+
-*                  ^ Border Bottom ^ 
-*/
+ * Container style: rca stands for absolute rectangle, it delimits the total
+ * drawable area, as such it does not include borders
+ *   
+ *   rca                  v Border Top v
+ * +-v--------------------------------------------------------+
+ * | +------------------------------------------------------+ |
+ * | |                  Titlebar                            | |
+ * | +------------------------------------------------------+ |
+ * | +------------------------------------------------------+ |
+ * | |\.................................................... | |
+ * | | \                  ^ Border Top ^                  . | |
+ * | | .\_ rect(0,0)                                      . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | . < Border Left                                    . | |
+ * | | .   + Margin                         Border Right >. | |
+ * | | .                                     + Margin     . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .                                                  . | |
+ * | | .................................................... | |
+ * | +------------------------------------------------------+ |
+ * +----------------------------------------------------------+
+ *                  ^ Border Bottom ^ 
+ */
 
 
 // search a container by id int the stack and get it's address
@@ -422,7 +448,6 @@ static void sort_containers(ug_ctx_t *ctx)
 // update the container position in the context area
 // TODO: can we generalize position_container and position_element into one or
 //       more similar functions
-// TODO: containers only have borders from which they can be resized
 static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 {
 	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
@@ -439,51 +464,55 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	*rca = *rect;
 
 	const ug_style_t *s = ctx->style_px;
-	int b  = SZ_INT(s->border.size) + SZ_INT(s->margin);
+	int b  = SZ_INT(s->border.size);
 	int hh = SZ_INT(s->title.height);
-	int cx = ctx->origin.x;
-	int cy = ctx->origin.y;
-	int cw = ctx->origin.w;
-	int ch = ctx->origin.h;
+	ug_rect_t c = {
+		.x = ctx->origin.x + b,
+		.y = ctx->origin.y + b,
+		.w = ctx->origin.w - 2*b,
+		.h = ctx->origin.h - 2*b
+	};
 
 	// handle relative sizes
-	if (rect->w == 0) rca->w = cw;
-	if (rect->h == 0) rca->h = ch;
-	else if (TEST(cnt->flags, UG_CNT_MOVABLE)) rca->h += hh;
+	if (rect->w == 0) rca->w = c.w;
+	if (rect->h == 0) rca->h = c.h;
+	else if (TEST(cnt->flags, UG_CNT_MOVABLE)) rca->h += hh + b;
 
 	// handle borders, only draw borders on sides which can be used to resize
-	if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
-		rca->w += b;
-	}
-	if (TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
-		rca->w += b;
-	}
-	if (TEST(cnt->flags, UG_CNT_RESIZE_TOP)) {
-		rca->h += b;
-	}
-	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM)) {
-		rca->h += b;
-	}
-	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
-		rca->h += b;
-	}
+	//if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
+	//	rca->w += b;
+	//}
+	//if (TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
+	//	rca->w += b;
+	//}
+	//if (TEST(cnt->flags, UG_CNT_RESIZE_TOP)) {
+	//	rca->h += b;
+	//}
+	//if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM)) {
+	//	rca->h += b;
+	//}
+	//if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
+	//	rca->h += b;
+	//}
 
 	// if the container is not fixed than it can have positions outside of the
 	// main window, thus negative
 	if (!TEST(cnt->flags, UG_CNT_FLOATING)) {
 		// <0 -> relative to the right margin
-		if (rect->x < 0) rca->x = cx + cw - rca->w + rca->x + 1;
-		else rca->x = cx;
-		if (rect->y < 0) rca->y = cy + ch - rca->h + rca->y + 1;
-		else rca->y = cy;
+		if (rect->x < 0) rca->x = R_MARGIN(c, 0) - R_MARGIN((*rca), -1);
+		else rca->x = L_MARGIN(c, 0);
+		if (rect->y < 0) rca->y = B_MARGIN(c, 0) - B_MARGIN((*rca), -1);
+		else rca->y = T_MARGIN(c, 0);
 		
 		// if the container is fixed than update the available space in
 		// the context
 		if (rect->w) {
-			ctx->origin.x = rect->x >= 0 ? rca->x + rca->w : ctx->origin.x;
+			if (rect->x >= 0)
+				ctx->origin.x = R_MARGIN((*rca), -b);
 			ctx->origin.w -= rca->w;
 		} else if (rect->h) {
-			ctx->origin.y = rect->y >= 0 ? rca->y + rca->h : ctx->origin.y;
+			if (rect->y >= 0)
+				ctx->origin.y = B_MARGIN((*rca), -b);
 			ctx->origin.h -= rca->h;
 		} else {
 			// width and height zero means fill everything
@@ -492,8 +521,8 @@ static int position_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	}
 
 	// set the correct element origin
-	cnt->c_orig.x = cnt->r_orig.x = cnt->space.x = L_MARGIN((*rca), b);
-	cnt->c_orig.y = cnt->r_orig.y = cnt->space.y = T_MARGIN((*rca),b);
+	cnt->c_orig.x = cnt->r_orig.x = cnt->space.x = L_MARGIN((*rca), 0);
+	cnt->c_orig.y = cnt->r_orig.y = cnt->space.y = T_MARGIN((*rca), 0);
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		cnt->c_orig.y += hh + SZ_INT(s->border.size);
 		cnt->r_orig.y += hh + SZ_INT(s->border.size);
@@ -528,7 +557,8 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	rca  = &cnt->rca;
 
 	const ug_style_t *s = ctx->style_px;
-	int b = SZ_INT(s->border.size) + SZ_INT(s->margin);
+	int b = SZ_INT(s->border.size);
+	int m  = SZ_INT(s->margin);
 	int hh = SZ_INT(s->title.height);
 
 	ug_vec2_t mpos = ctx->mouse.pos;
@@ -537,9 +567,9 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// handle movable windows
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		clip = (ug_rect_t){
-			.x = L_MARGIN((*rca), b),
-			.y = T_MARGIN((*rca), b),
-			.w = rca->w - 2*b,
+			.x = L_MARGIN((*rca), 0),
+			.y = T_MARGIN((*rca), 0),
+			.w = rca->w,
 			.h = hh,
 		};
 		if (STATEIS(cnt, CNT_STATE_MOVING) ||
@@ -552,13 +582,12 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		}
 	}
 
-	// FIXME: allow for corner resize
 	// right border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
 		clip = (ug_rect_t){
-			.x = R_MARGIN((*rca), b),
-			.y = rca->y,
-			.w = b,
+			.x = R_MARGIN((*rca), m),
+			.y = T_MARGIN((*rca), 0),
+			.w = b + m,
 			.h = rca->h,
 		};
 		if (STATEIS(cnt, CNT_STATE_RESIZE_R) ||
@@ -572,9 +601,9 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// left border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
 		clip = (ug_rect_t){
-			.x = L_MARGIN((*rca), 0),
-			.y = rca->y,
-			.w = b,
+			.x = L_MARGIN((*rca), -b),
+			.y = T_MARGIN((*rca), 0),
+			.w = b + m,
 			.h = rca->h,
 		};
 		if (STATEIS(cnt, CNT_STATE_RESIZE_L) ||
@@ -596,10 +625,10 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// bottom border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM)) {
 		clip = (ug_rect_t){
-			.x = rca->x,
-			.y = B_MARGIN((*rca), b),
+			.x = L_MARGIN((*rca), 0),
+			.y = B_MARGIN((*rca), m),
 			.w = rca->w,
-			.h = b,
+			.h = b + m,
 		};
 		if (STATEIS(cnt, CNT_STATE_RESIZE_B) ||
 		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
@@ -612,10 +641,10 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	// top border resize
 	if (TEST(cnt->flags, UG_CNT_RESIZE_TOP)) {
 		clip = (ug_rect_t){
-			.x = rca->x,
-			.y = rca->y,
+			.x = L_MARGIN((*rca), 0),
+			.y = T_MARGIN((*rca), -b),
 			.w = rca->w,
-			.h = b,
+			.h = b + m,
 		};
 		if (STATEIS(cnt, CNT_STATE_RESIZE_T) ||
 		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
@@ -633,6 +662,24 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 		}
 	}
 
+	// lower diagonal resize
+	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM | UG_CNT_RESIZE_RIGHT)) {
+		clip = (ug_rect_t){
+			.x = R_MARGIN((*rca), -m),
+			.y = B_MARGIN((*rca), m),
+			.w = b + m,
+			.h = b + m,
+		};
+		if (STATEIS(cnt, CNT_STATE_RESIZE_D) ||
+		    (STATEIS(cnt, 0) && INTERSECTS(mpos, clip))) {
+			cnt->flags |= CNT_STATE_RESIZE_D;
+			rect->h = MAX(10, rect->h + ctx->mouse.delta.y);
+			rca->h  = MAX(10, rca->h + ctx->mouse.delta.y);
+			rect->w = MAX(10, rect->w + ctx->mouse.delta.x);
+			rca->w  = MAX(10, rca->w + ctx->mouse.delta.x);
+		}
+	}
+
 	// if we were not resized but we are still active it means we are doing 
 	// something to the contained elements, as such set state to none
 	if (STATEIS(cnt, 0))
@@ -647,6 +694,7 @@ static int handle_container(ug_ctx_t *ctx, ug_container_t *cnt)
 	return 1;
 }
 
+#define EXPAND(r, b) {r.x-=b,r.y-=b,r.w+=2*b,r.h+=2*b;}
 
 static void draw_container(ug_ctx_t *ctx, ug_container_t *cnt, const char *text)
 {
@@ -658,39 +706,47 @@ static void draw_container(ug_ctx_t *ctx, ug_container_t *cnt, const char *text)
 
 	// push main body
 	rect = cnt->rca;
+	EXPAND(rect, b);
 	push_rect_command(ctx, &rect, s->color.bg);
 	
 	// push outline
 	if (TEST(cnt->flags, UG_CNT_RESIZE_LEFT)) {
 		rect = cnt->rca;
+		rect.x -= b;
+		rect.y -= b,
+		rect.h += 2*b;
 		rect.w = b;
 		push_rect_command(ctx, &rect, s->border.color);
 	}
 	if (TEST(cnt->flags, UG_CNT_RESIZE_RIGHT)) {
 		rect = cnt->rca;
-		rect.x += rect.w - b;
+		rect.x += rect.w;
+		rect.y -= b;
+		rect.h += 2*b;
 		rect.w = b;
 		push_rect_command(ctx, &rect, s->border.color);
 	}
 	if (TEST(cnt->flags, UG_CNT_RESIZE_TOP)) {
 		rect = cnt->rca;
+		rect.y -= b;
+		rect.x -= b;
 		rect.h = b;
+		rect.w += 2*b;
 		push_rect_command(ctx, &rect, s->border.color);
 	}
 	if (TEST(cnt->flags, UG_CNT_RESIZE_BOTTOM)) {
 		rect = cnt->rca;
-		rect.y += rect.h - b;
+		rect.x -= b;
+		rect.y += rect.h;
 		rect.h = b;
+		rect.w += 2*b;
 		push_rect_command(ctx, &rect, s->border.color);
 	}
 	// titlebar
 	if (TEST(cnt->flags, UG_CNT_MOVABLE)) {
 		// titlebar area
 		rect = cnt->rca;
-		rect.x += b;
-		rect.y += b;
-		rect.w -= 2*b;
-		rect.h  = hh;
+		rect.h = hh;
 		push_rect_command(ctx, &rect, s->title.color.bg);
 		// titlebar border
 		rect.y += hh;
@@ -792,7 +848,6 @@ int ug_container_sidebar(ug_ctx_t *ctx, const char *name, ug_size_t size, int si
 		switch (side) {
 		case UG_SIDE_BOTTOM:
 			cnt->flags |= UG_CNT_RESIZE_TOP;
-			// FIXME: we do not support relative zero position yet
 			rect.y = -1;
 			rect.h = size_to_px(ctx, size);
 			break;
@@ -962,6 +1017,7 @@ int ug_frame_begin(ug_ctx_t *ctx)
 		}
 
 		ug_rect_t r = c->rca;
+		EXPAND(r, SZ_INT(ctx->style_px->border.size));
 		if (INTERSECTS(v, r))
 			ctx->hover.cnt = c->id;
 	}
@@ -1048,7 +1104,7 @@ int ug_frame_end(ug_ctx_t *ctx)
  * +--------------------------------------------------------+
  * |                             .<- r_orig                 |
  * |                             .                          |
- * |   prev "partition"          .                          |
+ * |   previous element          .                          |
  * |                             .                          |
  * |..............................                          |
  * |^                                                       |
@@ -1058,18 +1114,20 @@ int ug_frame_end(ug_ctx_t *ctx)
  * |                                                        |
  * |                                                        |
  * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
- * |                                                        |
  * +--------------------------------------------------------+
  * 
+ * Element Style:
+ * 
+ *   rca             margin 
+ * +-v--------------+<--->+----------------+
+ * | +------------+ |     | +------------+ |
+ * | |            | |     | |            | |
+ * | |            | |     | |            | |
+ * | |            | |     | |            | |
+ * | +------------+ |     | +------------+ |
+ * +----------------+     +----------------+
+ * <->
+ *  border
 */
 
 
@@ -1113,7 +1171,7 @@ int ug_layout_next_row(ug_ctx_t *ctx)
 	GET_SELECTED_CONTAINER(ctx, cp);
 
 	cp->c_orig.x = cp->r_orig.x = L_MARGIN(cp->space, 0);
-	cp->c_orig.y = cp->r_orig.y = B_MARGIN(cp->space, -SZ_INT(ctx->style_px->margin));
+	cp->c_orig.y = cp->r_orig.y = B_MARGIN(cp->space, 0);
 
 	return 0;
 }
@@ -1126,7 +1184,7 @@ int ug_layout_next_column(ug_ctx_t *ctx)
 	ug_container_t *cp;
 	GET_SELECTED_CONTAINER(ctx, cp);
 
-	cp->c_orig.x = cp->r_orig.x = R_MARGIN(cp->space, -SZ_INT(ctx->style_px->margin));
+	cp->c_orig.x = cp->r_orig.x = R_MARGIN(cp->space, 0);
 	cp->c_orig.y = cp->r_orig.y = T_MARGIN(cp->space, 0);
 
 	return 0;
@@ -1169,10 +1227,10 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 
 	// if there is no space then return
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
-		if (cnt->space.h >= cnt->rca.h)
+		if (cnt->space.w >= cnt->rca.w)
 			return -1;
 	} else {
-		if (cnt->space.w >= cnt->rca.w)
+		if (cnt->space.h >= cnt->rca.h)
 			return -1;
 	}
 
@@ -1187,7 +1245,6 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	const ug_style_t *s = ctx->style_px;
 	int b  = SZ_INT(s->border.size);
 	int m  = SZ_INT(s->margin);
-	// TODO: different element borders
 	int cx, cy, cw, ch;
 	int eb = 0;
 	
@@ -1196,7 +1253,7 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	default: break;
 	} 
 
-	// FIXME: this may not work
+	// FIXME: this does not work
 	cw = MAX(cnt->rca.w - cnt->space.w, 0);
 	ch = MAX(cnt->rca.h - cnt->space.h, 0);
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
@@ -1208,50 +1265,37 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 	}
 
 	// handle relative sizes
-	if (rect->w == 0) rca->w = cw;
-	else rca->w += 2*eb;
-	if (rect->h == 0) rca->h = ch;
-	else rca->h += 2*eb;
+	if (rect->w == 0) rca->w = cw - 2*eb;
+	if (rect->h == 0) rca->h = ch - 2*eb;
 	// for elements x and y are offsets	
-	rca->x = cx + rect->x;
-	rca->y = cy + rect->y;
+	rca->x = cx + rect->x + eb + m;
+	rca->y = cy + rect->y + eb + m;
 
 	// if the element was put outside of the container return, this can happen
 	// because of the element offset
 	if (OUTSIDE((*rca), 0, cnt->rca, b))
 		return -1;
 
-	if (R_MARGIN((*rca), 0) > R_MARGIN(cnt->rca, b))
-		rca->w = R_MARGIN(cnt->rca, b) - L_MARGIN((*rca), 0);
-
-	if (L_MARGIN((*rca), 0) < L_MARGIN(cnt->rca, b)) {
-		rca->x = L_MARGIN(cnt->rca, b);
-		rca->w -= L_MARGIN(cnt->rca, b) - L_MARGIN((*rca), 0);
-	}
-
-	if (T_MARGIN((*rca), 0) < T_MARGIN(cnt->rca, b)) {
-		rca->y = T_MARGIN(cnt->rca, b);
-		rca->h -= T_MARGIN(cnt->rca, b) - T_MARGIN((*rca), 0);
-	}
-	
-	if (B_MARGIN((*rca), 0) > B_MARGIN(cnt->rca, b))
-		rca->h = B_MARGIN(cnt->rca, b) - T_MARGIN((*rca), 0);
-	
+	elem->flags &= ~(ELEM_CLIPPED);
+	if (crop_rect(rca, &cnt->rca))
+		elem->flags |= ELEM_CLIPPED; 
 
 	if (TEST(cnt->flags, CNT_LAYOUT_COLUMN)) {
-		cnt->c_orig.y += rca->h + m;
-		cnt->r_orig.x = R_MARGIN((*rca), 0) + m;
-		cnt->r_orig.y = T_MARGIN((*rca), 0);
+		cnt->c_orig.y = B_MARGIN((*rca), 0) + eb;
+		cnt->r_orig.x = R_MARGIN((*rca), 0) + eb;
+		cnt->r_orig.y = T_MARGIN((*rca), 0) + eb;
 
 	} else {
-		cnt->r_orig.x += rca->w + m;
-		cnt->c_orig.x = L_MARGIN((*rca), 0);
-		cnt->c_orig.y = B_MARGIN((*rca), 0) + m;
+		cnt->r_orig.x = R_MARGIN((*rca), 0) + eb;
+		cnt->c_orig.x = L_MARGIN((*rca), 0) + eb;
+		cnt->c_orig.y = B_MARGIN((*rca), 0) + eb;
 	}
-	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), 0))
-		cnt->space.h = B_MARGIN((*rca), 0) - T_MARGIN(cnt->space, 0);
-	if (R_MARGIN(cnt->space, 0) < R_MARGIN((*rca), 0))
-		cnt->space.w = R_MARGIN((*rca), 0) - L_MARGIN(cnt->space, 0);
+	
+	// expand used space
+	if (R_MARGIN(cnt->space, 0) < R_MARGIN((*rca), -eb))
+		cnt->space.w = R_MARGIN((*rca), -eb) - L_MARGIN(cnt->space, 0);
+	if (B_MARGIN(cnt->space, 0) < B_MARGIN((*rca), -eb))
+		cnt->space.h = B_MARGIN((*rca), -eb) - T_MARGIN(cnt->space, 0);
 	
 	return 0;
 }
@@ -1261,6 +1305,11 @@ static int position_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *el
 //       generic function
 int handle_element(ug_ctx_t *ctx, ug_container_t *cnt, ug_element_t *elem)
 {
+	// if the contaniner is not the current hover then do nothing, think about
+	// floating cont. over bodies
+	if (ctx->hover.cnt != cnt->id)
+		return 0;
+
 	if (INTERSECTS(ctx->mouse.pos, elem->rca)) {
 		cnt->hover_elem = elem->id;
 		if (MOUSEDOWN(ctx, BTN_ANY))
@@ -1286,17 +1335,16 @@ void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 		ug_color_t txtcol = RGB_FORMAT(0);
 		ug_rect_t r = e->rca;
 		int eb = 0, ts = 0;
-		unsigned char draw_bg = 0, draw_fg = 0, draw_txt = 0;
+		unsigned char draw_br = 0, draw_fg = 0, draw_txt = 0;
 
 		switch (e->type) {
 		case UG_ELEM_BUTTON:
-			// TODO: draw borders, different color for selected element
 			col  = cnt->hover_elem == e->id ? s->btn.color.act : s->btn.color.bg;
 			bcol = cnt->selected_elem == e->id ? s->btn.color.sel : s->btn.color.br;
 			txtcol = s->btn.color.fg;
 			ts = SZ_INT(s->btn.font_size);
 			eb = SZ_INT(ctx->style_px->btn.border);
-			draw_bg = draw_fg = draw_txt = 1;
+			draw_br = draw_fg = draw_txt = 1;
 			break;
 		case UG_ELEM_TXTBTN:
 			ts = SZ_INT(s->btn.font_size);
@@ -1305,21 +1353,26 @@ void draw_elements(ug_ctx_t *ctx, ug_container_t *cnt)
 		default: break;
 		}
 
-		if (draw_bg)
+		if (draw_br) {
+			r = (ug_rect_t){
+				.x = e->rca.x - eb,
+				.y = e->rca.y - eb,
+				.w = e->rca.w + 2*eb,
+				.h = e->rca.h + 2*eb,
+			};
+			if (TEST(e->flags, ELEM_CLIPPED))
+				crop_rect(&r, &cnt->rca);
 			push_rect_command(ctx, &r, bcol);
+		}
 		if (draw_fg) {
 			r = e->rca;
-			r.x += eb;
-			r.y += eb;
-			r.w -= 2*eb;
-			r.h -= 2*eb; 
 			push_rect_command(ctx, &r, col);
 		}
 		if (draw_txt) {
 			push_text_command(ctx, 
 			                 (ug_vec2_t){
-						.x = e->rca.x,
-						.y = e->rca.y+e->rca.h/2
+						.x = e->rca.x+eb,
+						.y = e->rca.y+eb+e->rca.h/2
 					 },
 					 ts,
 					 txtcol,
