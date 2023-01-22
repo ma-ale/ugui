@@ -15,7 +15,11 @@
 
 #define GLSL_VERT_SHADER "vertex.glsl"
 #define GLSL_FRAG_SHADER "fragment.glsl"
+#define PACKED __attribute__((packed))
 
+
+const int vertindex = 0;
+const int colindex  = 1;
 
 struct {
 	SDL_Window *w;
@@ -24,11 +28,25 @@ struct {
 	GLuint gl_program;
 } ren = {0};
 
-#define VNUM(s, e) ((sizeof(s)/sizeof(s[0]))/e)
-float vert[] = {
-	 0.75f,  0.75f, 0.0f, 1.0f,
-	-0.75f, -0.75f, 0.0f, 1.0f,
-	 0.75f, -0.75f, 0.0f, 1.0f,
+typedef struct PACKED {
+	union { GLfloat x, r; };
+	union { GLfloat y, g; };
+	union { GLfloat z, b; };
+	union { GLfloat w, a; };
+} vec4;
+
+// a vertex has a position and a color
+struct PACKED vertex { vec4 pos, col; };
+
+#define VNUM(s) (sizeof(s)/sizeof(s[0]))
+struct vertex vertbuffer[] = {
+	{ .pos={.x= 0.75f, .y= 0.75f, .z=0.0f,.w=1.0f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
+	{ .pos={.x=-0.75f, .y=-0.75f, .z=0.0f,.w=1.0f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
+	{ .pos={.x= 0.75f, .y=-0.75f, .z=0.0f,.w=1.0f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
+
+	{ .pos={.x= 0.75f, .y= 0.75f, .z=0.0f,.w=1.0f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
+	{ .pos={.x=-0.75f, .y=-0.75f, .z=0.0f,.w=1.0f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
+	{ .pos={.x=-0.75f, .y= 0.75f, .z=0.0f,.w=1.0f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
 };
 
 
@@ -42,18 +60,22 @@ void ren_initvertbuffer()
 	// copy the vertex data into the gpu memory, GL_STATIC_DRAW tells opengl
 	// that the data will be used for drawing (DRAW) and it will only be modified
 	// once (STATIC)
-	glBufferData(GL_ARRAY_BUFFER, sizeof(vert), &vert, GL_STATIC_DRAW);
-	// set the data to generic vertex buffer, and bind it as input to the vertex
-	// shader with an index of zero
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertbuffer), &vertbuffer, GL_STATIC_DRAW);
+	// set the format of each vertex, in this case each vertex is made of 4
+	// coordinates, x y z w, where w is the clip coordinate, stride is
+	// sizeof(vec4) since every postition vertex there is a vector representing
+	// color data
+	// set the position data of the vertex buffer, and bind it as input to the
+	// vertex shader with an index of 0
+	glEnableVertexAttribArray(vertindex);
+	glVertexAttribPointer(vertindex, 4, GL_FLOAT, GL_FALSE, sizeof(struct vertex), 0);
+	// set the color data of the vertex buffer to index 1
 	// vertex attribute is the OpenGL name given to a set of vertices which are
 	// given as input to a vertext shader, in a shader an array of vertices is
 	// always referred to by index and not by pointer or other manners, indices
 	// go from 0 to 15
-	int vertindex = 0;
-	glEnableVertexAttribArray(vertindex);
-	// set the format of each vertex, in this case each vertex is made of 4
-	// coordinates, x y z w, where w is the clip coordinate
-	glVertexAttribPointer(vertindex, 4, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(colindex);
+	glVertexAttribPointer(colindex, 4, GL_FLOAT, GL_FALSE, sizeof(struct vertex), (void*)sizeof(vec4));
 	// reset the object bind so not to create errors
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -181,7 +203,7 @@ void ren_initshaders()
 void ren_drawvertbuffer()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, ren.gl_vertbuffer);
-	glDrawArrays(GL_TRIANGLES, 0, VNUM(vert, 4));
+	glDrawArrays(GL_TRIANGLES, 0, VNUM(vertbuffer));
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
@@ -237,7 +259,7 @@ int main (void)
 		}
 
 		glViewport(0, 0, w_width(ren.w), w_height(ren.w));
-		glClearColor(1.f, 0.f, 1.f, 0.f);
+		glClearColor(0.f, 0.f, 0.f, 0.f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		ren_drawvertbuffer();
@@ -246,6 +268,8 @@ int main (void)
 
 	} while(running);
 
+	glDisableVertexAttribArray(vertindex);
+	glDisableVertexAttribArray(colindex);
 	SDL_GL_DeleteContext(ren.gl);
 	SDL_DestroyWindow(ren.w);
 	SDL_Quit();
