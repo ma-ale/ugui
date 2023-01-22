@@ -86,6 +86,8 @@ static ug_style_t style_cache = {0};
 }
 
 
+// delete all items that have the same id from the stack, also shrink it if the total
+// number of items is less than a third of the capacity
 #define DELETE_FROM_STACK(S, c)                                                     \
 {                                                                                   \
 	for (int i = 0; i < S.idx; i++) {                                           \
@@ -94,7 +96,13 @@ static ug_style_t style_cache = {0};
 		memmove(&S.items[i], &S.items[i+1], (S.idx-i)*sizeof(S.items[0]));  \
 		memset(&S.items[S.idx--], 0, sizeof(S.items[0]));                   \
 	}                                                                           \
-}
+	if (S.size > STACK_STEP && S.idx*3 < S.size) {                              \
+		S.items = realloc(S.items, (S.size-STACK_STEP)*sizeof(*(S.items))); \
+		if(!S.items)                                                        \
+			UG_ERR("Could not allocate stack #S: %s", strerror(errno)); \
+		S.size -= STACK_STEP;                                               \
+	}                                                                           \
+}                                                                                   \
 
 
 #define RESET_STACK(S)                                                         \
