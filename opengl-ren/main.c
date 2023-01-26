@@ -1,3 +1,4 @@
+#include <SDL2/SDL_events.h>
 #include <stddef.h>
 #define _POSIX_C_SOURCE 200809l
 
@@ -113,7 +114,7 @@ int vstack_push_quad_c(int x, int y, int w, int h, vec4 color)
 	// x1,y1        x2,y2
 
 	int hw = w_width(ren.w)/2;
-	int hh = w_width(ren.w)/2;
+	int hh = w_height(ren.w)/2;
 
 	float x1, x2, x3, x4;
 	float y1, y2, y3, y4;
@@ -152,7 +153,7 @@ int vstack_push_quad_t(int x, int y, int w, int h, int u, int v)
 	// x1,y1        x2,y2
 
 	int hw = w_width(ren.w)/2;
-	int hh = w_width(ren.w)/2;
+	int hh = w_height(ren.w)/2;
 
 	float x1, x2, x3, x4;
 	float y1, y2, y3, y4;
@@ -343,6 +344,9 @@ void ren_initshaders()
 void ren_drawvertbuffer()
 {
 	glBindBuffer(GL_ARRAY_BUFFER, ren.gl_vertbuffer);
+	// upload vertex data
+	glBufferData(GL_ARRAY_BUFFER, vstack.idx*sizeof(struct vertex), vstack.v, GL_DYNAMIC_DRAW);
+	// draw vertex data
 	glDrawArrays(GL_TRIANGLES, 0, vstack.idx);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -437,12 +441,10 @@ int main (void)
 	import_font("./charmap.ff");
 
 	vec4 magenta = {.r=1.0, .g=0.0, .b=1.0, .a=1.0};
-	vstack_push_quad_c(0, 0, 100, 100, magenta);
-	vstack_push_quad_c(200, 0, 10, 10, magenta);
-	vstack_push_quad_c(10, 150, 100, 100, magenta);
 
-	push_text(250, 250, "ò Ciao Victoria <3");
 	ren_initvertbuffer();
+
+	glClearColor(0.3f, 0.3f, 0.3f, 0.f);
 
 	// event loop and drawing
 	SDL_Event ev = {0};
@@ -451,22 +453,33 @@ int main (void)
 		SDL_WaitEvent(&ev);
 		switch (ev.type) {
 		case SDL_QUIT: running = 0; break;
+		case SDL_WINDOWEVENT:
+			glClear(GL_COLOR_BUFFER_BIT);
+			if(ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+				glViewport(0, 0, w_width(ren.w), w_height(ren.w));
+				glScissor(0, 0, w_width(ren.w), w_height(ren.w));
+			}
+			break;
 		default: break;
 		}
 
-		glViewport(0, 0, w_width(ren.w), w_height(ren.w));
-		glClearColor(0.f, 0.f, 0.f, 0.f);
-		glClear(GL_COLOR_BUFFER_BIT);
+		vstack_push_quad_c(0, 0, 100, 100, magenta);
+		vstack_push_quad_c(200, 0, 10, 10, magenta);
+		vstack_push_quad_c(10, 150, 100, 100, magenta);
+		push_text(250, 250, "ò Ciao Victoria <3");
 
 		ren_drawvertbuffer();
 
 		SDL_GL_SwapWindow(ren.w);
+
+		vstack_clear();
 
 	} while(running);
 
 	glUseProgram(0);
 	glDisableVertexAttribArray(vertindex);
 	glDisableVertexAttribArray(colindex);
+	glDeleteTextures(1, &ren.font_texture);
 	SDL_GL_DeleteContext(ren.gl);
 	SDL_DestroyWindow(ren.w);
 	SDL_Quit();
