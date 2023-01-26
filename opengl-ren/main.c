@@ -1,6 +1,8 @@
+#include <stddef.h>
 #define _POSIX_C_SOURCE 200809l
 
 #include <sys/mman.h>
+#include <arpa/inet.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -21,16 +23,19 @@
 
 const int vertindex = 0;
 const int colindex  = 1;
+const int textindex = 2;
 
 struct {
 	SDL_Window *w;
 	SDL_GLContext *gl;
 	GLuint gl_vertbuffer;
 	GLuint gl_program;
+	GLuint font_texture;
 } ren = {0};
 
 typedef struct PACKED {
-	GLfloat x, y;
+	union { GLfloat x, u; };
+	union { GLfloat y, v; };
 } vec2;
 
 typedef struct PACKED {
@@ -42,8 +47,9 @@ typedef struct PACKED {
 
 // a vertex has a position and a color
 struct PACKED vertex { 
-	vec2 pos;
-	vec4 col;
+	vec2 pos;	
+	vec2 texture;
+	vec4 color;
 };
 
 
@@ -62,6 +68,17 @@ int w_width(SDL_Window *);
 //};
 
 
+// this just descrives a farbfeld image
+// https://tools.suckless.org/farbfeld/
+struct PACKED _ff {
+	uint8_t magic[8];
+	uint32_t w, h;
+	uint64_t bytes[];
+};
+const int gw = 7, gh = 9;
+unsigned int fw, fh;
+
+
 struct {
 	struct vertex *v;
 	int size, idx;
@@ -78,7 +95,7 @@ void grow_stack(int step)
 }
 
 
-int vstack_push_quad(int x, int y, int w, int h, vec4 color)
+int vstack_push_quad_c(int x, int y, int w, int h, vec4 color)
 {
 	if (vstack.idx <= vstack.size)
 		grow_stack(6);
@@ -106,17 +123,63 @@ int vstack_push_quad(int x, int y, int w, int h, vec4 color)
 	y4 = y3 = (float)(hh - y)   / hh;
 	y1 = y2 = (float)(hh - y-h) / hh;
 
-	printf("x1=%.3f x2=%.3f, y1=%.3f y4=%.3f\n", x1, x2, y1, y4);
-
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .col=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x2, .pos.y=y2, .col=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .col=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .col=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .col=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x4, .pos.y=y4, .col=color };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .color=color };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x2, .pos.y=y2, .color=color };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .color=color };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .color=color };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .color=color };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x4, .pos.y=y4, .color=color };
 
 	return 0;
 }
+
+
+int vstack_push_quad_t(int x, int y, int w, int h, int u, int v)
+{
+	if (vstack.idx <= vstack.size)
+		grow_stack(6);
+	
+	// x4,y4        x3,y3
+	// +-------------+
+	// |(x,y)       /|
+	// |          /  |
+	// |   2    /    |
+	// |      /      |
+	// |    /        |
+	// |  /     1    |
+	// |/            |
+	// +-------------+
+	// x1,y1        x2,y2
+
+	int hw = w_width(ren.w)/2;
+	int hh = w_width(ren.w)/2;
+
+	float x1, x2, x3, x4;
+	float y1, y2, y3, y4;
+
+	x1 = x4 = (float)(x - hw)   / hw;
+	x2 = x3 = (float)(x+w - hw) / hw;
+	y1 = y2 = (float)(hh - y-h) / hh;
+	y3 = y4 = (float)(hh - y)   / hh;
+
+	float u1, u2, u3, u4;
+	float v1, v2, v3, v4;
+
+	u1 = u4 = (float)(u)    / fw;
+	u2 = u3 = (float)(u+gw) / fw;
+	v1 = v2 = (float)(v+gh) / fh;
+	v3 = v4 = (float)(v)    / fh;
+
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .texture.x=u1, .texture.y=v1 };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x2, .pos.y=y2, .texture.x=u2, .texture.y=v2 };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .texture.x=u3, .texture.y=v3 };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .texture.x=u1, .texture.y=v1 };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .texture.x=u3, .texture.y=v3 };
+	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x4, .pos.y=y4, .texture.x=u4, .texture.y=v4 };
+
+	return 0;
+}
+
 
 void vstack_clear(void)
 {
@@ -149,7 +212,10 @@ void ren_initvertbuffer()
 	// always referred to by index and not by pointer or other manners, indices
 	// go from 0 to 15
 	glEnableVertexAttribArray(colindex);
-	glVertexAttribPointer(colindex, 4, GL_FLOAT, GL_FALSE, sizeof(struct vertex), (void*)sizeof(vec2));
+	glVertexAttribPointer(colindex, 4, GL_FLOAT, GL_FALSE, sizeof(struct vertex), (void*)(2*sizeof(vec2)));
+	// texture uv data
+	glEnableVertexAttribArray(textindex);
+	glVertexAttribPointer(textindex, 2, GL_FLOAT, GL_FALSE, sizeof(struct vertex), (void*)sizeof(vec2));
 	// reset the object bind so not to create errors
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
@@ -298,6 +364,46 @@ int w_width(SDL_Window *win)
 }
 
 
+void import_font(const char *path)
+{
+	const char *map;
+	int size;
+	const struct _ff *img;
+
+	map_file(&map, &size, path);
+	img = (const struct _ff *)map;
+	fw = ntohl(img->w);
+	fh = ntohl(img->h);
+ 
+	glGenTextures(1, &ren.font_texture);
+	glBindTexture(GL_TEXTURE_2D, ren.font_texture);
+	// farbfeld image
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fw, fh, 0, GL_RGBA, GL_UNSIGNED_SHORT, img->bytes);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	munmap((void *)map, size);
+}
+
+
+void push_text(int x, int y, const char *s)
+{
+	for (; *s; s++) {
+		int u, v;
+		int idx = *s - ' ';
+		u = idx % (fw / gw);
+		v = (idx / (fw / gw)) % (fh / gh);
+		vstack_push_quad_t(x, y, gw*2, gh*2, u*gw, v*gh);
+		x += gw*2;
+		if (*s == '\n')
+			y += gh;
+	}
+}
+
+
 int main (void)
 {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
@@ -328,11 +434,14 @@ int main (void)
 		err(-1, "Failed to initialize GLEW: %s", glewGetErrorString(glew_err));
 
 	ren_initshaders();
+	import_font("./charmap.ff");
 
 	vec4 magenta = {.r=1.0, .g=0.0, .b=1.0, .a=1.0};
-	vstack_push_quad(0, 0, 100, 100, magenta);
-	vstack_push_quad(200, 0, 10, 10, magenta);
-	vstack_push_quad(10, 150, 100, 100, magenta);
+	vstack_push_quad_c(0, 0, 100, 100, magenta);
+	vstack_push_quad_c(200, 0, 10, 10, magenta);
+	vstack_push_quad_c(10, 150, 100, 100, magenta);
+
+	push_text(250, 250, "ò Ciao Victoria <3");
 	ren_initvertbuffer();
 
 	// event loop and drawing
