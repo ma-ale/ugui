@@ -58,17 +58,6 @@ int w_height(SDL_Window *);
 int w_width(SDL_Window *);
 
 
-//#define VNUM(s) (sizeof(s)/sizeof(s[0]))
-//struct vertex vertbuffer[] = {
-//	{ .pos={.x= 0.75f, .y= 0.75f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
-//	{ .pos={.x=-0.75f, .y=-0.75f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
-//	{ .pos={.x= 0.75f, .y=-0.75f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
-//	{ .pos={.x= 0.75f, .y= 0.75f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
-//	{ .pos={.x=-0.75f, .y=-0.75f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
-//	{ .pos={.x=-0.75f, .y= 0.75f}, .col={ .r=1.0f, .g=0.0f, .b=0.0f, .a=1.0f} },
-//};
-
-
 // this just descrives a farbfeld image
 // https://tools.suckless.org/farbfeld/
 struct PACKED _ff {
@@ -83,6 +72,8 @@ unsigned int fw, fh;
 struct {
 	struct vertex *v;
 	int size, idx;
+	int prev_idx;
+	unsigned long int hash, prev_hash;
 } vstack = {0};
 
 
@@ -95,12 +86,49 @@ void grow_stack(int step)
 	vstack.size += step; 
 }
 
-
-int vstack_push_quad_c(int x, int y, int w, int h, vec4 color)
+void push(struct vertex v)
 {
 	if (vstack.idx <= vstack.size)
 		grow_stack(6);
-	
+	vstack.v[vstack.idx++] = v;
+}
+
+
+void update_hash()
+{
+	if (!vstack.idx)
+		return;
+	unsigned int hash = 0x5400F1B3;
+	unsigned char *v = (unsigned char *)vstack.v;
+	int size = vstack.idx;
+
+	for (; size; size--) {
+		hash += v[size-1];
+		hash += hash << 10;
+		hash ^= hash >> 6;
+	}
+	hash += hash << 3;
+  	hash ^= hash >> 11;
+  	hash += hash << 15;
+
+	vstack.hash = hash;
+}
+
+
+void force_changed()
+{
+	vstack.prev_idx = 0;
+}
+
+
+int changed()
+{
+	return vstack.prev_idx != vstack.idx || vstack.prev_hash != vstack.hash;
+}
+
+
+int vstack_push_quad_c(int x, int y, int w, int h, vec4 color)
+{
 	// x4,y4        x3,y3
 	// +-------------+
 	// |(x,y)       /|
@@ -124,12 +152,12 @@ int vstack_push_quad_c(int x, int y, int w, int h, vec4 color)
 	y4 = y3 = (float)(hh - y)   / hh;
 	y1 = y2 = (float)(hh - y-h) / hh;
 
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .color=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x2, .pos.y=y2, .color=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .color=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .color=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .color=color };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x4, .pos.y=y4, .color=color };
+	push((struct vertex){ .pos.x=x1, .pos.y=y1, .color=color });
+	push((struct vertex){ .pos.x=x2, .pos.y=y2, .color=color });
+	push((struct vertex){ .pos.x=x3, .pos.y=y3, .color=color });
+	push((struct vertex){ .pos.x=x1, .pos.y=y1, .color=color });
+	push((struct vertex){ .pos.x=x3, .pos.y=y3, .color=color });
+	push((struct vertex){ .pos.x=x4, .pos.y=y4, .color=color });
 
 	return 0;
 }
@@ -137,9 +165,6 @@ int vstack_push_quad_c(int x, int y, int w, int h, vec4 color)
 
 int vstack_push_quad_t(int x, int y, int w, int h, int u, int v)
 {
-	if (vstack.idx <= vstack.size)
-		grow_stack(6);
-	
 	// x4,y4        x3,y3
 	// +-------------+
 	// |(x,y)       /|
@@ -171,12 +196,12 @@ int vstack_push_quad_t(int x, int y, int w, int h, int u, int v)
 	v1 = v2 = (float)(v+gh) / fh;
 	v3 = v4 = (float)(v)    / fh;
 
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .texture.x=u1, .texture.y=v1 };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x2, .pos.y=y2, .texture.x=u2, .texture.y=v2 };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .texture.x=u3, .texture.y=v3 };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x1, .pos.y=y1, .texture.x=u1, .texture.y=v1 };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x3, .pos.y=y3, .texture.x=u3, .texture.y=v3 };
-	vstack.v[vstack.idx++] = (struct vertex){ .pos.x=x4, .pos.y=y4, .texture.x=u4, .texture.y=v4 };
+	push((struct vertex){ .pos.x=x1, .pos.y=y1, .texture.x=u1, .texture.y=v1 });
+	push((struct vertex){ .pos.x=x2, .pos.y=y2, .texture.x=u2, .texture.y=v2 });
+	push((struct vertex){ .pos.x=x3, .pos.y=y3, .texture.x=u3, .texture.y=v3 });
+	push((struct vertex){ .pos.x=x1, .pos.y=y1, .texture.x=u1, .texture.y=v1 });
+	push((struct vertex){ .pos.x=x3, .pos.y=y3, .texture.x=u3, .texture.y=v3 });
+	push((struct vertex){ .pos.x=x4, .pos.y=y4, .texture.x=u4, .texture.y=v4 });
 
 	return 0;
 }
@@ -184,6 +209,8 @@ int vstack_push_quad_t(int x, int y, int w, int h, int u, int v)
 
 void vstack_clear(void)
 {
+	vstack.prev_hash = vstack.hash;
+	vstack.prev_idx = vstack.idx;
 	vstack.idx = 0;
 }
 
@@ -343,12 +370,19 @@ void ren_initshaders()
 
 void ren_drawvertbuffer()
 {
+	if (!changed())
+		return;
+	glClear(GL_COLOR_BUFFER_BIT);
 	glBindBuffer(GL_ARRAY_BUFFER, ren.gl_vertbuffer);
 	// upload vertex data
-	glBufferData(GL_ARRAY_BUFFER, vstack.idx*sizeof(struct vertex), vstack.v, GL_DYNAMIC_DRAW);
+	if (vstack.idx != vstack.prev_idx)
+		glBufferData(GL_ARRAY_BUFFER, vstack.idx*sizeof(struct vertex), vstack.v, GL_DYNAMIC_DRAW);
+	else
+	 	glBufferSubData(GL_ARRAY_BUFFER, 0, vstack.idx*sizeof(struct vertex), vstack.v);
 	// draw vertex data
 	glDrawArrays(GL_TRIANGLES, 0, vstack.idx);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	SDL_GL_SwapWindow(ren.w);
 }
 
 
@@ -445,6 +479,7 @@ int main (void)
 	ren_initvertbuffer();
 
 	glClearColor(0.3f, 0.3f, 0.3f, 0.f);
+	glClear(GL_COLOR_BUFFER_BIT);
 
 	// event loop and drawing
 	SDL_Event ev = {0};
@@ -454,10 +489,10 @@ int main (void)
 		switch (ev.type) {
 		case SDL_QUIT: running = 0; break;
 		case SDL_WINDOWEVENT:
-			glClear(GL_COLOR_BUFFER_BIT);
 			if(ev.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
 				glViewport(0, 0, w_width(ren.w), w_height(ren.w));
 				glScissor(0, 0, w_width(ren.w), w_height(ren.w));
+				force_changed();
 			}
 			break;
 		default: break;
@@ -467,10 +502,9 @@ int main (void)
 		vstack_push_quad_c(200, 0, 10, 10, magenta);
 		vstack_push_quad_c(10, 150, 100, 100, magenta);
 		push_text(250, 250, "ò Ciao Victoria <3");
+		update_hash();
 
 		ren_drawvertbuffer();
-
-		SDL_GL_SwapWindow(ren.w);
 
 		vstack_clear();
 
