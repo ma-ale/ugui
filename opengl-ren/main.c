@@ -1,5 +1,3 @@
-#include <SDL2/SDL_events.h>
-#include <stddef.h>
 #define _POSIX_C_SOURCE 200809l
 
 #include <sys/mman.h>
@@ -47,8 +45,8 @@ typedef struct PACKED {
 } vec4;
 
 // a vertex has a position and a color
-struct PACKED vertex { 
-	vec2 pos;	
+struct PACKED vertex {
+	vec2 pos;
 	vec2 texture;
 	vec4 color;
 };
@@ -83,12 +81,12 @@ void grow_stack(int step)
 	if(!vstack.v)
 		err(-1, "Could not allocate stack #S: %s", strerror(errno));
 	memset(&(vstack.v[vstack.size]), 0, step*sizeof(*(vstack.v)));
-	vstack.size += step; 
+	vstack.size += step;
 }
 
 void push(struct vertex v)
 {
-	if (vstack.idx <= vstack.size)
+	if (vstack.idx >= vstack.size)
 		grow_stack(6);
 	vstack.v[vstack.idx++] = v;
 }
@@ -412,30 +410,30 @@ void import_font(const char *path)
 	img = (const struct _ff *)map;
 	fw = ntohl(img->w);
 	fh = ntohl(img->h);
- 
+
 	glGenTextures(1, &ren.font_texture);
 	glBindTexture(GL_TEXTURE_2D, ren.font_texture);
 	// farbfeld image
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, fw, fh, 0, GL_RGBA, GL_UNSIGNED_SHORT, img->bytes);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	munmap((void *)map, size);
 }
 
 
-void push_text(int x, int y, const char *s)
+void push_text(int x, int y, float scale, const char *s)
 {
 	for (; *s; s++) {
 		int u, v;
 		int idx = *s - ' ';
 		u = idx % (fw / gw);
 		v = (idx / (fw / gw)) % (fh / gh);
-		vstack_push_quad_t(x, y, gw*2, gh*2, u*gw, v*gh);
-		x += gw*2;
+		vstack_push_quad_t(x, y, gw*scale, gh*scale, u*gw, v*gh);
+		x += gw*scale;
 		if (*s == '\n')
 			y += gh;
 	}
@@ -501,7 +499,7 @@ int main (void)
 		vstack_push_quad_c(0, 0, 100, 100, magenta);
 		vstack_push_quad_c(200, 0, 10, 10, magenta);
 		vstack_push_quad_c(10, 150, 100, 100, magenta);
-		push_text(250, 250, "ò Ciao Victoria <3");
+		push_text(250, 250, 1.0f, "Ciao Victoria <3");
 		update_hash();
 
 		ren_drawvertbuffer();
@@ -514,6 +512,7 @@ int main (void)
 	glDisableVertexAttribArray(vertindex);
 	glDisableVertexAttribArray(colindex);
 	glDeleteTextures(1, &ren.font_texture);
+	glDeleteBuffers(1, &ren.gl_vertbuffer);
 	SDL_GL_DeleteContext(ren.gl);
 	SDL_DestroyWindow(ren.w);
 	SDL_Quit();
