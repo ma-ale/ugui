@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "hash.h"
+#include "util.h"
 
 #define MAXSIZE 4096
 
@@ -27,7 +28,7 @@ struct hm_ref * hm_create(unsigned int size)
 	size = 1<<__builtin_clz(size);
 
 	// FIXME: check for intger overflow here
-	struct hm_ref *h = malloc(sizeof(struct hm_ref)+sizeof(struct hm_entry)*size);
+	struct hm_ref *h = emalloc(sizeof(struct hm_ref)+sizeof(struct hm_entry)*size);
 	if (h) {
 		h->items = 0;
 		h->size  = size;
@@ -39,7 +40,7 @@ struct hm_ref * hm_create(unsigned int size)
 
 void hm_destroy(struct hm_ref *hm)
 {
-	free(hm);
+	efree(hm);
 }
 
 

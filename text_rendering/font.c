@@ -4,7 +4,8 @@
 
 #include <grapheme.h>
 
-#include "stb_truetype.h"
+#include "msdf_c/stb_truetype.h"
+#include "msdf_c/msdf.h"
 #include "util.h"
 #include "font.h"
 
@@ -20,9 +21,8 @@
 
 
 struct font_atlas {
-	unsigned int glyphs, width, height;
+	unsigned int glyphs;
 	unsigned char *atlas;
-	unsigned int glyph_max_w, glyph_max_h;
 
 	struct {
 		stbtt_fontinfo info;
@@ -31,6 +31,10 @@ struct font_atlas {
 	int file_size;
 	unsigned char *file;
 };
+
+
+const unsigned int glyph_w = 32;
+const unsigned int glyph_h = 32;
 
 
 // loads a font into memory, storing all the ASCII characters in the atlas
@@ -49,10 +53,10 @@ int load_font(struct font_atlas *atlas, const char *path, int height)
 	stbtt_GetFontBoundingBox(&(atlas->stb.info), &x0, &y0, &x1, &y1);
 
 	baseline = atlas->stb.scale * -y0;
-	atlas->glyph_max_w = (atlas->stb.scale*x1) - (atlas->stb.scale*x0);
-	atlas->glyph_max_h = (baseline+atlas->stb.scale*y1) - (baseline+atlas->stb.scale*y0);
-
-	atlas->atlas = emalloc(atlas->glyph_max_w*atlas->glyph_max_h*CACHE_SIZE);
+	//atlas->glyph_max_w = (atlas->stb.scale*x1) - (atlas->stb.scale*x0);
+	//atlas->glyph_max_h = (baseline+atlas->stb.scale*y1) - (baseline+atlas->stb.scale*y0);
+	//atlas->atlas = emalloc(atlas->glyph_max_w*atlas->glyph_max_h*CACHE_SIZE);
+	atlas->atlas
 
 	return 0;
 }
