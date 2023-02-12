@@ -1,0 +1,4 @@
+Divide up the OpenGL renderer into three parts, one part that draws simple shapes,
+another that only draws text and one that is responsible for drawing icons and
+mapping sprites in general, this way all the texture atlases are separate and
+everything is done within 3 draw calls

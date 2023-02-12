@@ -212,6 +212,9 @@ int crop_rect(ug_rect_t *ra, ug_rect_t *rb)
  *=============================================================================*/
 
 
+// TODO: when pushing onto the stack calculate the incremental hash of the whole
+//       stack instead of calculating it at the end, this saves us one last scroll
+//       trought the draw stack
 static void push_rect_command(ug_ctx_t *ctx, const ug_rect_t *rect, ug_color_t color)
 {
 	ug_cmd_t *c;
