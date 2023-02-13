@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "cache.h"
 #include "hash.h"
 #include "font.h"
 #include "util.h"
@@ -49,7 +50,7 @@ void cache_destroy(void)
 }
 
 
-struct font_glyph * cache_get(unsigned int code)
+const struct font_glyph * cache_search(unsigned int code)
 {
 	struct hm_entry *r = hm_search(hash_table, code);
 
@@ -63,21 +64,28 @@ struct font_glyph * cache_get(unsigned int code)
 }
 
 
-int cache_insert(struct font_glyph *g)
+// return the first free spot into the cache
+unsigned int cache_get(void)
 {
-	struct font_glyph *spot = NULL;
 	uint32_t x = 0;
 	// find an open spot in the cache
 	// TODO: use __builtin_clz to speed this up
 	for (; x < CACHE_SIZE; x++) {
-//		printf("test: %d\n", x);
 		if (!B_TEST(x))
 			break;
 	}
+	return x;
+}
+
+
+// inserts the font glyph into the cache
+const struct font_glyph * cache_insert(struct font_glyph *g, unsigned int x)
+{
+	struct font_glyph *spot = NULL;
 
 	// allocation in cache failed
 	if (B_TEST(x))
-		return -1;
+		return NULL;
 
 	set_bit(x);
 	spot = &cache_array[x];
@@ -100,7 +108,7 @@ int cache_insert(struct font_glyph *g)
 
 	struct hm_entry e = { .code  = g->codepoint, .data = spot};
 	if (!hm_insert(hash_table, &e))
-		return -1;
+		return NULL;
 
-	return 0;
+	return spot;
 }

@@ -1,7 +1,6 @@
 #ifndef _FONT_H
 #define _FONT_H
 
-#define CACHE_SIZE 512
 
 /* width and height of a glyph contain the kering advance
  * (u,v)
@@ -28,13 +27,7 @@ struct font_glyph {
 
 struct font_atlas;
 
-int load_font(struct font_atlas *atlas, const char *path, int height);
-int free_font(struct font_atlas *atlas);
-
-void cache_init(void);
-void cache_destroy(void);
-struct font_glyph * cache_get(unsigned int code);
-int cache_insert(struct font_glyph *g);
-
+int font_load(struct font_atlas *atlas, const char *path, int height);
+int font_free(struct font_atlas *atlas);
 
 #endif
