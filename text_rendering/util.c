@@ -83,10 +83,13 @@ void dump_file(const char *path, unsigned char **buf, int *buf_len)
 	if (!fp)
 		err(EXIT_FAILURE, "Cannot open file %s", path);
 	*buf_len = lseek(fileno(fp), 0, SEEK_END);
+	rewind(fp);
 	if (*buf_len == (off_t)-1)
 		err(EXIT_FAILURE, "lseek() failed");
 	*buf = emalloc(*buf_len);
-	*buf_len = fread(*buf, 1, *buf_len, fp);
+	int ret = fread(*buf, 1, *buf_len, fp);
+	if (ret != *buf_len)
+		err(EXIT_FAILURE, "fread() returned short %s", ferror(fp) ? "stream error" : feof(fp) ? "EOF reached" : "unknown error");
 	if (fclose(fp))
 		err(EXIT_FAILURE, "Error closing file");
 }

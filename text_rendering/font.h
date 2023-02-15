@@ -27,7 +27,10 @@ struct font_glyph {
 
 struct font_atlas;
 
-int font_load(struct font_atlas *atlas, const char *path, int height);
+struct font_atlas * font_init(void);
+int font_load(struct font_atlas *atlas, const char *path);
 int font_free(struct font_atlas *atlas);
+const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsigned int code);
+void font_dump(const struct font_atlas *atlas, const char *path);
 
 #endif

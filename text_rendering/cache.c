@@ -79,7 +79,7 @@ unsigned int cache_get(void)
 
 
 // inserts the font glyph into the cache
-const struct font_glyph * cache_insert(struct font_glyph *g, unsigned int x)
+const struct font_glyph * cache_insert(const struct font_glyph *g, unsigned int x)
 {
 	struct font_glyph *spot = NULL;
 

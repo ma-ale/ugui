@@ -4,32 +4,30 @@
 
 #include "cache.h"
 #include "font.h"
+#include "util.h"
 
 
 int main(void)
 {
-	cache_init();
+	int err;
+	struct font_atlas *at = font_init();
+	err = font_load(at, "./monospace.ttf");
+	ERROR(err, -1, printf("failed to load font\n"));
 
-	struct font_glyph *g, b;
-	b.codepoint = 'a';
-	b.u = b.v = 10;
-	b.w = b.h = 20;
-
-	g = cache_get('a');
-	if (!g)	printf("no element\n");
-	g = cache_get(0xa3c0);
-	if (!g) printf("not present\n");
-
-	const char *s = "κόσμε ciao mamma @à``²`²aas³³²";
+	const char *s = "ciao mamma";
+	const struct font_glyph *g;
 	size_t ret, off;
 	uint_least32_t cp;
 	for (off = 0; (ret = grapheme_decode_utf8(s+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		printf("%.*s (%d) -> %d\n", (int)ret, s+off, (int)ret, cp);
-		b.codepoint = cp;
-		if (cache_insert(&b)) printf("failed insert %d\n", b.codepoint);
-		if ((g = cache_get(cp))) printf("got %d\n", g->codepoint);
+		g = font_get_glyph_texture(at, cp);
+		if (!g)
+			printf("g is NULL\n");
 	}
 
-	cache_destroy();
+	font_dump(at, "./atlas.png");
+
+	font_free(at);
+
 	return 0;
 }
