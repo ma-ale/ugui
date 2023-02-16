@@ -123,14 +123,19 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 		atlas->priv.scale,
 		2.0f/glyph_h,
 		&atlas->priv.ctx);
-	if (!err)
-		return NULL;
+	// msdf_genGlyph returns 0 only when there are no contours, so only for
+	// whitespace and such, for those insert a zero uv map into the cache
+	// FIXME: this is a waste of space
+	if (!err) {
+		atlas->priv.msdf.width = 0;
+		atlas->priv.msdf.height = 0;
+	}
 
 
 	unsigned int spot = cache_get();
 	unsigned int oy   = (glyph_h * spot) / atlas->width;
 	unsigned int ox   = (glyph_h * spot) % atlas->height;
-	unsigned int w    = atlas->width; 
+	unsigned int w    = atlas->width;
 
 	// sum magic shit
 	struct {unsigned char r,g,b;} *a = (void *)atlas->atlas;
@@ -180,7 +185,7 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 void font_dump(const struct font_atlas *atlas, const char *path)
 {
 	stbi_write_png(
-		path, 
+		path,
 		//atlas->width,
 		//atlas->height,
 		128, 128,
