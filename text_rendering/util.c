@@ -65,7 +65,7 @@ void map_file(const unsigned char **str, int *size, const char *path)
 }
 
 
-void dump_file(const char *path, unsigned char **buf, int *buf_len)
+void dump_file(const char *path, char **buf, int *buf_len)
 {
 	if (!path) {
 		errno = EINVAL;
@@ -75,10 +75,9 @@ void dump_file(const char *path, unsigned char **buf, int *buf_len)
 		errno = EINVAL;
 		err(EXIT_FAILURE, "No buffer specified");
 	}
-	if (!buf_len) {
-		errno = EINVAL;
-		err(EXIT_FAILURE, "Nowhere to store buffer size");
-	}
+	int m = 0;
+	if (!buf_len)
+		buf_len = &m;
 	FILE *fp = fopen(path, "r");
 	if (!fp)
 		err(EXIT_FAILURE, "Cannot open file %s", path);

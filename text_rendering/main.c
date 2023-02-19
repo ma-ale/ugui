@@ -1,33 +1,30 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <grapheme.h>
 
-#include "cache.h"
-#include "font.h"
+#include "ren.h"
 #include "util.h"
 
 
 int main(void)
 {
-	int err;
-	struct font_atlas *at = font_init();
-	err = font_load(at, "./monospace.ttf");
-	ERROR(err, -1, printf("failed to load font\n"));
-
-	const char *s = "ciao mamma";
-	const struct font_glyph *g;
-	size_t ret, off;
-	uint_least32_t cp;
-	for (off = 0; (ret = grapheme_decode_utf8(s+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
-		printf("%.*s (%d) -> %d\n", (int)ret, s+off, (int)ret, cp);
-		g = font_get_glyph_texture(at, cp);
-		if (!g)
-			printf("g is NULL\n");
+	SDL_Window *win = SDL_CreateWindow(
+		"test render",
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		500,
+		500,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	if (ren_init(win)) {
+		printf("renderer init error: %s\n", ren_strerror());
+		return 1;
 	}
 
-	font_dump(at, "./atlas.png");
+	ren_render_text("ciao mamma", 100, 100, 100, 100, 12);
+	SDL_GL_SwapWindow(win);
 
-	font_free(at);
+	while(1);
 
+	ren_free();
+	SDL_DestroyWindow(win);
 	return 0;
 }

@@ -24,13 +24,19 @@ struct font_glyph {
 	unsigned int u, v, w, h;
 };
 
+struct font_atlas {
+	unsigned int glyphs, width, height;
+	unsigned char *atlas;
+	int file_size;
+	char *file;
+	void *priv;
+};
 
-struct font_atlas;
 
 struct font_atlas * font_init(void);
 int font_load(struct font_atlas *atlas, const char *path);
 int font_free(struct font_atlas *atlas);
-const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsigned int code);
+const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsigned int code, int *updated);
 void font_dump(const struct font_atlas *atlas, const char *path);
 
 #endif
