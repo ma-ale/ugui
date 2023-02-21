@@ -1,3 +1,5 @@
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_events.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -22,9 +24,15 @@ int main(void)
 	ren_render_text("ciao mamma", 100, 100, 100, 100, 12);
 	SDL_GL_SwapWindow(win);
 
-	while(1);
+	SDL_Event e;
+	while(1) {
+		SDL_WaitEvent(&e);
+		if (e.type == SDL_QUIT)
+			break;
+	}
 
 	ren_free();
 	SDL_DestroyWindow(win);
+	SDL_Quit();
 	return 0;
 }

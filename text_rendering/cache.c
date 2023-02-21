@@ -16,13 +16,14 @@ static struct hm_ref *hash_table;
 static struct font_glyph cache_array[CACHE_SIZE] = {0};
 
 // bitmap size is aligned to word
-#define _BSIZE ((CACHE_SIZE+0x3f)&(~0x3f))
+// 2^6 == 64 bits, number of bits in a uint64_t
+#define _BSIZE (((CACHE_SIZE+0x3f)&(~0x3f))>>6)
 static uint64_t bitmap[_BSIZE] = {0};
 
 // bitmap operations
-#define B_RESET() memset(bitmap, 0, _BSIZE*sizeof(uint64_t))
-#define B_SET(x)  bitmap[(x)/_BSIZE] |= 1<<((x)%_BSIZE)
-#define B_TEST(x) (bitmap[(x)/_BSIZE]&(1<<((x)%_BSIZE)))
+#define B_RESET() for (int i = 0; i < _BSIZE; bitmap[i++] = 0);
+#define B_SET(x)  bitmap[(x)>>6] |= (uint64_t)1<<((x)%64)
+#define B_TEST(x) (bitmap[(x)>>6]&((uint64_t)1<<((x)%64)))
 
 // reset the bitmap every n cycles
 #define NCYCLES (CACHE_SIZE/2)
@@ -71,6 +72,18 @@ unsigned int cache_get(void)
 	// find an open spot in the cache
 	// TODO: use __builtin_clz to speed this up
 	for (; x < CACHE_SIZE; x++) {
+		//printf("testing spot %d\n", x);
+		//print_byte(bitmap[0]>>56);
+		//print_byte(bitmap[0]>>48);
+		//print_byte(bitmap[0]>>40);
+		//print_byte(bitmap[0]>>32);
+		//print_byte(bitmap[0]>>24);
+		//print_byte(bitmap[0]>>16);
+		//print_byte(bitmap[0]>>8);
+		//print_byte(bitmap[0]);
+		//printf("%lx", bitmap[i]);
+		//printf("\n");
+
 		if (!B_TEST(x))
 			break;
 	}

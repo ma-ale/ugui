@@ -10,7 +10,6 @@
 #define REN_VERTEX_IDX 0
 #define REN_UV_IDX     1
 #define REN_COLOR_IDX  2
-#define REN_SCREENSIZE_LOC 0
 
 
 typedef struct {

@@ -24,6 +24,7 @@ enum REN_ERR {
 	REN_GLEW,
 	REN_FONT,
 	REN_BUFFER,
+	REN_UNIFORM,
 };
 
 
@@ -42,6 +43,7 @@ const char * ren_err_msg[] = {
 	[REN_GLEW]     = "GLEW Error",
 	[REN_FONT]     = "Font Error",
 	[REN_BUFFER]   = "Failed to create opengl buffer",
+	[REN_UNIFORM]  = "Failed to get uniform location",
 };
 
 // different stacks
@@ -57,6 +59,7 @@ struct {
 	GLuint font_prog;
 	GLuint box_prog;
 	GLuint font_buffer;
+	GLint  viewsize_loc;
 	struct vtstack font_stack;
 	struct vcstack box_stack;
 } ren = {0};
@@ -227,6 +230,29 @@ static GLuint ren_texturergba_2d(const char *buf, int w, int h, int upscale, int
 }
 
 
+static GLuint ren_texturer_2d(const char *buf, int w, int h, int upscale, int downscale)
+{
+	GLuint t;
+
+	if (!buf || w <= 0 || h <= 0)
+		REN_RET(0, REN_INVAL)
+
+	glGenTextures(1, &t);
+	if (!t) REN_RET(0, REN_TEXTURE)
+
+	glBindTexture(GL_TEXTURE_2D, t);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R, w, h, 0, GL_R, GL_UNSIGNED_BYTE, buf);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale);
+
+	return t;
+}
+
+
+
 // FIXME: update only the newly generated character instead of the whole texture
 static int update_font_texture(void)
 {
@@ -235,7 +261,7 @@ static int update_font_texture(void)
 		0, 0, 0,
 		ren.font->width,
 		ren.font->height,
-		GL_RGB,
+		GL_R,
 		GL_UNSIGNED_BYTE,
 		ren.font->atlas);
 	font_dump(ren.font, "./atlas.png");
@@ -266,9 +292,10 @@ int ren_init(SDL_Window *w)
 
 	ren.font = font_init();
 	if (!ren.font) REN_RET(-1, REN_FONT) 
-	if (font_load(ren.font, FONT_PATH)) REN_RET(-1, REN_FONT)
+	if (font_load(ren.font, FONT_PATH, 12)) REN_RET(-1, REN_FONT)
+	font_dump(ren.font, "./atlas.png");
 
-	ren.font_texture = ren_texturergb_2d(
+	ren.font_texture = ren_texturer_2d(
 		(const char *)ren.font->atlas,
 		ren.font->width,
 		ren.font->height,
@@ -281,6 +308,7 @@ int ren_init(SDL_Window *w)
 	ren.font_stack = vtstack_init();
 	ren.box_stack  = vcstack_init(); 
 
+	// generate the font buffer object 
 	glGenBuffers(1, &ren.font_buffer);
 	if (!ren.font_buffer) REN_RET(-1, REN_BUFFER)
 	glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer);
@@ -302,6 +330,10 @@ int ren_init(SDL_Window *w)
 		(void*)sizeof(vec2_i));
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+	// create the uniforms
+	ren.viewsize_loc = glGetUniformLocation(ren.font_prog, "viewsize");
+	if (ren.viewsize_loc == -1) REN_RET(-1, REN_UNIFORM)
 
 	int width, height;
 	SDL_GetWindowSize(w, &width, &height);
@@ -335,7 +367,7 @@ static int ren_draw_font_stack(void)
 int ren_update_viewport(int w, int h)
 {
 	glViewport(0, 0, w, h);
-	glUniform2i(REN_SCREENSIZE_LOC, w, h);
+	glUniform2i(ren.viewsize_loc, w, h);
 	return 0;
 }
 
@@ -368,35 +400,38 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 				REN_RET(-1, REN_TEXTURE);
 		}
 
+		printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", g->u, g->v, g->w, g->h, g->a, g->x, g->y);
+
 		// x1,y1
 		v = (struct v_text){
-			.pos = { .x = gx,   .y = gy+g->h   },
-			.uv  = { .u = g->u, .v = g->v+g->h },
+			.pos = { .x = gx+g->x, .y = gy+g->y+g->h   },
+			.uv  = { .u = g->u,    .v = g->v+g->h },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x2,y2
 		v = (struct v_text){
-			.pos = { .x = gx+g->w,   .y = gy+g->h   },
-			.uv  = { .u = g->u+g->w, .v = g->v+g->h },
+			.pos = { .x = gx+g->x+g->w, .y = gy+g->y+g->h   },
+			.uv  = { .u = g->u+g->w,    .v = g->v+g->h },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x3,y3
 		v = (struct v_text){
-			.pos = { .x = gx+g->w,   .y = gy   },
-			.uv  = { .u = g->u+g->w, .v = g->v },
+			.pos = { .x = gx+g->x+g->w, .y = gy+g->y   },
+			.uv  = { .u = g->u+g->w,    .v = g->v },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x4,y4
 		v = (struct v_text){
-			.pos = { .x = gx,   .y = gy   },
-			.uv  = { .u = g->u, .v = g->v },
+			.pos = { .x = gx+g->x, .y = gy+g->y   },
+			.uv  = { .u = g->u,    .v = g->v },
 		};
 		vtstack_push(&ren.font_stack, &v);
 
 		// TODO: possible kerning needs to be applied here
-		gx += g->w;
+		gx += g->w + g->a;
 		if (cp == '\n')
-			gy += 20; // FIXME: encode and/or store line height
+			gy += ren.font->glyph_max_h; 
+			// TODO: encode and/or store line height
 	}
 
 	// FIXME: here we are doing one draw call for string of text which is 
