@@ -46,6 +46,16 @@ const char * ren_err_msg[] = {
 	[REN_UNIFORM]  = "Failed to get uniform location",
 };
 
+
+#define ELEM(x) [x] = #x,
+const char *glerr[] = {
+	ELEM(GL_INVALID_ENUM)
+	ELEM(GL_INVALID_VALUE)
+	ELEM(GL_INVALID_OPERATION)
+};
+#undef ELEM
+
+
 // different stacks
 #include "stack.h"
 STACK_DECL(vtstack, struct v_text)
@@ -60,8 +70,11 @@ struct {
 	GLuint box_prog;
 	GLuint font_buffer;
 	GLint  viewsize_loc;
+	GLint texturesize_loc;
 	struct vtstack font_stack;
 	struct vcstack box_stack;
+	int width, height;
+	int s_x, s_y, s_w, s_h;
 } ren = {0};
 
 
@@ -292,7 +305,7 @@ int ren_init(SDL_Window *w)
 
 	ren.font = font_init();
 	if (!ren.font) REN_RET(-1, REN_FONT) 
-	if (font_load(ren.font, FONT_PATH, 12)) REN_RET(-1, REN_FONT)
+	if (font_load(ren.font, FONT_PATH, 20)) REN_RET(-1, REN_FONT)
 	font_dump(ren.font, "./atlas.png");
 
 	ren.font_texture = ren_texturer_2d(
@@ -311,29 +324,12 @@ int ren_init(SDL_Window *w)
 	// generate the font buffer object 
 	glGenBuffers(1, &ren.font_buffer);
 	if (!ren.font_buffer) REN_RET(-1, REN_BUFFER)
-	glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer);
-	glEnableVertexAttribArray(REN_VERTEX_IDX);
-	glVertexAttribPointer(
-		REN_VERTEX_IDX,
-		2,
-		GL_INT,
-		GL_FALSE,
-		sizeof(struct v_text),
-		0);
-	glEnableVertexAttribArray(REN_UV_IDX);
-	glVertexAttribPointer(
-		REN_UV_IDX,
-		2,
-		GL_INT,
-		GL_FALSE,
-		sizeof(struct v_text),
-		(void*)sizeof(vec2_i));
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 	// create the uniforms
 	ren.viewsize_loc = glGetUniformLocation(ren.font_prog, "viewsize");
 	if (ren.viewsize_loc == -1) REN_RET(-1, REN_UNIFORM)
+	ren.texturesize_loc = glGetUniformLocation(ren.font_prog, "texturesize");
+	if (ren.texturesize_loc == -1) REN_RET(-1, REN_UNIFORM)
 
 	int width, height;
 	SDL_GetWindowSize(w, &width, &height);
@@ -344,12 +340,38 @@ int ren_init(SDL_Window *w)
 	return 0;
 }
 
-
+#define GLERR()  {int a = glGetError(); if (a != GL_NO_ERROR) printf("glError: %d %s\n", a, glerr[a]);}
 static int ren_draw_font_stack(void)
 {
 	glUseProgram(ren.font_prog);
 	glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer);
 
+	glViewport(0, 0, ren.width, ren.height);
+	glScissor(ren.s_x, ren.s_y, ren.s_w, ren.s_h);
+	glUniform2i(ren.viewsize_loc, ren.width, ren.height);
+	glUniform2i(ren.texturesize_loc, ren.font->width, ren.font->height);
+	GLERR();
+
+	glEnableVertexAttribArray(REN_VERTEX_IDX);
+	glEnableVertexAttribArray(REN_UV_IDX);
+	// when passing ints to glVertexAttribPointer they are automatically 
+	// converted to floats
+	glVertexAttribPointer(
+		REN_VERTEX_IDX,
+		2,
+		GL_INT,
+		GL_FALSE,
+		sizeof(struct v_text),
+		0);
+	GLERR();
+	glVertexAttribPointer(
+		REN_UV_IDX,
+		2,
+		GL_INT,
+		GL_FALSE,
+		sizeof(struct v_text),
+		(void*)sizeof(vec2_i));
+	GLERR();
 	// TODO: implement size and damage tracking on stacks
 	glBufferData(
 		GL_ARRAY_BUFFER,
@@ -357,7 +379,10 @@ static int ren_draw_font_stack(void)
 		ren.font_stack.items,
 		GL_DYNAMIC_DRAW);
 	glDrawArrays(GL_TRIANGLES, 0, ren.font_stack.idx);
+	GLERR();
 
+	glDisableVertexAttribArray(REN_VERTEX_IDX);
+	glDisableVertexAttribArray(REN_UV_IDX);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glUseProgram(0);
 	return 0;
@@ -366,10 +391,22 @@ static int ren_draw_font_stack(void)
 
 int ren_update_viewport(int w, int h)
 {
-	glViewport(0, 0, w, h);
-	glUniform2i(ren.viewsize_loc, w, h);
+	ren.width = w;
+	ren.height = h;
 	return 0;
 }
+
+
+// TODO: add a scissor array in order to do less render calls
+int ren_set_scissor(int x, int y, int w, int h)
+{
+	ren.s_x = x;
+	ren.s_y = y;
+	ren.s_w = w;
+	ren.s_h = h;
+	return 0;
+}
+
 
 
 // TODO: implement font size
@@ -420,15 +457,24 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 			.uv  = { .u = g->u+g->w,    .v = g->v },
 		};
 		vtstack_push(&ren.font_stack, &v);
+		vtstack_push(&ren.font_stack, &v);
 		// x4,y4
 		v = (struct v_text){
 			.pos = { .x = gx+g->x, .y = gy+g->y   },
 			.uv  = { .u = g->u,    .v = g->v },
 		};
 		vtstack_push(&ren.font_stack, &v);
+		// x1,y1
+		v = (struct v_text){
+			.pos = { .x = gx+g->x, .y = gy+g->y+g->h   },
+			.uv  = { .u = g->u,    .v = g->v+g->h },
+		};
+		vtstack_push(&ren.font_stack, &v);
 
 		// TODO: possible kerning needs to be applied here
-		gx += g->w + g->a;
+		// FIXME: advance is too large
+		//gx += g->w + g->a;
+		gx += g->w + g->x + 1;
 		if (cp == '\n')
 			gy += ren.font->glyph_max_h; 
 			// TODO: encode and/or store line height
@@ -436,7 +482,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 
 	// FIXME: here we are doing one draw call for string of text which is 
 	// inefficient but is simpler and allows for individual scissors
-	glScissor(x, y, w, h);
+	ren_set_scissor(x, y, w, h);
 	ren_draw_font_stack();
 	vtstack_clear(&ren.font_stack);
 

@@ -21,7 +21,7 @@ int main(void)
 		return 1;
 	}
 
-	ren_render_text("ciao mamma", 100, 100, 100, 100, 12);
+	ren_render_text("ciao mamma", 0, 0, 100, 100, 12);
 	SDL_GL_SwapWindow(win);
 
 	SDL_Event e;
