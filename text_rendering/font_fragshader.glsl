@@ -6,10 +6,13 @@ uniform ivec2 texturesize;
 
 // texture uv coordinate in texture space
 in vec2 uv;
-uniform sampler2D ts;
+uniform sampler2DRect ts;
+
+const vec3 textcolor = vec3(1.0, 1.0, 1.0);
+
 
 void main()
 {
 	//gl_FragColor = vec4(1.0f,0.0f,0.0f,1.0f);
-	gl_FragColor = texture(ts, uv);
+	gl_FragColor = vec4(textcolor, texture(ts, uv));
 }

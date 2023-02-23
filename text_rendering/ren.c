@@ -10,8 +10,14 @@
 #include "ren.h"
 
 
-#define GLERR()  {int a = glGetError(); if (a != GL_NO_ERROR) printf("(%s:%d %s) glError: 0x%x %s\n", __FILE__, __LINE__, __func__, a, glerr[a]);}
-#define GL(f) f; GLERR()
+#define GLERR(x)                                                               \
+{                                                                              \
+	int a = glGetError();                                                  \
+	if (a != GL_NO_ERROR)                                                  \
+		printf("(%s:%d %s:%s) glError: 0x%x %s\n",                     \
+			__FILE__, __LINE__, __func__, x, a, glerr[a]);         \
+}
+#define GL(f) f; GLERR(#f)
 
 
 enum REN_ERR {
@@ -270,19 +276,44 @@ static GLuint ren_texturer_2d(const char *buf, int w, int h, int upscale, int do
 }
 
 
+static GLuint ren_texturer_rect(const char *buf, int w, int h, int upscale, int downscale)
+{
+	GLuint t;
+
+	if (!buf || w <= 0 || h <= 0)
+		REN_RET(0, REN_INVAL)
+
+	GL(glGenTextures(1, &t))
+	if (!t) REN_RET(0, REN_TEXTURE)
+
+	GL(glBindTexture(GL_TEXTURE_RECTANGLE, t))
+	GL(glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, buf))
+
+	// a limitation of recatngle textures is that the wrapping mode is limited 
+	// to either clamp-to-edge or clamp-to-border
+	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE))
+	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE))
+	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, downscale))
+	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, upscale))
+
+	return t;
+}
+
 
 // FIXME: update only the newly generated character instead of the whole texture
 static int update_font_texture(void)
 {
+	glUseProgram(ren.font_prog);
 	GL(glTexSubImage2D(
-		ren.font_texture,
+		GL_TEXTURE_RECTANGLE,
 		0, 0, 0,
 		ren.font->width,
 		ren.font->height,
-		GL_R,
+		GL_RED,
 		GL_UNSIGNED_BYTE,
 		ren.font->atlas))
 	font_dump(ren.font, "./atlas.png");
+	glUseProgram(0);
 	return 0;
 }
 
@@ -303,6 +334,7 @@ int ren_init(SDL_Window *w)
 	GL(glDisable(GL_DEPTH_TEST))
 	GL(glEnable(GL_SCISSOR_TEST))
 	GL(glEnable(GL_TEXTURE_2D))
+	GL(glEnable(GL_TEXTURE_RECTANGLE))
 
 	GLenum glew_err = glewInit();
 	if (glew_err != GLEW_OK)
@@ -313,7 +345,7 @@ int ren_init(SDL_Window *w)
 	if (font_load(ren.font, FONT_PATH, 20)) REN_RET(-1, REN_FONT)
 	font_dump(ren.font, "./atlas.png");
 
-	ren.font_texture = ren_texturer_2d(
+	ren.font_texture = ren_texturer_rect(
 		(const char *)ren.font->atlas,
 		ren.font->width,
 		ren.font->height,
@@ -330,11 +362,14 @@ int ren_init(SDL_Window *w)
 	GL(glGenBuffers(1, &ren.font_buffer))
 	if (!ren.font_buffer) REN_RET(-1, REN_BUFFER)
 
-	// create the uniforms
+	// create the uniforms, if the returned value is -1 then the uniform may have
+	// been optimized away, in any case do not return, just give a warning
 	ren.viewsize_loc = GL(glGetUniformLocation(ren.font_prog, "viewsize"))
-	if (ren.viewsize_loc == -1) REN_RET(-1, REN_UNIFORM)
+	if (ren.viewsize_loc == -1)
+		printf("uniform %s was optimized away\n", "viewsize");
 	ren.texturesize_loc = GL(glGetUniformLocation(ren.font_prog, "texturesize"))
-	if (ren.texturesize_loc == -1) REN_RET(-1, REN_UNIFORM)
+	if (ren.texturesize_loc == -1)
+		printf("uniform %s was optimized away\n", "texturesize");
 
 	int width, height;
 	SDL_GetWindowSize(w, &width, &height);
@@ -352,7 +387,10 @@ static int ren_draw_font_stack(void)
 	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
 
 	GL(glViewport(0, 0, ren.width, ren.height))
-	GL(glScissor(ren.s_x, ren.s_y, ren.s_w, ren.s_h))
+	GL(glScissor(0, 0, ren.width, ren.height))
+	GL(glClear(GL_COLOR_BUFFER_BIT));
+	// this has caused me some trouble, convert from image coordiates to viewport
+	//GL(glScissor(ren.s_x, ren.height-ren.s_y-ren.s_h, ren.s_w, ren.s_h))
 	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
 	GL(glUniform2i(ren.texturesize_loc, ren.font->width, ren.font->height))
 
@@ -431,6 +469,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	uint_least32_t cp;
 	int updated, gx = x, gy = y;
 	struct v_text v;
+	printf("rendering text: %s\n", str);
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		g = font_get_glyph_texture(ren.font, cp, &updated);
 		if (!g) REN_RET(-1, REN_FONT);
@@ -439,8 +478,8 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 				REN_RET(-1, REN_TEXTURE);
 		}
 		c = *g;
-		printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
-
+		//printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
+		//printf("v: x=%d y=%d u=%d v=%d\n", v.pos.x, v.pos.y, v.uv.u, v.uv.v);
 		// x1,y1
 		v = (struct v_text){
 			.pos = { .x = gx+c.x, .y = gy+c.y+c.h   },
@@ -449,37 +488,51 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		vtstack_push(&ren.font_stack, &v);
 		// x2,y2
 		v = (struct v_text){
-			.pos = { .x = gx+c.x+c.w, .y = gy+c.y+c.h   },
+			.pos = { .x = gx+c.x+c.w, .y = gy+c.y+c.h },
 			.uv  = { .u = c.u+c.w,    .v = c.v+c.h },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x3,y3
 		v = (struct v_text){
-			.pos = { .x = gx+c.x+c.w, .y = gy+c.y   },
+			.pos = { .x = gx+c.x+c.w, .y = gy+c.y },
 			.uv  = { .u = c.u+c.w,    .v = c.v },
-		};
-		vtstack_push(&ren.font_stack, &v);
-		vtstack_push(&ren.font_stack, &v);
-		// x4,y4
-		v = (struct v_text){
-			.pos = { .x = gx+c.x, .y = gy+c.y   },
-			.uv  = { .u = c.u,    .v = c.v },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x1,y1
 		v = (struct v_text){
-			.pos = { .x = gx+c.x, .y = gy+c.y+c.h   },
+			.pos = { .x = gx+c.x, .y = gy+c.y+c.h },
 			.uv  = { .u = c.u,    .v = c.v+c.h },
+		};
+		vtstack_push(&ren.font_stack, &v);
+		// x3,y3
+		v = (struct v_text){
+			.pos = { .x = gx+c.x+c.w, .y = gy+c.y },
+			.uv  = { .u = c.u+c.w,    .v = c.v },
+		};
+		vtstack_push(&ren.font_stack, &v);
+		// x4,y4
+		v = (struct v_text){
+			.pos = { .x = gx+c.x, .y = gy+c.y },
+			.uv  = { .u = c.u,    .v = c.v },
 		};
 		vtstack_push(&ren.font_stack, &v);
 
 		// TODO: possible kerning needs to be applied here
 		// FIXME: advance is too large
 		//gx += c.w + c.a;
-		gx += c.w + c.x + 1;
-		if (cp == '\n')
-			gy += ren.font->glyph_max_h; 
+		//gx += c.w + c.x + 1;
+		gx += c.x + c.a;
+		switch (cp) {
+		case '\r':
+			gx = x;
+			break;
+		case '\n':
 			// TODO: encode and/or store line height
+			gy = ren.font->glyph_max_h;
+			gx = x;
+			break;
+		default: break;
+		}
 	}
 
 	// FIXME: here we are doing one draw call for string of text which is 
