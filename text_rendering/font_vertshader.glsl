@@ -13,11 +13,14 @@ out vec2 uv;
 
 void main()
 {
-	vec4 pos = vec4(position.x, position.y, 0.0f, 1.0f);
-	vec2 hsize = vec2(float(viewsize.x)/2.0f, float(viewsize.y)/2.0f);
+	// matrix to change from image coordinates to opengl coordinates
+	mat2 transform = mat2(vec2(0.0f, -1.0f), vec2(1.0f, 0.0f));
+	vec2 v = vec2(float(viewsize.x), float(viewsize.y));
+	vec2 h = v/2.0f;
+	vec2 p = ((position-h)/ h);
 
-	pos.xy = (pos.xy - hsize) / hsize;
+	vec4 pos = vec4(p.x, p.y, 0.0f, 1.0f);
 
 	gl_Position = pos;
-	uv = txcoord / float(texturesize);
+	uv = vec2(txcoord.x / float(texturesize.x), (float(texturesize.y) - txcoord.y) / float(texturesize.y));
 }

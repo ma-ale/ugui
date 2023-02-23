@@ -4,6 +4,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <err.h>
@@ -85,7 +86,8 @@ void dump_file(const char *path, char **buf, int *buf_len)
 	rewind(fp);
 	if (*buf_len == (off_t)-1)
 		err(EXIT_FAILURE, "lseek() failed");
-	*buf = emalloc(*buf_len);
+	*buf = emalloc(*buf_len+1);
+	memset(*buf, 0, *buf_len+1);
 	int ret = fread(*buf, 1, *buf_len, fp);
 	if (ret != *buf_len)
 		err(EXIT_FAILURE, "fread() returned short %s", ferror(fp) ? "stream error" : feof(fp) ? "EOF reached" : "unknown error");

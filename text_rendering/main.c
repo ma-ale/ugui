@@ -1,5 +1,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
+#include <SDL2/SDL_video.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -29,6 +30,18 @@ int main(void)
 		SDL_WaitEvent(&e);
 		if (e.type == SDL_QUIT)
 			break;
+		if (e.type == SDL_WINDOWEVENT) {
+			switch (e.window.event) {
+			case SDL_WINDOWEVENT_RESIZED:
+			case SDL_WINDOWEVENT_SIZE_CHANGED:
+				ren_update_viewport(e.window.data1, e.window.data2);
+			case SDL_WINDOWEVENT_EXPOSED:
+				ren_render_text("ciao mamma", 0, 0, 100, 100, 12);
+				SDL_GL_SwapWindow(win);
+				break;
+			default: break;
+			}
+		}
 	}
 
 	ren_free();

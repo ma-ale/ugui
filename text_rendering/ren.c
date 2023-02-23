@@ -10,6 +10,10 @@
 #include "ren.h"
 
 
+#define GLERR()  {int a = glGetError(); if (a != GL_NO_ERROR) printf("(%s:%d %s) glError: 0x%x %s\n", __FILE__, __LINE__, __func__, a, glerr[a]);}
+#define GL(f) f; GLERR()
+
+
 enum REN_ERR {
 	REN_SUCCESS = 0,
 	REN_ERRNO,
@@ -47,11 +51,12 @@ const char * ren_err_msg[] = {
 };
 
 
-#define ELEM(x) [x] = #x,
+#define ELEM(x...) [x] = #x,
 const char *glerr[] = {
 	ELEM(GL_INVALID_ENUM)
 	ELEM(GL_INVALID_VALUE)
 	ELEM(GL_INVALID_OPERATION)
+	ELEM(GL_OUT_OF_MEMORY)
 };
 #undef ELEM
 
@@ -135,11 +140,11 @@ static GLuint shader_compile(const char *shader, GLuint type)
 {
 	GLuint s;
 	// initialize the vertex shader and get the corresponding id
-	s = glCreateShader(type);
+	s = GL(glCreateShader(type))
 	if (!s) REN_RET(0, REN_VERTEX)
 	// get the shader into opengl
-	glShaderSource(s, 1, &shader, NULL);
-	glCompileShader(s);
+	GL(glShaderSource(s, 1, &shader, NULL))
+	GL(glCompileShader(s))
 	if (shader_compile_error(s))
 		REN_RET(0, REN_COMPILE)
 	return s;
@@ -179,21 +184,21 @@ static GLuint ren_compile_program(const char *vs_path, const char *fs_path)
 
 
 	// create the main program object, it is an amalgamation of all shaders
-	prog = glCreateProgram();
+	prog = GL(glCreateProgram())
 	if (!prog) REN_RET(0, REN_PROGRAM)
 
 	// attach the shaders to the program (set which shaders are present)
-	glAttachShader(prog, gl_vertshader);
-	glAttachShader(prog, gl_fragshader);
+	GL(glAttachShader(prog, gl_vertshader))
+	GL(glAttachShader(prog, gl_fragshader))
 	// then link the program (basically the linking stage of the program)
-	glLinkProgram(prog);
+	GL(glLinkProgram(prog))
 	if (shader_link_error(prog))
 		REN_RET(0, REN_LINK)
 
 	// after linking the shaders can be detached and the source freed from
 	// memory since the program is ready to use
-	glDetachShader(prog, gl_vertshader);
-	glDetachShader(prog, gl_fragshader);
+	GL(glDetachShader(prog, gl_vertshader))
+	GL(glDetachShader(prog, gl_fragshader))
 
 	return prog;
 }
@@ -206,16 +211,16 @@ static GLuint ren_texturergb_2d(const char *buf, int w, int h, int upscale, int 
 	if (!buf || w <= 0 || h <= 0)
 		REN_RET(0, REN_INVAL)
 
-	glGenTextures(1, &t);
+	GL(glGenTextures(1, &t))
 	if (!t) REN_RET(0, REN_TEXTURE)
 
-	glBindTexture(GL_TEXTURE_2D, t);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, buf);
+	GL(glBindTexture(GL_TEXTURE_2D, t))
+	GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, buf))
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale);
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
 
 	return t;
 }
@@ -228,16 +233,16 @@ static GLuint ren_texturergba_2d(const char *buf, int w, int h, int upscale, int
 	if (!buf || w <= 0 || h <= 0)
 		REN_RET(0, REN_INVAL)
 
-	glGenTextures(1, &t);
+	GL(glGenTextures(1, &t))
 	if (!t) REN_RET(0, REN_TEXTURE)
 
-	glBindTexture(GL_TEXTURE_2D, t);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf);
+	GL(glBindTexture(GL_TEXTURE_2D, t))
+	GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf))
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale);
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
 
 	return t;
 }
@@ -250,16 +255,16 @@ static GLuint ren_texturer_2d(const char *buf, int w, int h, int upscale, int do
 	if (!buf || w <= 0 || h <= 0)
 		REN_RET(0, REN_INVAL)
 
-	glGenTextures(1, &t);
+	GL(glGenTextures(1, &t))
 	if (!t) REN_RET(0, REN_TEXTURE)
 
-	glBindTexture(GL_TEXTURE_2D, t);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_R, w, h, 0, GL_R, GL_UNSIGNED_BYTE, buf);
+	GL(glBindTexture(GL_TEXTURE_2D, t))
+	GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, buf))
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale);
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
 
 	return t;
 }
@@ -269,14 +274,14 @@ static GLuint ren_texturer_2d(const char *buf, int w, int h, int upscale, int do
 // FIXME: update only the newly generated character instead of the whole texture
 static int update_font_texture(void)
 {
-	glTexSubImage2D(
+	GL(glTexSubImage2D(
 		ren.font_texture,
 		0, 0, 0,
 		ren.font->width,
 		ren.font->height,
 		GL_R,
 		GL_UNSIGNED_BYTE,
-		ren.font->atlas);
+		ren.font->atlas))
 	font_dump(ren.font, "./atlas.png");
 	return 0;
 }
@@ -292,12 +297,12 @@ int ren_init(SDL_Window *w)
 		REN_RET(-1, REN_CONTEXT)
 	
 	// select some features
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDisable(GL_CULL_FACE);
-	glDisable(GL_DEPTH_TEST);
-	glEnable(GL_SCISSOR_TEST);
-	glEnable(GL_TEXTURE_2D);
+	GL(glEnable(GL_BLEND))
+	GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA))
+	GL(glDisable(GL_CULL_FACE))
+	GL(glDisable(GL_DEPTH_TEST))
+	GL(glEnable(GL_SCISSOR_TEST))
+	GL(glEnable(GL_TEXTURE_2D))
 
 	GLenum glew_err = glewInit();
 	if (glew_err != GLEW_OK)
@@ -322,69 +327,65 @@ int ren_init(SDL_Window *w)
 	ren.box_stack  = vcstack_init(); 
 
 	// generate the font buffer object 
-	glGenBuffers(1, &ren.font_buffer);
+	GL(glGenBuffers(1, &ren.font_buffer))
 	if (!ren.font_buffer) REN_RET(-1, REN_BUFFER)
 
 	// create the uniforms
-	ren.viewsize_loc = glGetUniformLocation(ren.font_prog, "viewsize");
+	ren.viewsize_loc = GL(glGetUniformLocation(ren.font_prog, "viewsize"))
 	if (ren.viewsize_loc == -1) REN_RET(-1, REN_UNIFORM)
-	ren.texturesize_loc = glGetUniformLocation(ren.font_prog, "texturesize");
+	ren.texturesize_loc = GL(glGetUniformLocation(ren.font_prog, "texturesize"))
 	if (ren.texturesize_loc == -1) REN_RET(-1, REN_UNIFORM)
 
 	int width, height;
 	SDL_GetWindowSize(w, &width, &height);
 	ren_update_viewport(width, height);
-	glClearColor(0.3f, 0.3f, 0.3f, 0.f);
-	glClear(GL_COLOR_BUFFER_BIT);
+	GL(glClearColor(0.3f, 0.3f, 0.3f, 0.f))
+	GL(glClear(GL_COLOR_BUFFER_BIT))
 
 	return 0;
 }
 
-#define GLERR()  {int a = glGetError(); if (a != GL_NO_ERROR) printf("glError: %d %s\n", a, glerr[a]);}
+
 static int ren_draw_font_stack(void)
 {
-	glUseProgram(ren.font_prog);
-	glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer);
+	GL(glUseProgram(ren.font_prog))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
 
-	glViewport(0, 0, ren.width, ren.height);
-	glScissor(ren.s_x, ren.s_y, ren.s_w, ren.s_h);
-	glUniform2i(ren.viewsize_loc, ren.width, ren.height);
-	glUniform2i(ren.texturesize_loc, ren.font->width, ren.font->height);
-	GLERR();
+	GL(glViewport(0, 0, ren.width, ren.height))
+	GL(glScissor(ren.s_x, ren.s_y, ren.s_w, ren.s_h))
+	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
+	GL(glUniform2i(ren.texturesize_loc, ren.font->width, ren.font->height))
 
-	glEnableVertexAttribArray(REN_VERTEX_IDX);
-	glEnableVertexAttribArray(REN_UV_IDX);
+	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
+	GL(glEnableVertexAttribArray(REN_UV_IDX))
 	// when passing ints to glVertexAttribPointer they are automatically 
 	// converted to floats
-	glVertexAttribPointer(
+	GL(glVertexAttribPointer(
 		REN_VERTEX_IDX,
 		2,
 		GL_INT,
 		GL_FALSE,
 		sizeof(struct v_text),
-		0);
-	GLERR();
-	glVertexAttribPointer(
+		0))
+	GL(glVertexAttribPointer(
 		REN_UV_IDX,
 		2,
 		GL_INT,
 		GL_FALSE,
 		sizeof(struct v_text),
-		(void*)sizeof(vec2_i));
-	GLERR();
+		(void*)sizeof(vec2_i)))
 	// TODO: implement size and damage tracking on stacks
-	glBufferData(
+	GL(glBufferData(
 		GL_ARRAY_BUFFER,
 		ren.font_stack.idx*sizeof(struct v_text),
 		ren.font_stack.items,
-		GL_DYNAMIC_DRAW);
-	glDrawArrays(GL_TRIANGLES, 0, ren.font_stack.idx);
-	GLERR();
+		GL_DYNAMIC_DRAW))
+	GL(glDrawArrays(GL_TRIANGLES, 0, ren.font_stack.idx))
 
-	glDisableVertexAttribArray(REN_VERTEX_IDX);
-	glDisableVertexAttribArray(REN_UV_IDX);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glUseProgram(0);
+	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))
+	GL(glDisableVertexAttribArray(REN_UV_IDX))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
+	GL(glUseProgram(0))
 	return 0;
 }
 
@@ -425,6 +426,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	// x1,y1        x2,y2
 
 	const struct font_glyph *g;
+	struct font_glyph c;
 	size_t ret, off;
 	uint_least32_t cp;
 	int updated, gx = x, gy = y;
@@ -436,45 +438,45 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 			if (update_font_texture())
 				REN_RET(-1, REN_TEXTURE);
 		}
-
-		printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", g->u, g->v, g->w, g->h, g->a, g->x, g->y);
+		c = *g;
+		printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
 
 		// x1,y1
 		v = (struct v_text){
-			.pos = { .x = gx+g->x, .y = gy+g->y+g->h   },
-			.uv  = { .u = g->u,    .v = g->v+g->h },
+			.pos = { .x = gx+c.x, .y = gy+c.y+c.h   },
+			.uv  = { .u = c.u,    .v = c.v+c.h },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x2,y2
 		v = (struct v_text){
-			.pos = { .x = gx+g->x+g->w, .y = gy+g->y+g->h   },
-			.uv  = { .u = g->u+g->w,    .v = g->v+g->h },
+			.pos = { .x = gx+c.x+c.w, .y = gy+c.y+c.h   },
+			.uv  = { .u = c.u+c.w,    .v = c.v+c.h },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x3,y3
 		v = (struct v_text){
-			.pos = { .x = gx+g->x+g->w, .y = gy+g->y   },
-			.uv  = { .u = g->u+g->w,    .v = g->v },
+			.pos = { .x = gx+c.x+c.w, .y = gy+c.y   },
+			.uv  = { .u = c.u+c.w,    .v = c.v },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		vtstack_push(&ren.font_stack, &v);
 		// x4,y4
 		v = (struct v_text){
-			.pos = { .x = gx+g->x, .y = gy+g->y   },
-			.uv  = { .u = g->u,    .v = g->v },
+			.pos = { .x = gx+c.x, .y = gy+c.y   },
+			.uv  = { .u = c.u,    .v = c.v },
 		};
 		vtstack_push(&ren.font_stack, &v);
 		// x1,y1
 		v = (struct v_text){
-			.pos = { .x = gx+g->x, .y = gy+g->y+g->h   },
-			.uv  = { .u = g->u,    .v = g->v+g->h },
+			.pos = { .x = gx+c.x, .y = gy+c.y+c.h   },
+			.uv  = { .u = c.u,    .v = c.v+c.h },
 		};
 		vtstack_push(&ren.font_stack, &v);
 
 		// TODO: possible kerning needs to be applied here
 		// FIXME: advance is too large
-		//gx += g->w + g->a;
-		gx += g->w + g->x + 1;
+		//gx += c.w + c.a;
+		gx += c.w + c.x + 1;
 		if (cp == '\n')
 			gy += ren.font->glyph_max_h; 
 			// TODO: encode and/or store line height
@@ -492,10 +494,10 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 
 int ren_free(void)
 {
-	glUseProgram(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDeleteTextures(1, &ren.font_texture);
-	glDeleteBuffers(1, &ren.font_buffer);
+	GL(glUseProgram(0))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
+	GL(glDeleteTextures(1, &ren.font_texture))
+	GL(glDeleteBuffers(1, &ren.font_buffer))
 	SDL_GL_DeleteContext(ren.gl);
 	vtstack_free(&ren.font_stack);
 	vcstack_free(&ren.box_stack);
