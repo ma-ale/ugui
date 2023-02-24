@@ -11,7 +11,6 @@ genrule() {
 }
 
 
-mkdir -p obj
 rm -f objlist
 
 cat > Makefile << EOF
