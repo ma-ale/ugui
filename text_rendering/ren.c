@@ -452,17 +452,27 @@ int ren_set_scissor(int x, int y, int w, int h)
 // TODO: implement font size
 int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 {
-	// x4,y4        x3,y3
-	// +-------------+
-	// |(x,y)       /|
-	// |          /  |
-	// |   2    /    |
-	// |      /      |
-	// |    /        |
-	// |  /     1    |
-	// |/            |
-	// +-------------+
-	// x1,y1        x2,y2
+	
+	/* x4,y4        x3,y3
+	 * +-------------+
+	 * |(x,y)       /|
+	 * |          /  |
+	 * |   2    /    |
+	 * |      /      |
+	 * |    /        |
+	 * |  /     1    |
+	 * |/            |
+	 * +-------------+
+	 * x1,y1        x2,y2 */
+
+	// TODO: stop drawing when outside the bounding box
+	// TODO: check size, if the current font is not of the same size then load 
+	//       load a new font and use that texture instead, this implies making
+	//       a system to store and use different fonts, like:
+	//           struct font_atlas * font_by_size(int size);
+	// FIXME: the bounding box (scissor) logic does not work
+	// TODO: create a method for calculating the total bounding box of a string
+	//       given the box size
 
 	const struct font_glyph *g;
 	struct font_glyph c;
