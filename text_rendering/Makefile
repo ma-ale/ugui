@@ -14,4 +14,4 @@ util.o: util.c util.h
 test:  cache.o font.o hash.o main.o ren.o util.o
 	${CC} ${LDFLAGS} -o test  cache.o font.o hash.o main.o ren.o util.o
 clean: 
-	rm -f  cache.o font.o hash.o main.o ren.o util.o
+	rm -f test  cache.o font.o hash.o main.o ren.o util.o

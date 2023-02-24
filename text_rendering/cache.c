@@ -70,24 +70,14 @@ unsigned int cache_get(void)
 {
 	uint32_t x = 0;
 	// find an open spot in the cache
-	// TODO: use __builtin_clz to speed this up
-	for (; x < CACHE_SIZE; x++) {
-		//printf("testing spot %d\n", x);
-		//print_byte(bitmap[0]>>56);
-		//print_byte(bitmap[0]>>48);
-		//print_byte(bitmap[0]>>40);
-		//print_byte(bitmap[0]>>32);
-		//print_byte(bitmap[0]>>24);
-		//print_byte(bitmap[0]>>16);
-		//print_byte(bitmap[0]>>8);
-		//print_byte(bitmap[0]);
-		//printf("%lx", bitmap[i]);
-		//printf("\n");
-
-		if (!B_TEST(x))
-			break;
+	for (int b = 0; b < _BSIZE; b++) {
+		if (bitmap[b] == 0) x = 64;
+		else                x = __builtin_clzll(bitmap[b]);
+		x = 64-x;
+		if (!B_TEST(x+64*b))
+			return x+64*b;
 	}
-	return x;
+	return 0;
 }
 
 

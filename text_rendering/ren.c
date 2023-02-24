@@ -391,7 +391,7 @@ static int ren_draw_font_stack(void)
 	GL(glScissor(0, 0, ren.width, ren.height))
 	GL(glClear(GL_COLOR_BUFFER_BIT));
 	// this has caused me some trouble, convert from image coordiates to viewport
-	//GL(glScissor(ren.s_x, ren.height-ren.s_y-ren.s_h, ren.s_w, ren.s_h))
+	GL(glScissor(ren.s_x, ren.height-ren.s_y-ren.s_h, ren.s_w, ren.s_h))
 	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
 	GL(glUniform2i(ren.texturesize_loc, ren.font->width, ren.font->height))
 
@@ -480,9 +480,9 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	uint_least32_t cp;
 	int updated, gx = x, gy = y;
 	struct v_text v;
-	printf("rendering text: %s\n", str);
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		// skip special characters that render a box (not present in font)
+		// FIXME: handle tab
 		if (iscntrl(cp)) goto skip_render;
 		g = font_get_glyph_texture(ren.font, cp, &updated);
 		if (!g) REN_RET(-1, REN_FONT);
@@ -531,9 +531,8 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		vtstack_push(&ren.font_stack, &v);
 
 		// TODO: possible kerning needs to be applied here
-		// FIXME: advance is too large
-		//gx += c.w + c.a;
-		//gx += c.w + c.x + 1;
+		// TODO: handle other unicode control characters such as the 
+		//       right-to-left isolate (\u2067)
 		gx += c.x + c.a;
 		skip_render:
 		switch (cp) {
@@ -542,7 +541,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 			break;
 		case '\n':
 			// TODO: encode and/or store line height
-			gy = ren.font->glyph_max_h;
+			gy += ren.font->glyph_max_h;
 			gx = x;
 			break;
 		default: break;

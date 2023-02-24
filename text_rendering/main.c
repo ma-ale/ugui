@@ -26,7 +26,7 @@ int main(void)
 		return 1;
 	}
 
-	const char *str = "Ciao Mamma!\nprova: òçà°ù§|¬³¼$£ì";
+	const char *str = "Ciao Mamma!\nprova: òçà°ù§|¬³¼$£ì\t";
 
 	SDL_Event e;
 	while(1) {
@@ -38,11 +38,11 @@ int main(void)
 			case SDL_WINDOWEVENT_RESIZED:
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
 				ren_update_viewport(e.window.data1, e.window.data2);
-				ren_render_text(str, 0, 0, 100, 100, 12);
+				ren_render_text(str, 0, 0, 200, 100, 12);
 				SDL_GL_SwapWindow(win);
 				break;
 			case SDL_WINDOWEVENT_EXPOSED:
-				ren_render_text(str, 0, 0, 100, 100, 12);
+				ren_render_text(str, 0, 0, 200, 100, 12);
 				SDL_GL_SwapWindow(win);
 				break;
 			default: break;

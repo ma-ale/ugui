@@ -46,7 +46,8 @@ struct font_atlas * font_init(void)
 
 
 // loads a font into memory, storing all the ASCII characters in the atlas, each font
-// atlas structure holds glyphs of a specific size
+// atlas structure holds glyphs of a specific size in pixels
+// NOTE: size includes ascend and descend (so 12 does not mean that 'A' is 12px tall)
 int font_load(struct font_atlas *atlas, const char *path, int size)
 {
 	if (!atlas || !path)
@@ -62,9 +63,9 @@ int font_load(struct font_atlas *atlas, const char *path, int size)
 	int ascent, descent, linegap, baseline;
 	int x0,y0,x1,y1;
 	float scale;
-	scale = stbtt_ScaleForPixelHeight(&(PRIV(atlas)->stb), size);
 	stbtt_GetFontVMetrics(&(PRIV(atlas)->stb), &ascent, &descent, &linegap);
 	stbtt_GetFontBoundingBox(&(PRIV(atlas)->stb), &x0, &y0, &x1, &y1);
+	scale = stbtt_ScaleForPixelHeight(&(PRIV(atlas)->stb), size);
 	baseline = scale * -y0;
 	atlas->glyph_max_w = (scale*x1) - (scale*x0);
 	atlas->glyph_max_h = (baseline+scale*y1) - (baseline+scale*y0);

@@ -31,7 +31,7 @@ done
 mainrule='test: '
 linkcmd='	${CC} ${LDFLAGS} -o test '
 cleanrule='clean: 
-	rm -f '
+	rm -f test '
 while IFS="" read -r line; do
 	mainrule="$mainrule $line"
 	linkcmd="$linkcmd $line"
