@@ -2,6 +2,7 @@
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
 #include <SDL2/SDL_video.h>
+#include <ctype.h>
 #include <grapheme.h>
 #include <stdio.h>
 
@@ -471,6 +472,8 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	struct v_text v;
 	printf("rendering text: %s\n", str);
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
+		// skip special characters that render a box (not present in font)
+		if (iscntrl(cp)) goto skip_render;
 		g = font_get_glyph_texture(ren.font, cp, &updated);
 		if (!g) REN_RET(-1, REN_FONT);
 		if (updated) {
@@ -522,6 +525,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		//gx += c.w + c.a;
 		//gx += c.w + c.x + 1;
 		gx += c.x + c.a;
+		skip_render:
 		switch (cp) {
 		case '\r':
 			gx = x;
