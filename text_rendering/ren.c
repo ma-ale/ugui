@@ -81,7 +81,9 @@ struct {
 	GLuint font_prog;
 	GLuint box_prog;
 	GLuint font_buffer;
+	GLuint box_buffer;
 	GLint  viewsize_loc;
+	GLint  box_viewsize_loc;
 	GLint texturesize_loc;
 	struct vtstack font_stack;
 	struct vcstack box_stack;
@@ -322,13 +324,13 @@ static int update_font_texture(void)
 // TODO: push window size uniforms
 int ren_init(SDL_Window *w)
 {
+	// Initialize OpenGL
 	if (!w)
 		REN_RET(-1, REN_INVAL)
 	ren.gl = SDL_GL_CreateContext(w);
 	if (!ren.gl)
 		REN_RET(-1, REN_CONTEXT)
-	
-	// select some features
+
 	GL(glEnable(GL_BLEND))
 	GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA))
 	GL(glDisable(GL_CULL_FACE))
@@ -341,11 +343,12 @@ int ren_init(SDL_Window *w)
 	if (glew_err != GLEW_OK)
 		REN_RET(glew_err, REN_GLEW);
 
+	// Load font
 	ren.font = font_init();
 	if (!ren.font) REN_RET(-1, REN_FONT) 
 	if (font_load(ren.font, FONT_PATH, 20)) REN_RET(-1, REN_FONT)
 	font_dump(ren.font, "./atlas.png");
-
+	// load font texture (atlas)
 	ren.font_texture = ren_texturer_rect(
 		(const char *)ren.font->atlas,
 		ren.font->width,
@@ -353,16 +356,18 @@ int ren_init(SDL_Window *w)
 		GL_LINEAR, GL_LINEAR);
 	if (!ren.font_texture) return -1;
 
-	ren.font_prog = ren_compile_program(FONT_VERSHADER, FONT_FRAGSHADER);
-	if (!ren.font_prog) return -1;
-
+	// Create stacks
 	ren.font_stack = vtstack_init();
-	ren.box_stack  = vcstack_init(); 
-
+	ren.box_stack  = vcstack_init();
 	// generate the font buffer object 
 	GL(glGenBuffers(1, &ren.font_buffer))
 	if (!ren.font_buffer) REN_RET(-1, REN_BUFFER)
+	GL(glGenBuffers(1, &ren.box_buffer))
+	if (!ren.box_buffer) REN_RET(-1, REN_BUFFER)
 
+	// Compile font shaders
+	ren.font_prog = ren_compile_program(FONT_VERSHADER, FONT_FRAGSHADER);
+	if (!ren.font_prog) return -1;
 	// create the uniforms, if the returned value is -1 then the uniform may have
 	// been optimized away, in any case do not return, just give a warning
 	ren.viewsize_loc = GL(glGetUniformLocation(ren.font_prog, "viewsize"))
@@ -372,6 +377,14 @@ int ren_init(SDL_Window *w)
 	if (ren.texturesize_loc == -1)
 		printf("uniform %s was optimized away\n", "texturesize");
 
+	// Compile box shaders
+	ren.box_prog = ren_compile_program(BOX_VERSHADER, BOX_FRAGSHADER);
+	if (!ren.box_prog) return -1;
+	ren.box_viewsize_loc = GL(glGetUniformLocation(ren.box_prog, "viewsize"))
+	if (ren.box_viewsize_loc == -1)
+		printf("uniform %s was optimized away\n", "viewsize");
+
+	// Finishing touches
 	int width, height;
 	SDL_GetWindowSize(w, &width, &height);
 	ren_update_viewport(width, height);
@@ -382,14 +395,20 @@ int ren_init(SDL_Window *w)
 }
 
 
+int ren_clear(void)
+{
+	GL(glScissor(0, 0, ren.width, ren.height))
+	GL(glClear(GL_COLOR_BUFFER_BIT));
+	return 0;
+}
+
+
 static int ren_draw_font_stack(void)
 {
 	GL(glUseProgram(ren.font_prog))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
 
 	GL(glViewport(0, 0, ren.width, ren.height))
-	GL(glScissor(0, 0, ren.width, ren.height))
-	GL(glClear(GL_COLOR_BUFFER_BIT));
 	// this has caused me some trouble, convert from image coordiates to viewport
 	GL(glScissor(ren.s_x, ren.height-ren.s_y-ren.s_h, ren.s_w, ren.s_h))
 	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
@@ -425,6 +444,54 @@ static int ren_draw_font_stack(void)
 	GL(glDisableVertexAttribArray(REN_UV_IDX))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
 	GL(glUseProgram(0))
+
+	vtstack_clear(&ren.font_stack);
+	return 0;
+}
+
+
+static int ren_draw_box_stack(void)
+{
+	GL(glUseProgram(ren.box_prog))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.box_buffer))
+
+	GL(glViewport(0, 0, ren.width, ren.height))
+	GL(glScissor(0, 0, ren.width, ren.height))
+	GL(glUniform2i(ren.box_viewsize_loc, ren.width, ren.height))
+
+	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
+	GL(glEnableVertexAttribArray(REN_COLOR_IDX))
+	// when passing ints to glVertexAttribPointer they are automatically 
+	// converted to floats
+	GL(glVertexAttribPointer(
+		REN_VERTEX_IDX,
+		2,
+		GL_INT,
+		GL_FALSE,
+		sizeof(struct v_col),
+		0))
+	// the color gets normalized
+	GL(glVertexAttribPointer(
+		REN_COLOR_IDX,
+		4,
+		GL_INT,
+		GL_TRUE,
+		sizeof(struct v_col),
+		(void*)sizeof(vec2_i)))
+	// TODO: implement size and damage tracking on stacks
+	GL(glBufferData(
+		GL_ARRAY_BUFFER,
+		ren.box_stack.idx*sizeof(struct v_col),
+		ren.box_stack.items,
+		GL_DYNAMIC_DRAW))
+	GL(glDrawArrays(GL_TRIANGLES, 0, ren.box_stack.idx))
+
+	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))
+	GL(glDisableVertexAttribArray(REN_COLOR_IDX))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
+	GL(glUseProgram(0))
+
+	vcstack_clear(&ren.box_stack);
 	return 0;
 }
 
@@ -552,8 +619,53 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	// inefficient but is simpler and allows for individual scissors
 	ren_set_scissor(x, y, w, h);
 	ren_draw_font_stack();
-	vtstack_clear(&ren.font_stack);
 
+	return 0;
+}
+
+
+// re-normalize color from 0-255 to 0-0x7fffffff, technically i'm dividing by 256 here
+#define RENORM(x) (((unsigned long long)(x)*0x7fffffff)>>8)
+#define R(x) (x&0xff)
+#define G(x) ((x>>8)&0xff)
+#define B(x) ((x>>16)&0xff)
+#define A(x) ((x>>24)&0xff)
+static int ren_push_box(int x, int y, int w, int h, unsigned int color)
+{
+	struct v_col v;
+	vec4_i c = {
+		.r = RENORM(R(color)),
+		.g = RENORM(G(color)),
+		.b = RENORM(B(color)),
+		.a = RENORM(A(color)),
+	};
+	// x1, y1
+	v = (struct v_col){ .pos = { .x = x, .y = y+h }, .col = c };
+	vcstack_push(&ren.box_stack, &v);
+	// x2, y2
+	v = (struct v_col){ .pos = { .x = x+w, .y = y+h }, .col = c };
+	vcstack_push(&ren.box_stack, &v);
+	// x3, y3
+	v = (struct v_col){ .pos = { .x = x+w, .y = y }, .col = c };
+	vcstack_push(&ren.box_stack, &v);
+	// x1, y1
+	v = (struct v_col){ .pos = { .x = x, .y = y+h }, .col = c };
+	vcstack_push(&ren.box_stack, &v);
+	// x3, y3
+	v = (struct v_col){ .pos = { .x = x+w, .y = y }, .col = c };
+	vcstack_push(&ren.box_stack, &v);
+	// x4, y4
+	v = (struct v_col){ .pos = { .x = x, .y = y }, .col = c };
+	vcstack_push(&ren.box_stack, &v);
+
+	return 0;
+}
+
+
+int ren_render_box(int x, int y, int w, int h, unsigned int color)
+{
+	ren_push_box(x, y, w, h, color);
+	ren_draw_box_stack();
 	return 0;
 }
 
@@ -562,6 +674,8 @@ int ren_free(void)
 {
 	GL(glUseProgram(0))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
+	GL(glDeleteProgram(ren.box_prog));
+	GL(glDeleteProgram(ren.font_prog));
 	GL(glDeleteTextures(1, &ren.font_texture))
 	GL(glDeleteBuffers(1, &ren.font_buffer))
 	SDL_GL_DeleteContext(ren.gl);
