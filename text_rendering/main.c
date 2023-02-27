@@ -15,7 +15,7 @@ SDL_Window *win;
 void draw(void)
 {
 	ren_clear();
-	ren_render_text(str, 0, 0, 200, 100, 12);
+	ren_render_text(str, 0, 0, 100, 50, 12);
 	ren_render_box(100, 300, 50, 50, 0xffff0000);
 	SDL_GL_SwapWindow(win);
 }

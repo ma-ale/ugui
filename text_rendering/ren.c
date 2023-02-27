@@ -292,7 +292,7 @@ static GLuint ren_texturer_rect(const char *buf, int w, int h, int upscale, int 
 	GL(glBindTexture(GL_TEXTURE_RECTANGLE, t))
 	GL(glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, buf))
 
-	// a limitation of recatngle textures is that the wrapping mode is limited 
+	// a limitation of recatngle textures is that the wrapping mode is limited
 	// to either clamp-to-edge or clamp-to-border
 	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE))
 	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE))
@@ -345,7 +345,7 @@ int ren_init(SDL_Window *w)
 
 	// Load font
 	ren.font = font_init();
-	if (!ren.font) REN_RET(-1, REN_FONT) 
+	if (!ren.font) REN_RET(-1, REN_FONT)
 	if (font_load(ren.font, FONT_PATH, 20)) REN_RET(-1, REN_FONT)
 	font_dump(ren.font, "./atlas.png");
 	// load font texture (atlas)
@@ -359,7 +359,7 @@ int ren_init(SDL_Window *w)
 	// Create stacks
 	ren.font_stack = vtstack_init();
 	ren.box_stack  = vcstack_init();
-	// generate the font buffer object 
+	// generate the font buffer object
 	GL(glGenBuffers(1, &ren.font_buffer))
 	if (!ren.font_buffer) REN_RET(-1, REN_BUFFER)
 	GL(glGenBuffers(1, &ren.box_buffer))
@@ -416,7 +416,7 @@ static int ren_draw_font_stack(void)
 
 	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
 	GL(glEnableVertexAttribArray(REN_UV_IDX))
-	// when passing ints to glVertexAttribPointer they are automatically 
+	// when passing ints to glVertexAttribPointer they are automatically
 	// converted to floats
 	GL(glVertexAttribPointer(
 		REN_VERTEX_IDX,
@@ -461,7 +461,7 @@ static int ren_draw_box_stack(void)
 
 	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
 	GL(glEnableVertexAttribArray(REN_COLOR_IDX))
-	// when passing ints to glVertexAttribPointer they are automatically 
+	// when passing ints to glVertexAttribPointer they are automatically
 	// converted to floats
 	GL(glVertexAttribPointer(
 		REN_VERTEX_IDX,
@@ -515,11 +515,8 @@ int ren_set_scissor(int x, int y, int w, int h)
 }
 
 
-
-// TODO: implement font size
-int ren_render_text(const char *str, int x, int y, int w, int h, int size)
+static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 {
-	
 	/* x4,y4        x3,y3
 	 * +-------------+
 	 * |(x,y)       /|
@@ -531,22 +528,66 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	 * |/            |
 	 * +-------------+
 	 * x1,y1        x2,y2 */
+	struct v_text v;
+	struct font_glyph c;
+	c = *g;
+	//printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
+	//printf("v: x=%d y=%d u=%d v=%d\n", v.pos.x, v.pos.y, v.uv.u, v.uv.v);
+	// x1,y1
+	v = (struct v_text){
+		.pos = { .x = gx+c.x, .y = gy+c.y+c.h   },
+		.uv  = { .u = c.u,    .v = c.v+c.h },
+	};
+	vtstack_push(&ren.font_stack, &v);
+	// x2,y2
+	v = (struct v_text){
+		.pos = { .x = gx+c.x+c.w, .y = gy+c.y+c.h },
+		.uv  = { .u = c.u+c.w,    .v = c.v+c.h },
+	};
+	vtstack_push(&ren.font_stack, &v);
+	// x3,y3
+	v = (struct v_text){
+		.pos = { .x = gx+c.x+c.w, .y = gy+c.y },
+		.uv  = { .u = c.u+c.w,    .v = c.v },
+	};
+	vtstack_push(&ren.font_stack, &v);
+	// x1,y1
+	v = (struct v_text){
+		.pos = { .x = gx+c.x, .y = gy+c.y+c.h },
+		.uv  = { .u = c.u,    .v = c.v+c.h },
+	};
+	vtstack_push(&ren.font_stack, &v);
+	// x3,y3
+	v = (struct v_text){
+		.pos = { .x = gx+c.x+c.w, .y = gy+c.y },
+		.uv  = { .u = c.u+c.w,    .v = c.v },
+	};
+	vtstack_push(&ren.font_stack, &v);
+	// x4,y4
+	v = (struct v_text){
+		.pos = { .x = gx+c.x, .y = gy+c.y },
+		.uv  = { .u = c.u,    .v = c.v },
+	};
+	vtstack_push(&ren.font_stack, &v);
 
-	// TODO: stop drawing when outside the bounding box
-	// TODO: check size, if the current font is not of the same size then load 
+	return 0;
+}
+
+
+// TODO: implement font size
+int ren_render_text(const char *str, int x, int y, int w, int h, int size)
+{
+	// TODO: check size, if the current font is not of the same size then load
 	//       load a new font and use that texture instead, this implies making
 	//       a system to store and use different fonts, like:
 	//           struct font_atlas * font_by_size(int size);
 	// FIXME: the bounding box (scissor) logic does not work
 	// TODO: create a method for calculating the total bounding box of a string
 	//       given the box size
-
 	const struct font_glyph *g;
-	struct font_glyph c;
 	size_t ret, off;
 	uint_least32_t cp;
 	int updated, gx = x, gy = y;
-	struct v_text v;
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		// skip special characters that render a box (not present in font)
 		// FIXME: handle tab
@@ -557,50 +598,14 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 			if (update_font_texture())
 				REN_RET(-1, REN_TEXTURE);
 		}
-		c = *g;
-		//printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
-		//printf("v: x=%d y=%d u=%d v=%d\n", v.pos.x, v.pos.y, v.uv.u, v.uv.v);
-		// x1,y1
-		v = (struct v_text){
-			.pos = { .x = gx+c.x, .y = gy+c.y+c.h   },
-			.uv  = { .u = c.u,    .v = c.v+c.h },
-		};
-		vtstack_push(&ren.font_stack, &v);
-		// x2,y2
-		v = (struct v_text){
-			.pos = { .x = gx+c.x+c.w, .y = gy+c.y+c.h },
-			.uv  = { .u = c.u+c.w,    .v = c.v+c.h },
-		};
-		vtstack_push(&ren.font_stack, &v);
-		// x3,y3
-		v = (struct v_text){
-			.pos = { .x = gx+c.x+c.w, .y = gy+c.y },
-			.uv  = { .u = c.u+c.w,    .v = c.v },
-		};
-		vtstack_push(&ren.font_stack, &v);
-		// x1,y1
-		v = (struct v_text){
-			.pos = { .x = gx+c.x, .y = gy+c.y+c.h },
-			.uv  = { .u = c.u,    .v = c.v+c.h },
-		};
-		vtstack_push(&ren.font_stack, &v);
-		// x3,y3
-		v = (struct v_text){
-			.pos = { .x = gx+c.x+c.w, .y = gy+c.y },
-			.uv  = { .u = c.u+c.w,    .v = c.v },
-		};
-		vtstack_push(&ren.font_stack, &v);
-		// x4,y4
-		v = (struct v_text){
-			.pos = { .x = gx+c.x, .y = gy+c.y },
-			.uv  = { .u = c.u,    .v = c.v },
-		};
-		vtstack_push(&ren.font_stack, &v);
 
+		// only push the glyph if it is inside the bounding box
+		if (gx <= x+w && gy <= y+h)
+			ren_push_glyph(g, gx, gy);
 		// TODO: possible kerning needs to be applied here
-		// TODO: handle other unicode control characters such as the 
+		// TODO: handle other unicode control characters such as the
 		//       right-to-left isolate (\u2067)
-		gx += c.x + c.a;
+		gx += g->x + g->a;
 		skip_render:
 		switch (cp) {
 		case '\r':
@@ -615,7 +620,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		}
 	}
 
-	// FIXME: here we are doing one draw call for string of text which is 
+	// FIXME: here we are doing one draw call for string of text which is
 	// inefficient but is simpler and allows for individual scissors
 	ren_set_scissor(x, y, w, h);
 	ren_draw_font_stack();
@@ -632,6 +637,17 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 #define A(x) ((x>>24)&0xff)
 static int ren_push_box(int x, int y, int w, int h, unsigned int color)
 {
+	/* x4,y4        x3,y3
+	 * +-------------+
+	 * |(x,y)       /|
+	 * |          /  |
+	 * |   2    /    |
+	 * |      /      |
+	 * |    /        |
+	 * |  /     1    |
+	 * |/            |
+	 * +-------------+
+	 * x1,y1        x2,y2 */
 	struct v_col v;
 	vec4_i c = {
 		.r = RENORM(R(color)),
