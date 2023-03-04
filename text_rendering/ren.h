@@ -4,7 +4,7 @@
 #include <SDL2/SDL.h>
 
 
-#define FONT_PATH "./monospace.ttf"
+#define DEFAULT_FONT   "./monospace.ttf"
 #define FONT_VERSHADER "./font_vertshader.glsl"
 #define FONT_FRAGSHADER "./font_fragshader.glsl"
 #define BOX_VERSHADER "./box_vertshader.glsl"

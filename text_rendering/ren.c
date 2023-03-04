@@ -74,10 +74,15 @@ STACK_DECL(vtstack, struct v_text)
 STACK_DECL(vcstack, struct v_col)
 
 
+struct ren_font {
+	struct font_atlas *font;
+	GLuint texture;
+};
+
 struct {
 	SDL_GLContext *gl;
-	struct font_atlas *font;
-	GLuint font_texture;
+	struct ren_font *fonts;
+	int fonts_no;
 	GLuint font_prog;
 	GLuint box_prog;
 	GLuint font_buffer;
@@ -304,20 +309,65 @@ static GLuint ren_texturer_rect(const char *buf, int w, int h, int upscale, int 
 
 
 // FIXME: update only the newly generated character instead of the whole texture
-static int update_font_texture(void)
+static int update_font_texture(int idx)
 {
-	glUseProgram(ren.font_prog);
+	GL(glUseProgram(ren.font_prog))
 	GL(glTexSubImage2D(
 		GL_TEXTURE_RECTANGLE,
 		0, 0, 0,
-		ren.font->width,
-		ren.font->height,
+		ren.fonts[idx].font->width,
+		ren.fonts[idx].font->height,
 		GL_RED,
 		GL_UNSIGNED_BYTE,
-		ren.font->atlas))
-	font_dump(ren.font, "./atlas.png");
-	glUseProgram(0);
+		ren.fonts[idx].font->atlas))
+	font_dump(ren.fonts[idx].font, "./atlas.png");
+	GL(glUseProgram(0));
 	return 0;
+}
+
+
+// loads a font and returns it's index in the fonts array
+static int ren_load_font(int size, const char *path)
+{
+	int idx = ren.fonts_no;
+	struct font_atlas *f;
+	ren.fonts = erealloc(ren.fonts, sizeof(struct ren_font)*(idx+1));
+	ren.fonts[idx].font = font_init();
+	f = ren.fonts[idx].font;
+	if (!f)
+		REN_RET(-1, REN_FONT)
+
+	if (!path)
+		path = DEFAULT_FONT;
+
+	if (font_load(f, path, size))
+		REN_RET(-1, REN_FONT)
+	font_dump(f, "./atlas.png");
+
+	// load font texture (atlas)
+	ren.fonts[idx].texture = ren_texturer_rect(
+		(const char *)f->atlas,
+		f->width,
+		f->height,
+		GL_LINEAR, GL_LINEAR);
+	if (!ren.fonts[idx].texture)
+		return -1;
+
+	ren.fonts_no = idx+1;
+	return idx;
+}
+
+
+// returns the index to the ren.fonts array to the font with the correct size
+// return -1 on errror
+static int ren_get_font(int size)
+{
+	for (int i = 0; i < ren.fonts_no; i++) {
+		if (ren.fonts[i].font->size == size)
+			return i;
+	}
+	// TODO: add a way to change font family
+	return ren_load_font(size, NULL);
 }
 
 
@@ -342,19 +392,6 @@ int ren_init(SDL_Window *w)
 	GLenum glew_err = glewInit();
 	if (glew_err != GLEW_OK)
 		REN_RET(glew_err, REN_GLEW);
-
-	// Load font
-	ren.font = font_init();
-	if (!ren.font) REN_RET(-1, REN_FONT)
-	if (font_load(ren.font, FONT_PATH, 20)) REN_RET(-1, REN_FONT)
-	font_dump(ren.font, "./atlas.png");
-	// load font texture (atlas)
-	ren.font_texture = ren_texturer_rect(
-		(const char *)ren.font->atlas,
-		ren.font->width,
-		ren.font->height,
-		GL_LINEAR, GL_LINEAR);
-	if (!ren.font_texture) return -1;
 
 	// Create stacks
 	ren.font_stack = vtstack_init();
@@ -403,7 +440,9 @@ int ren_clear(void)
 }
 
 
-static int ren_draw_font_stack(void)
+// idx refers to the fonts array index, this means that when drawing the font stack
+// only one font size at the time can be used
+static int ren_draw_font_stack(int idx)
 {
 	GL(glUseProgram(ren.font_prog))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
@@ -412,7 +451,7 @@ static int ren_draw_font_stack(void)
 	// this has caused me some trouble, convert from image coordiates to viewport
 	GL(glScissor(ren.s_x, ren.height-ren.s_y-ren.s_h, ren.s_w, ren.s_h))
 	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
-	GL(glUniform2i(ren.texturesize_loc, ren.font->width, ren.font->height))
+	GL(glUniform2i(ren.texturesize_loc, ren.fonts[idx].font->width, ren.fonts[idx].font->height))
 
 	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
 	GL(glEnableVertexAttribArray(REN_UV_IDX))
@@ -595,10 +634,6 @@ static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 // TODO: implement font size
 int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 {
-	// TODO: check size, if the current font is not of the same size then load
-	//       load a new font and use that texture instead, this implies making
-	//       a system to store and use different fonts, like:
-	//           struct font_atlas * font_by_size(int size);
 	// FIXME: the bounding box (scissor) logic does not work
 	// TODO: create a method for calculating the total bounding box of a string
 	//       given the box size
@@ -606,14 +641,17 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	size_t ret, off;
 	uint_least32_t cp;
 	int updated, gx = x, gy = y;
+	int idx = ren_get_font(size);
+	if (idx < 0)
+		return -1;
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		// skip special characters that render a box (not present in font)
 		// FIXME: handle tab
 		if (iscntrl(cp)) goto skip_render;
-		g = font_get_glyph_texture(ren.font, cp, &updated);
+		g = font_get_glyph_texture(ren.fonts[idx].font, cp, &updated);
 		if (!g) REN_RET(-1, REN_FONT);
 		if (updated) {
-			if (update_font_texture())
+			if (update_font_texture(idx))
 				REN_RET(-1, REN_TEXTURE);
 		}
 
@@ -631,7 +669,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 			break;
 		case '\n':
 			// TODO: encode and/or store line height
-			gy += ren.font->glyph_max_h;
+			gy += ren.fonts[idx].font->glyph_max_h;
 			gx = x;
 			break;
 		default: break;
@@ -641,7 +679,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	// FIXME: here we are doing one draw call for string of text which is
 	// inefficient but is simpler and allows for individual scissors
 	ren_set_scissor(x, y, w, h);
-	ren_draw_font_stack();
+	ren_draw_font_stack(idx);
 
 	return 0;
 }
@@ -710,11 +748,13 @@ int ren_free(void)
 	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
 	GL(glDeleteProgram(ren.box_prog));
 	GL(glDeleteProgram(ren.font_prog));
-	GL(glDeleteTextures(1, &ren.font_texture))
 	GL(glDeleteBuffers(1, &ren.font_buffer))
+	for (int i = 0; i < ren.fonts_no; i++) {
+		GL(glDeleteTextures(1, &ren.fonts[i].texture))
+		font_free(ren.fonts[i].font);
+	}
 	SDL_GL_DeleteContext(ren.gl);
 	vtstack_free(&ren.font_stack);
 	vcstack_free(&ren.box_stack);
-	font_free(ren.font);
 	return 0;
 }

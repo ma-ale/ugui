@@ -38,6 +38,14 @@ void * ecalloc(unsigned long int nmemb, unsigned long int size)
 	return r;
 }
 
+void * erealloc(void *ptr, unsigned long int size)
+{
+	void *r = realloc(ptr, size);
+	if (!r)
+		err(EXIT_FAILURE, "ralloc() of 0x%lx, to size %ld", (unsigned long)ptr, size);
+	return r;
+}
+
 
 void efree(void *ptr)
 {

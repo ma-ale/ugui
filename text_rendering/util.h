@@ -7,6 +7,7 @@
 
 void * emalloc(unsigned long int size);
 void * ecalloc(unsigned long int nmemb, unsigned long int size);
+void * erealloc(void *ptr, unsigned long int size);
 void efree(void *ptr);
 
 void map_file(const unsigned char **str, int *size, const char *path);
