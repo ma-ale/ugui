@@ -58,7 +58,7 @@ const char * ren_err_msg[] = {
 };
 
 
-#define ELEM(x...) [x] = #x,
+#define ELEM(x) [x] = #x,
 const char *glerr[] = {
 	ELEM(GL_INVALID_ENUM)
 	ELEM(GL_INVALID_VALUE)
@@ -432,12 +432,21 @@ static int ren_draw_font_stack(void)
 		GL_FALSE,
 		sizeof(struct v_text),
 		(void*)sizeof(vec2_i)))
-	// TODO: implement size and damage tracking on stacks
-	GL(glBufferData(
-		GL_ARRAY_BUFFER,
-		ren.font_stack.idx*sizeof(struct v_text),
-		ren.font_stack.items,
-		GL_DYNAMIC_DRAW))
+	if (vtstack_changed(&ren.font_stack)) {
+		if (vtstack_size_changed(&ren.font_stack)) {
+			GL(glBufferData(
+				GL_ARRAY_BUFFER,
+				ren.font_stack.idx*sizeof(struct v_text),
+				ren.font_stack.items,
+				GL_DYNAMIC_DRAW))
+		} else {
+			GL(glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				ren.font_stack.idx*sizeof(struct v_text),
+				ren.font_stack.items))
+		}
+	}
 	GL(glDrawArrays(GL_TRIANGLES, 0, ren.font_stack.idx))
 
 	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))
@@ -478,12 +487,21 @@ static int ren_draw_box_stack(void)
 		GL_TRUE,
 		sizeof(struct v_col),
 		(void*)sizeof(vec2_i)))
-	// TODO: implement size and damage tracking on stacks
-	GL(glBufferData(
-		GL_ARRAY_BUFFER,
-		ren.box_stack.idx*sizeof(struct v_col),
-		ren.box_stack.items,
-		GL_DYNAMIC_DRAW))
+	if(vcstack_changed(&ren.box_stack)) {
+		if (vcstack_size_changed(&ren.box_stack)) {
+			GL(glBufferData(
+				GL_ARRAY_BUFFER,
+				ren.box_stack.idx*sizeof(struct v_col),
+				ren.box_stack.items,
+				GL_DYNAMIC_DRAW))
+		} else {
+			GL(glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				ren.box_stack.idx*sizeof(struct v_col),
+				ren.box_stack.items))
+		}
+	}
 	GL(glDrawArrays(GL_TRIANGLES, 0, ren.box_stack.idx))
 
 	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))

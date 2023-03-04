@@ -105,6 +105,7 @@ static ug_style_t style_cache = {0};
 }                                                                                   \
 
 
+// FIXME: is it really  necessary to clear (memset) the stack
 #define RESET_STACK(S)                                                         \
 {                                                                              \
 	memset(S.items, 0, S.idx*sizeof(*(S.items)));                          \
