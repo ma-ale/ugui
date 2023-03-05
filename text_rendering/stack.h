@@ -8,7 +8,7 @@
 // FIXME: find a way to not re-hash the whole stack when removing one item
 
 // incremental hash for every grow
-#define HASH(p, s, h)                                                          \
+#define STACK_HASH(p, s, h)                                                    \
 {                                                                              \
 	unsigned char *v = (unsigned char *)(p);                               \
 	for (int x = (s); x; x--) {                                            \
@@ -58,7 +58,7 @@ int stackname##_push(struct stackname *stack, type *e)                         \
 		if (stackname##_grow(stack, STACK_STEP))                       \
 			return -1;                                             \
 	stack->items[stack->idx++] = *e;                                       \
-	HASH(e, sizeof(type), stack->hash);                                    \
+	STACK_HASH(e, sizeof(type), stack->hash);                              \
 	return 0;                                                              \
 }                                                                              \
 \
@@ -68,7 +68,7 @@ type stackname##_pop(struct stackname *stack)                                  \
 	if (!stack || stack->idx == 0 || stack->size == 0)                     \
 		return (type){0};                                              \
 	stack->hash = STACK_SALT;                                              \
-	HASH(stack->items, sizeof(type)*(stack->idx-1), stack->hash);          \
+	STACK_HASH(stack->items, sizeof(type)*(stack->idx-1), stack->hash);    \
 	return stack->items[stack->idx--];                                     \
 }                                                                              \
 \

@@ -10,7 +10,10 @@
 #include "stb_truetype.h"
 #include "stb_image_write.h"
 #include "util.h"
-#include "cache.h"
+
+// generic cache type
+#include "generic_cache.h"
+CACHE_DECL(cache, struct font_glyph)
 
 
 #define UTF8(c) (c&0x80)
@@ -18,7 +21,7 @@
 #define BORDER 4
 
 // FIXME: as of now only monospaced fonts work correctly since no kerning information
-// is stored 
+// is stored
 
 
 struct priv {
@@ -26,13 +29,9 @@ struct priv {
 	float scale;
 	int baseline;
 	unsigned char *bitmap;
+	struct cache c;
 };
 #define PRIV(x) ((struct priv *)x->priv)
-
-
-// only useful for msdf_c
-static inline void * _emalloc(size_t x, void *_) { (void)_; return emalloc(x); }
-static inline void _efree(void *x, void *_) { (void)_; efree(x); }
 
 
 struct font_atlas * font_init(void)
@@ -41,6 +40,7 @@ struct font_atlas * font_init(void)
 	memset(p, 0, sizeof(struct font_atlas));
 	p->priv = emalloc(sizeof(struct priv));
 	memset(p->priv, 0, sizeof(struct priv));
+	PRIV(p)->c = cache_init();
 	return p;
 }
 
@@ -96,9 +96,9 @@ int font_free(struct font_atlas *atlas)
 	efree(atlas->atlas);
 	efree(atlas->file);
 	efree(PRIV(atlas)->bitmap);
+	cache_free(&PRIV(atlas)->c);
 	efree(atlas->priv);
 	efree(atlas);
-	cache_destroy();
 	return 0;
 }
 
@@ -111,7 +111,7 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 	if (!updated) updated = &u;
 
 	const struct font_glyph *r;
-	if ((r = cache_search(code)) != NULL) {
+	if ((r = cache_search(&PRIV(atlas)->c, code)) != NULL) {
 		*updated = 0;
 		return r;
 	}
@@ -143,12 +143,12 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 		atlas->glyph_max_w,
 		PRIV(atlas)->scale,
 		PRIV(atlas)->scale,
-		0, 0, 
+		0, 0,
 		idx);
 
 	// TODO: bounds check usign atlas height
 	// TODO: clear spot area in the atlas before writing on it
-	unsigned int spot = cache_get();
+	unsigned int spot = cache_get(&PRIV(atlas)->c);
 	unsigned int oy   = ((atlas->glyph_max_w * spot) / atlas->width) * atlas->glyph_max_h;
 	unsigned int ox   = (atlas->glyph_max_w * spot) % atlas->width;
 	unsigned int w    = atlas->width;
@@ -177,9 +177,7 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 		.y = off_y,
 		.a = adv,
 	};
-	const struct font_glyph *ret = cache_insert(&g, spot);
-
-	return ret;
+	return cache_insert(&PRIV(atlas)->c, &g, g.codepoint, spot);
 }
 
 
