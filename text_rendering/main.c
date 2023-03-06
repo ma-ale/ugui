@@ -44,6 +44,12 @@ int main(void)
 	}
 
 
+	int w, h;
+	const char *s = "ciao mamma";
+	ren_get_text_box(s, &w, &h, 12);
+	printf("box for: %s -> (%d, %d)\n", s, w, h);
+
+
 	SDL_Event e;
 	while(1) {
 		SDL_WaitEvent(&e);

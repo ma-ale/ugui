@@ -216,9 +216,12 @@ typedef struct {
 
 
 // context initialization
-ug_ctx_t *ug_ctx_new(void);
+ug_ctx_t * ug_ctx_new(void);
 void ug_ctx_free(ug_ctx_t *ctx);
 // updates the context with user information
+// ppi: pixels per inch, the scale used for all em/mm to pixel calculations
+// scale: it is the scale between the physical pixels on the screen and the pixels
+//        on the buffer, if unsure set to 1.0
 int ug_ctx_set_displayinfo(ug_ctx_t *ctx, float scale, float ppi);
 int ug_ctx_set_drawableregion(ug_ctx_t *ctx, ug_vec2_t size);
 int ug_ctx_set_style(ug_ctx_t *ctx, const ug_style_t *style);
@@ -273,7 +276,7 @@ int ug_frame_end(ug_ctx_t *ctx);
 
 // Commands
 // get the next command, save iteration state inside 'iterator'
-ug_cmd_t *ug_cmd_next(ug_ctx_t *ctx);
+ug_cmd_t * ug_cmd_next(ug_ctx_t *ctx);
 
 
 #undef UG_STACK

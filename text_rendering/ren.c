@@ -69,7 +69,7 @@ const char *glerr[] = {
 
 
 // different stacks
-#include "stack.h"
+#include "generic_stack.h"
 STACK_DECL(vtstack, struct v_text)
 STACK_DECL(vcstack, struct v_col)
 
@@ -240,6 +240,15 @@ static GLuint ren_texturergb_2d(const char *buf, int w, int h, int upscale, int 
 }
 
 
+static void set_texture_parameters(GLuint type, GLuint wrap_s, GLuint wrap_t, GLuint upscale, GLuint downscale)
+{
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
+}
+
+
 static GLuint ren_texturergba_2d(const char *buf, int w, int h, int upscale, int downscale)
 {
 	GLuint t;
@@ -252,11 +261,7 @@ static GLuint ren_texturergba_2d(const char *buf, int w, int h, int upscale, int
 
 	GL(glBindTexture(GL_TEXTURE_2D, t))
 	GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, buf))
-
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
+	set_texture_parameters(GL_TEXTURE_2D, GL_REPEAT, GL_REPEAT, upscale, downscale);
 
 	return t;
 }
@@ -274,11 +279,7 @@ static GLuint ren_texturer_2d(const char *buf, int w, int h, int upscale, int do
 
 	GL(glBindTexture(GL_TEXTURE_2D, t))
 	GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, buf))
-
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
+	set_texture_parameters(GL_TEXTURE_2D, GL_REPEAT, GL_REPEAT, upscale, downscale);
 
 	return t;
 }
@@ -296,13 +297,9 @@ static GLuint ren_texturer_rect(const char *buf, int w, int h, int upscale, int 
 
 	GL(glBindTexture(GL_TEXTURE_RECTANGLE, t))
 	GL(glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_RED, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, buf))
-
 	// a limitation of recatngle textures is that the wrapping mode is limited
 	// to either clamp-to-edge or clamp-to-border
-	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE))
-	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE))
-	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, downscale))
-	GL(glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, upscale))
+	set_texture_parameters(GL_TEXTURE_RECTANGLE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, upscale, downscale);
 
 	return t;
 }
@@ -444,15 +441,18 @@ int ren_clear(void)
 // only one font size at the time can be used
 static int ren_draw_font_stack(int idx)
 {
+	struct font_atlas *font = ren.fonts[idx].font;
+	GLuint font_texture = ren.fonts[idx].texture;
+
 	GL(glUseProgram(ren.font_prog))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
-	GL(glBindTexture(GL_TEXTURE_RECTANGLE, ren.fonts[idx].texture))
+	GL(glBindTexture(GL_TEXTURE_RECTANGLE, font_texture))
 
 	GL(glViewport(0, 0, ren.width, ren.height))
 	// this has caused me some trouble, convert from image coordiates to viewport
 	GL(glScissor(ren.s_x, ren.height-ren.s_y-ren.s_h, ren.s_w, ren.s_h))
 	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
-	GL(glUniform2i(ren.texturesize_loc, ren.fonts[idx].font->width, ren.fonts[idx].font->height))
+	GL(glUniform2i(ren.texturesize_loc, font->width, font->height))
 
 	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
 	GL(glEnableVertexAttribArray(REN_UV_IDX))
@@ -632,15 +632,56 @@ static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 }
 
 
-// TODO: implement font size
+// TODO: reduce repeating patterns in ren_get_text_box() and ren_render_text()
+int ren_get_text_box(const char *str, int *rw, int *rh, int size)
+{
+	int w = 0, h = 0, x = 0, y = 0, updated;
+	const struct font_glyph *g;
+	size_t off, ret;
+	uint32_t cp;
+	int idx = ren_get_font(size);
+	if (idx < 0)
+		return -1;
+
+	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
+		if (iscntrl(cp)) goto skip_get;
+		g = font_get_glyph_texture(ren.fonts[idx].font, cp, &updated);
+		if (!g) REN_RET(-1, REN_FONT);
+		if (updated) {
+			if (update_font_texture(idx))
+				REN_RET(-1, REN_TEXTURE);
+		}
+
+		skip_get:
+		x += g->x + g->a;
+		switch (cp) {
+		case '\r':
+			x = 0;
+			break;
+		case '\n':
+			// TODO: encode and/or store line height
+			y += ren.fonts[idx].font->glyph_max_h;
+			x = 0;
+			break;
+		default: break;
+		}
+
+		if (x > w) w = x;
+		if (y > h) h = y;
+	}
+
+	if (rw) *rw = w;
+	if (rh) *rh = h;
+
+	return 0;
+}
+
+
 int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 {
-	// FIXME: the bounding box (scissor) logic does not work
-	// TODO: create a method for calculating the total bounding box of a string
-	//       given the box size
 	const struct font_glyph *g;
 	size_t ret, off;
-	uint_least32_t cp;
+	uint32_t cp;
 	int updated, gx = x, gy = y;
 	int idx = ren_get_font(size);
 	if (idx < 0)

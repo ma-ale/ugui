@@ -244,7 +244,7 @@ static void push_text_command(ug_ctx_t *ctx, ug_vec2_t pos, int size, ug_color_t
 }
 
 
-ug_cmd_t *ug_cmd_next(ug_ctx_t *ctx)
+ug_cmd_t * ug_cmd_next(ug_ctx_t *ctx)
 {
 	if(!ctx)
 		return NULL;
@@ -260,7 +260,7 @@ ug_cmd_t *ug_cmd_next(ug_ctx_t *ctx)
 
 
 // creates a new context, fills with default values, ctx is ready for ug_start()
-ug_ctx_t *ug_ctx_new(void)
+ug_ctx_t * ug_ctx_new(void)
 {
 	ug_ctx_t *ctx = malloc(sizeof(ug_ctx_t));
 	if (!ctx)

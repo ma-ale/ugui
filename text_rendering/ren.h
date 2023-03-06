@@ -43,8 +43,9 @@ int ren_init(SDL_Window *sdl_window);
 int ren_free(void);
 const char * ren_strerror(void);
 int ren_update_viewport(int w, int h);
-int ren_render_text(const char *str, int x, int y, int w, int h, int size);
 int ren_set_scissor(int x, int y, int w, int h);
+int ren_get_text_box(const char *str, int *rw, int *rh, int size);
+int ren_render_text(const char *str, int x, int y, int w, int h, int size);
 int ren_render_box(int x, int y, int w, int h, unsigned int color);
 int ren_clear(void);
 
