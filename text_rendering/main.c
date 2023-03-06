@@ -14,8 +14,10 @@ SDL_Window *win;
 
 void draw(void)
 {
+	static unsigned int frame = 0;
+	printf("frame: %d\n", frame++);
 	ren_clear();
-	if (ren_render_text(str, 0, 0, 100, 50, 20))
+	if (ren_render_text(str, 10, 10, 100, 50, 20))
 		printf("text: %s\n", ren_strerror());
 	ren_render_text("altro font", 200, 40, 300, 300, 40);
 	ren_render_box(100, 300, 50, 50, 0xffff0000);

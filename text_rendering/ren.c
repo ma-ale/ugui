@@ -446,6 +446,7 @@ static int ren_draw_font_stack(int idx)
 {
 	GL(glUseProgram(ren.font_prog))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
+	GL(glBindTexture(GL_TEXTURE_RECTANGLE, ren.fonts[idx].texture))
 
 	GL(glViewport(0, 0, ren.width, ren.height))
 	// this has caused me some trouble, convert from image coordiates to viewport
