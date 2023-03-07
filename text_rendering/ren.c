@@ -1,7 +1,6 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
-#include <SDL2/SDL_video.h>
 #include <ctype.h>
 #include <grapheme.h>
 #include <stdio.h>
@@ -19,6 +18,7 @@
 			__FILE__, __LINE__, __func__, x, a, glerr[a]);         \
 }
 #define GL(f) f; GLERR(#f)
+#define REN_RET(a,b) {ren_errno = b; return a;}
 
 
 enum REN_ERR {
@@ -101,29 +101,29 @@ static int ren_errno;
 
 
 // print shader compilation errors
-static int shader_compile_error(GLuint shader)
+static int shader_compile_error(GLuint shader, const char *path)
 {
 	GLint status;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	GL(glGetShaderiv(shader, GL_COMPILE_STATUS, &status))
 	if (status != GL_FALSE)
 		return 0;
 
 	GLint log_length;
-	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length);
+	GL(glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_length))
 
 	GLchar *log_str = emalloc((log_length + 1)*sizeof(GLchar));
-	glGetShaderInfoLog(shader, log_length, NULL, log_str);
+	GL(glGetShaderInfoLog(shader, log_length, NULL, log_str))
 
 	const char *shader_type_str = NULL;
 	GLint shader_type;
-	glGetShaderiv(shader, GL_SHADER_TYPE, &shader_type);
+	GL(glGetShaderiv(shader, GL_SHADER_TYPE, &shader_type))
 	switch(shader_type) {
 	case GL_VERTEX_SHADER:   shader_type_str = "vertex";   break;
 	case GL_GEOMETRY_SHADER: shader_type_str = "geometry"; break;
 	case GL_FRAGMENT_SHADER: shader_type_str = "fragment"; break;
 	}
 
-	fprintf(stderr, "Compile failure in %s shader:\n%s\n", shader_type_str, log_str);
+	fprintf(stderr, "Compile failure in %s shader %s:\n%s\n", shader_type_str, path, log_str);
 	efree(log_str);
 	return -1;
 }
@@ -133,15 +133,15 @@ static int shader_compile_error(GLuint shader)
 static int shader_link_error(GLuint prog)
 {
 	GLint status;
-	glGetProgramiv (prog, GL_LINK_STATUS, &status);
+	GL(glGetProgramiv(prog, GL_LINK_STATUS, &status))
 	if (status != GL_FALSE)
 		return 0;
 
 	GLint log_length;
-	glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_length);
+	GL(glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &log_length))
 
 	GLchar *log_str = emalloc((log_length + 1)*sizeof(GLchar));
-	glGetProgramInfoLog(prog, log_length, NULL, log_str);
+	GL(glGetProgramInfoLog(prog, log_length, NULL, log_str))
 	fprintf(stderr, "Linker failure: %s\n", log_str);
 	efree(log_str);
 
@@ -149,8 +149,7 @@ static int shader_link_error(GLuint prog)
 }
 
 
-#define REN_RET(a,b) {ren_errno = b; return a;}
-static GLuint shader_compile(const char *shader, GLuint type)
+static GLuint shader_compile(const char *path, const char *shader, GLuint type)
 {
 	GLuint s;
 	// initialize the vertex shader and get the corresponding id
@@ -159,7 +158,7 @@ static GLuint shader_compile(const char *shader, GLuint type)
 	// get the shader into opengl
 	GL(glShaderSource(s, 1, &shader, NULL))
 	GL(glCompileShader(s))
-	if (shader_compile_error(s))
+	if (shader_compile_error(s, path))
 		REN_RET(0, REN_COMPILE)
 	return s;
 }
@@ -184,14 +183,14 @@ static GLuint ren_compile_program(const char *vs_path, const char *fs_path)
 
 	dump_file(vs_path, &str, NULL);
 	if (!str) REN_RET(0, REN_ERRNO)
-	gl_vertshader = shader_compile(str, GL_VERTEX_SHADER);
+	gl_vertshader = shader_compile(vs_path, str, GL_VERTEX_SHADER);
 	efree(str);
 	if (!gl_vertshader)
 		return 0;
 
 	dump_file(fs_path, &str, NULL);
 	if (!str) REN_RET(0, REN_ERRNO)
-	gl_fragshader = shader_compile(str, GL_FRAGMENT_SHADER);
+	gl_fragshader = shader_compile(fs_path, str, GL_FRAGMENT_SHADER);
 	efree(str);
 	if (!gl_fragshader)
 		return 0;
@@ -218,6 +217,15 @@ static GLuint ren_compile_program(const char *vs_path, const char *fs_path)
 }
 
 
+static void set_texture_parameters(GLuint type, GLuint wrap_s, GLuint wrap_t, GLuint upscale, GLuint downscale)
+{
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
+	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
+}
+
+
 static GLuint ren_texturergb_2d(const char *buf, int w, int h, int upscale, int downscale)
 {
 	GLuint t;
@@ -231,21 +239,9 @@ static GLuint ren_texturergb_2d(const char *buf, int w, int h, int upscale, int 
 	GL(glBindTexture(GL_TEXTURE_2D, t))
 	GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, w, h, 0, GL_RGB, GL_UNSIGNED_BYTE, buf))
 
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
+	set_texture_parameters(GL_TEXTURE_2D, GL_REPEAT, GL_REPEAT, upscale, downscale);
 
 	return t;
-}
-
-
-static void set_texture_parameters(GLuint type, GLuint wrap_s, GLuint wrap_t, GLuint upscale, GLuint downscale)
-{
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrap_s))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrap_t))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, upscale))
-	GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, downscale))
 }
 
 
@@ -374,17 +370,27 @@ int ren_init(SDL_Window *w)
 	// Initialize OpenGL
 	if (!w)
 		REN_RET(-1, REN_INVAL)
+	// using version 3 does not allow to use glVertexAttribPointer() without
+	// vertex buffer objects
+	// TODO: make the switch to opengl 3.3 to go with the shader versions
+	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	ren.gl = SDL_GL_CreateContext(w);
-	if (!ren.gl)
+	if (!ren.gl) {
+		printf("SDL: %s\n", SDL_GetError());
 		REN_RET(-1, REN_CONTEXT)
+	}
 
 	GL(glEnable(GL_BLEND))
 	GL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA))
 	GL(glDisable(GL_CULL_FACE))
 	GL(glDisable(GL_DEPTH_TEST))
 	GL(glEnable(GL_SCISSOR_TEST))
-	GL(glEnable(GL_TEXTURE_2D))
-	GL(glEnable(GL_TEXTURE_RECTANGLE))
+//	GL(glEnable(GL_TEXTURE_2D))
+//	GL(glEnable(GL_TEXTURE_RECTANGLE))
 
 	GLenum glew_err = glewInit();
 	if (glew_err != GLEW_OK)
@@ -492,6 +498,7 @@ static int ren_draw_font_stack(int idx)
 	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))
 	GL(glDisableVertexAttribArray(REN_UV_IDX))
 	GL(glBindBuffer(GL_ARRAY_BUFFER, 0))
+	GL(glBindTexture(GL_TEXTURE_RECTANGLE, 0))
 	GL(glUseProgram(0))
 
 	vtstack_clear(&ren.font_stack);
@@ -576,7 +583,7 @@ int ren_set_scissor(int x, int y, int w, int h)
 static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 {
 	/* x4,y4        x3,y3
-	 * +-------------+
+	 * o-------------+
 	 * |(x,y)       /|
 	 * |          /  |
 	 * |   2    /    |
@@ -589,7 +596,7 @@ static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 	struct v_text v;
 	struct font_glyph c;
 	c = *g;
-	//printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
+	printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
 	//printf("v: x=%d y=%d u=%d v=%d\n", v.pos.x, v.pos.y, v.uv.u, v.uv.v);
 	// x1,y1
 	v = (struct v_text){
@@ -643,6 +650,7 @@ int ren_get_text_box(const char *str, int *rw, int *rh, int size)
 	if (idx < 0)
 		return -1;
 
+	h = y = ren.fonts[idx].font->glyph_max_h;
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		if (iscntrl(cp)) goto skip_get;
 		g = font_get_glyph_texture(ren.fonts[idx].font, cp, &updated);
@@ -736,7 +744,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 static int ren_push_box(int x, int y, int w, int h, unsigned int color)
 {
 	/* x4,y4        x3,y3
-	 * +-------------+
+	 * o-------------+
 	 * |(x,y)       /|
 	 * |          /  |
 	 * |   2    /    |

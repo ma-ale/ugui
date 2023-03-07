@@ -8,7 +8,9 @@
 #include "util.h"
 
 
-const char *str = "Ciao Mamma!\nprova: òçà°ù§|¬³¼$£ì\t";
+//const char *str1 = "Ciao Mamma!\nprova: òçà°ù§|¬³¼$£ì\t";
+const char *str1 = "j";
+const char *str2 = "gmt";
 SDL_Window *win;
 
 
@@ -17,10 +19,14 @@ void draw(void)
 	static unsigned int frame = 0;
 	printf("frame: %d\n", frame++);
 	ren_clear();
-	if (ren_render_text(str, 10, 10, 100, 50, 20))
+	ren_render_box(10, 10, 100, 50, 0xffff0000);
+	if (ren_render_text(str1, 10, 10, 100, 50, 20))
 		printf("text: %s\n", ren_strerror());
-	ren_render_text("altro font", 200, 40, 300, 300, 40);
-	ren_render_box(100, 300, 50, 50, 0xffff0000);
+	int w, h;
+	ren_get_text_box(str2, &w, &h, 40);
+	printf("box for: %s -> (%d, %d)\n", str2, w, h);
+	ren_render_box(200, 40, w, h, 0xffff0000);
+	ren_render_text(str2, 200, 40, 300, 300, 40);
 	SDL_GL_SwapWindow(win);
 }
 
@@ -30,6 +36,7 @@ int main(void)
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
 	SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+	SDL_SetHint(SDL_HINT_VIDEO_HIGHDPI_DISABLED, "0");
 
 	win = SDL_CreateWindow(
 		"test render",
@@ -37,7 +44,7 @@ int main(void)
 		SDL_WINDOWPOS_UNDEFINED,
 		500,
 		500,
-		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 	if (ren_init(win)) {
 		printf("renderer init error: %s\n", ren_strerror());
 		return 1;

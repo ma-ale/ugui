@@ -107,8 +107,8 @@ int font_free(struct font_atlas *atlas)
 //        errors height and width must be equal
 const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsigned int code, int *updated)
 {
-	int u = 0;
-	if (!updated) updated = &u;
+	int _u = 0;
+	if (!updated) updated = &_u;
 
 	const struct font_glyph *r;
 	if ((r = cache_search(&PRIV(atlas)->c, code)) != NULL) {
@@ -120,7 +120,8 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 	// generate the sdf and put it into the cache
 	// TODO: generate the whole block at once
 	int idx = stbtt_FindGlyphIndex(&PRIV(atlas)->stb, code);
-	int x0,y0,x1,y1,gw,gh,l,off_x,off_y,adv;
+	int x0,y0,x1,y1,gw,gh,l,off_x,off_y,adv,base;
+	base = atlas->glyph_max_h - PRIV(atlas)->baseline;
 	stbtt_GetGlyphBitmapBoxSubpixel(
 		&PRIV(atlas)->stb,
 		idx,
@@ -149,19 +150,19 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 	// TODO: bounds check usign atlas height
 	// TODO: clear spot area in the atlas before writing on it
 	unsigned int spot = cache_get(&PRIV(atlas)->c);
-	unsigned int oy   = ((atlas->glyph_max_w * spot) / atlas->width) * atlas->glyph_max_h;
-	unsigned int ox   = (atlas->glyph_max_w * spot) % atlas->width;
+	unsigned int ty   = ((atlas->glyph_max_w * spot) / atlas->width) * atlas->glyph_max_h;
+	unsigned int tx   = (atlas->glyph_max_w * spot) % atlas->width;
 	unsigned int w    = atlas->width;
 
 	unsigned char *a = (void *)atlas->atlas;
 
-	//printf("max:%d %d spot:%d : %d %d %d %d\n", atlas->glyph_max_w, atlas->glyph_max_h, spot, ox, oy, off_x, off_y);
+	//printf("max:%d %d spot:%d : %d %d %d %d\n", atlas->glyph_max_w, atlas->glyph_max_h, spot, tx, ty, off_x, off_y);
 
 	for (int y = 0; y < gh; y++) {
 		for (int x = 0; x < gw; x++) {
 			int c, r;
-			r = (oy+y)*w;
-			c = ox+x;
+			r = (ty+y)*w;
+			c = tx+x;
 			a[r+c] = PRIV(atlas)->bitmap[y*atlas->glyph_max_w+x];
 		}
 	}
@@ -169,12 +170,12 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 	// FIXME: get the advance
 	struct font_glyph g = {
 		.codepoint = code,
-		.u = ox,
-		.v = oy,
+		.u = tx,
+		.v = ty,
 		.w = gw,
 		.h = gh,
 		.x = off_x,
-		.y = off_y,
+		.y = off_y-base,
 		.a = adv,
 	};
 	return cache_insert(&PRIV(atlas)->c, &g, g.codepoint, spot);
