@@ -79,8 +79,6 @@ int font_load(struct font_atlas *atlas, const char *path, int size)
 	atlas->height = atlas->glyph_max_h*4;
 	atlas->size = size;
 
-	cache_init();
-
 	// preallocate all ascii characters
 	for (char c = ' '; c <= '~'; c++) {
 		if (!font_get_glyph_texture(atlas, c, NULL))
