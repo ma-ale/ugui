@@ -1,6 +1,7 @@
 #include <SDL2/SDL.h>
 #include <GL/glew.h>
 #include <SDL2/SDL_opengl.h>
+#include <SDL2/SDL_video.h>
 #include <ctype.h>
 #include <grapheme.h>
 #include <stdio.h>
@@ -15,7 +16,7 @@
 	int a = glGetError();                                                  \
 	if (a != GL_NO_ERROR)                                                  \
 		printf("(%s:%d %s:%s) glError: 0x%x %s\n",                     \
-			__FILE__, __LINE__, __func__, x, a, glerr[a]);         \
+			__FILE__, __LINE__, __func__, x, a, glerr[a&0xff]);    \
 }
 #define GL(f) f; GLERR(#f)
 #define REN_RET(a,b) {ren_errno = b; return a;}
@@ -57,8 +58,7 @@ const char * ren_err_msg[] = {
 	[REN_UNIFORM]  = "Failed to get uniform location",
 };
 
-
-#define ELEM(x) [x] = #x,
+#define ELEM(x) [x&0xff] = #x,
 const char *glerr[] = {
 	ELEM(GL_INVALID_ENUM)
 	ELEM(GL_INVALID_VALUE)
@@ -94,6 +94,7 @@ struct {
 	struct vcstack box_stack;
 	int width, height;
 	int s_x, s_y, s_w, s_h;
+	int tabsize;
 } ren = {0};
 
 
@@ -364,19 +365,16 @@ static int ren_get_font(int size)
 }
 
 
-// TODO: push window size uniforms
 int ren_init(SDL_Window *w)
 {
 	// Initialize OpenGL
 	if (!w)
 		REN_RET(-1, REN_INVAL)
 	// using version 3 does not allow to use glVertexAttribPointer() without
-	// vertex buffer objects
-	// TODO: make the switch to opengl 3.3 to go with the shader versions
-	//SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+	// vertex buffer objects, so use compatibility mode
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_COMPATIBILITY);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	ren.gl = SDL_GL_CreateContext(w);
 	if (!ren.gl) {
@@ -389,8 +387,8 @@ int ren_init(SDL_Window *w)
 	GL(glDisable(GL_CULL_FACE))
 	GL(glDisable(GL_DEPTH_TEST))
 	GL(glEnable(GL_SCISSOR_TEST))
-//	GL(glEnable(GL_TEXTURE_2D))
-//	GL(glEnable(GL_TEXTURE_RECTANGLE))
+	GL(glEnable(GL_TEXTURE_2D))
+	GL(glEnable(GL_TEXTURE_RECTANGLE))
 
 	GLenum glew_err = glewInit();
 	if (glew_err != GLEW_OK)
@@ -425,6 +423,7 @@ int ren_init(SDL_Window *w)
 		printf("uniform %s was optimized away\n", "viewsize");
 
 	// Finishing touches
+	ren.tabsize = REN_TABSIZE;
 	int width, height;
 	SDL_GetWindowSize(w, &width, &height);
 	ren_update_viewport(width, height);
@@ -451,7 +450,6 @@ static int ren_draw_font_stack(int idx)
 	GLuint font_texture = ren.fonts[idx].texture;
 
 	GL(glUseProgram(ren.font_prog))
-	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
 	GL(glBindTexture(GL_TEXTURE_RECTANGLE, font_texture))
 
 	GL(glViewport(0, 0, ren.width, ren.height))
@@ -460,8 +458,22 @@ static int ren_draw_font_stack(int idx)
 	GL(glUniform2i(ren.viewsize_loc, ren.width, ren.height))
 	GL(glUniform2i(ren.texturesize_loc, font->width, font->height))
 
-	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
-	GL(glEnableVertexAttribArray(REN_UV_IDX))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.font_buffer))
+	if (vtstack_changed(&ren.font_stack)) {
+		if (vtstack_size_changed(&ren.font_stack)) {
+			GL(glBufferData(
+				GL_ARRAY_BUFFER,
+				ren.font_stack.idx*sizeof(struct v_text),
+				ren.font_stack.items,
+				GL_DYNAMIC_DRAW))
+		} else {
+			GL(glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				ren.font_stack.idx*sizeof(struct v_text),
+				ren.font_stack.items))
+		}
+	}
 	// when passing ints to glVertexAttribPointer they are automatically
 	// converted to floats
 	GL(glVertexAttribPointer(
@@ -478,21 +490,9 @@ static int ren_draw_font_stack(int idx)
 		GL_FALSE,
 		sizeof(struct v_text),
 		(void*)sizeof(vec2_i)))
-	if (vtstack_changed(&ren.font_stack)) {
-		if (vtstack_size_changed(&ren.font_stack)) {
-			GL(glBufferData(
-				GL_ARRAY_BUFFER,
-				ren.font_stack.idx*sizeof(struct v_text),
-				ren.font_stack.items,
-				GL_DYNAMIC_DRAW))
-		} else {
-			GL(glBufferSubData(
-				GL_ARRAY_BUFFER,
-				0,
-				ren.font_stack.idx*sizeof(struct v_text),
-				ren.font_stack.items))
-		}
-	}
+	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
+	GL(glEnableVertexAttribArray(REN_UV_IDX))
+
 	GL(glDrawArrays(GL_TRIANGLES, 0, ren.font_stack.idx))
 
 	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))
@@ -509,14 +509,27 @@ static int ren_draw_font_stack(int idx)
 static int ren_draw_box_stack(void)
 {
 	GL(glUseProgram(ren.box_prog))
-	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.box_buffer))
 
 	GL(glViewport(0, 0, ren.width, ren.height))
 	GL(glScissor(0, 0, ren.width, ren.height))
 	GL(glUniform2i(ren.box_viewsize_loc, ren.width, ren.height))
 
-	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
-	GL(glEnableVertexAttribArray(REN_COLOR_IDX))
+	GL(glBindBuffer(GL_ARRAY_BUFFER, ren.box_buffer))
+	if(vcstack_changed(&ren.box_stack)) {
+		if (vcstack_size_changed(&ren.box_stack)) {
+			GL(glBufferData(
+				GL_ARRAY_BUFFER,
+				ren.box_stack.idx*sizeof(struct v_col),
+				ren.box_stack.items,
+				GL_DYNAMIC_DRAW))
+		} else {
+			GL(glBufferSubData(
+				GL_ARRAY_BUFFER,
+				0,
+				ren.box_stack.idx*sizeof(struct v_col),
+				ren.box_stack.items))
+		}
+	}
 	// when passing ints to glVertexAttribPointer they are automatically
 	// converted to floats
 	GL(glVertexAttribPointer(
@@ -534,21 +547,9 @@ static int ren_draw_box_stack(void)
 		GL_TRUE,
 		sizeof(struct v_col),
 		(void*)sizeof(vec2_i)))
-	if(vcstack_changed(&ren.box_stack)) {
-		if (vcstack_size_changed(&ren.box_stack)) {
-			GL(glBufferData(
-				GL_ARRAY_BUFFER,
-				ren.box_stack.idx*sizeof(struct v_col),
-				ren.box_stack.items,
-				GL_DYNAMIC_DRAW))
-		} else {
-			GL(glBufferSubData(
-				GL_ARRAY_BUFFER,
-				0,
-				ren.box_stack.idx*sizeof(struct v_col),
-				ren.box_stack.items))
-		}
-	}
+	GL(glEnableVertexAttribArray(REN_VERTEX_IDX))
+	GL(glEnableVertexAttribArray(REN_COLOR_IDX))
+
 	GL(glDrawArrays(GL_TRIANGLES, 0, ren.box_stack.idx))
 
 	GL(glDisableVertexAttribArray(REN_VERTEX_IDX))
@@ -569,7 +570,6 @@ int ren_update_viewport(int w, int h)
 }
 
 
-// TODO: add a scissor array in order to do less render calls
 int ren_set_scissor(int x, int y, int w, int h)
 {
 	ren.s_x = x;
@@ -596,7 +596,7 @@ static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 	struct v_text v;
 	struct font_glyph c;
 	c = *g;
-	printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
+	//printf("g: u=%d v=%d w=%d h=%d a=%d x=%d y=%d\n", c.u, c.v, c.w, c.h, c.a, c.x, c.y);
 	//printf("v: x=%d y=%d u=%d v=%d\n", v.pos.x, v.pos.y, v.uv.u, v.uv.v);
 	// x1,y1
 	v = (struct v_text){
@@ -639,10 +639,25 @@ static int ren_push_glyph(const struct font_glyph *g, int gx, int gy)
 }
 
 
+static const struct font_glyph * get_glyph(unsigned int code, int idx)
+{
+	const struct font_glyph *g;
+	int updated;
+	g = font_get_glyph_texture(ren.fonts[idx].font, code, &updated);
+	if (!g)
+		REN_RET(NULL, REN_FONT);
+	if (updated) {
+		if (update_font_texture(idx))
+			REN_RET(NULL, REN_TEXTURE);
+	}
+	return g;
+}
+
+
 // TODO: reduce repeating patterns in ren_get_text_box() and ren_render_text()
 int ren_get_text_box(const char *str, int *rw, int *rh, int size)
 {
-	int w = 0, h = 0, x = 0, y = 0, updated;
+	int w = 0, h = 0, x = 0, y = 0;
 	const struct font_glyph *g;
 	size_t off, ret;
 	uint32_t cp;
@@ -653,16 +668,19 @@ int ren_get_text_box(const char *str, int *rw, int *rh, int size)
 	h = y = ren.fonts[idx].font->glyph_max_h;
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		if (iscntrl(cp)) goto skip_get;
-		g = font_get_glyph_texture(ren.fonts[idx].font, cp, &updated);
-		if (!g) REN_RET(-1, REN_FONT);
-		if (updated) {
-			if (update_font_texture(idx))
-				REN_RET(-1, REN_TEXTURE);
-		}
+		if (!(g = get_glyph(cp, idx)))
+			return -1;
 
-		skip_get:
 		x += g->x + g->a;
+		// FIXME: generalize this thing
+		skip_get:
 		switch (cp) {
+		case '\t': {
+			const struct font_glyph *sp = get_glyph(' ', idx);
+			if (!sp) return -1;
+			x += (sp->x + sp->a)*ren.tabsize;
+		}
+		break;
 		case '\r':
 			x = 0;
 			break;
@@ -696,14 +714,9 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		return -1;
 	for (off = 0; (ret = grapheme_decode_utf8(str+off, SIZE_MAX, &cp)) > 0 && cp != 0; off += ret) {
 		// skip special characters that render a box (not present in font)
-		// FIXME: handle tab
 		if (iscntrl(cp)) goto skip_render;
-		g = font_get_glyph_texture(ren.fonts[idx].font, cp, &updated);
-		if (!g) REN_RET(-1, REN_FONT);
-		if (updated) {
-			if (update_font_texture(idx))
-				REN_RET(-1, REN_TEXTURE);
-		}
+		if (!(g = get_glyph(cp, idx)))
+			return -1;
 
 		// only push the glyph if it is inside the bounding box
 		if (gx <= x+w && gy <= y+h)
@@ -714,11 +727,16 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		gx += g->x + g->a;
 		skip_render:
 		switch (cp) {
+		case '\t': {
+			const struct font_glyph *sp = get_glyph(' ', idx);
+			if (!sp) return -1;
+			gx += (sp->x + sp->a)*ren.tabsize;
+		}
+		break;
 		case '\r':
 			gx = x;
 			break;
 		case '\n':
-			// TODO: encode and/or store line height
 			gy += ren.fonts[idx].font->glyph_max_h;
 			gx = x;
 			break;
@@ -726,8 +744,6 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 		}
 	}
 
-	// FIXME: here we are doing one draw call for string of text which is
-	// inefficient but is simpler and allows for individual scissors
 	ren_set_scissor(x, y, w, h);
 	ren_draw_font_stack(idx);
 

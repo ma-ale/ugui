@@ -9,7 +9,7 @@
 
 
 //const char *str1 = "Ciao Mamma!\nprova: òçà°ù§|¬³¼$£ì\t";
-const char *str1 = "j";
+const char *str1 = "ciao\tmamma";
 const char *str2 = "gmt";
 SDL_Window *win;
 
@@ -19,8 +19,8 @@ void draw(void)
 	static unsigned int frame = 0;
 	printf("frame: %d\n", frame++);
 	ren_clear();
-	ren_render_box(10, 10, 100, 50, 0xffff0000);
-	if (ren_render_text(str1, 10, 10, 100, 50, 20))
+	ren_render_box(10, 10, 400, 50, 0xffff0000);
+	if (ren_render_text(str1, 10, 10, 400, 50, 20))
 		printf("text: %s\n", ren_strerror());
 	int w, h;
 	ren_get_text_box(str2, &w, &h, 40);

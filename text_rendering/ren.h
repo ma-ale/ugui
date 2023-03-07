@@ -12,6 +12,7 @@
 #define REN_VERTEX_IDX 0
 #define REN_UV_IDX     1
 #define REN_COLOR_IDX  2
+#define REN_TABSIZE    8
 
 
 typedef struct {
