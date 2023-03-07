@@ -16,7 +16,7 @@ rm -f objlist
 cat > Makefile << EOF
 CC      = gcc
 LDFLAGS = -lm -lgrapheme -lSDL2 -lGLEW -lGL
-CFLAGS  = -g -Wall -Wextra -pedantic -fno-omit-frame-pointer
+CFLAGS  = -ggdb3 -Wall -Wextra -pedantic -fno-omit-frame-pointer
 
 .PHONY: clean all
 all: test

@@ -14,21 +14,21 @@
 
 
 /* Ready-made compares */
-int hash_compare_u32(unsigned int a, unsigned int b) { return a == b; }
-int hash_compare_u64(unsigned long long int a, unsigned long long int b) { return a == b; }
-int hash_compare_str(const char *a, const char *b) { return strcmp(a, b) == 0; }
+static int hash_cp_u32(unsigned int a, unsigned int b) { return a == b; }
+static int hash_cp_u64(unsigned long long int a, unsigned long long int b) { return a == b; }
+static int hash_cp_str(const char *a, const char *b) { return strcmp(a, b) == 0; }
 
 
 /* Ready-made hashes */
-unsigned int hash_u64(unsigned long long int c)
+static unsigned int hash_u64(unsigned long long int c)
 {
 	return (unsigned long long int)((unsigned long long int)(c*HASH_RATIO64)>>32);
 }
-unsigned int hash_u32(unsigned int c)
+static unsigned int hash_u32(unsigned int c)
 {
 	return (unsigned int)((unsigned long long int)(c*HASH_RATIO32)>>32);
 }
-unsigned int hash_str(const char *s)
+static unsigned int hash_str(const char *s)
 {
 	unsigned int h = HASH_STRSALT;
 	const unsigned char *v = (const unsigned char *)(s);
@@ -76,7 +76,7 @@ struct hashname##_ref * hashname##_create(unsigned int size, unsigned int (*hash
 		h->size    = size;                                             \
 		h->hash    = hash;                                             \
 		h->compare = compare;                                          \
-		memset(h->bucket, 0, sizeof(struct hashname##_ref)*size);      \
+		memset(h->bucket, 0, sizeof(struct hashname##_entry)*size);    \
 	}                                                                      \
 	return h;                                                              \
 }                                                                              \
