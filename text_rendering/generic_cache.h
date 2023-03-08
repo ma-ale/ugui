@@ -12,7 +12,7 @@
 #define CACHE_BTEST(b, x) (b[(x)>>6]&((uint64_t)1<<((x)%64)))
 
 // FIXME: this cache implementation is not really generic since it expects an unsigned
-//        as the code and not a generic type 
+//        as the code and not a generic type
 
 #define CACHE_SET(c, x)                                                        \
 {                                                                              \
@@ -22,8 +22,8 @@
 }
 
 
-#define CACHE_DECL(cachename, type, hashfn, comparefn)                         \
-HASH_DECL(cachename##table, unsigned int, void *)                              \
+#define CACHE_DECL(cachename, type, hashfn, cmpfn)                             \
+HASH_DECL(cachename##table, unsigned int, void *, hashfn, cmpfn)               \
 struct cachename {                                                             \
 	struct cachename##table_ref *table;                                    \
 	type *array;                                                           \
@@ -34,9 +34,7 @@ struct cachename {                                                             \
 \
 struct cachename cachename##_init(void)                                        \
 {                                                                              \
-	struct cachename##table_ref *t = cachename##table_create(              \
-		CACHE_SIZE, hashfn, comparefn                                  \
-	);                                                                     \
+	struct cachename##table_ref *t = cachename##table_create(CACHE_SIZE);  \
 	type *a = malloc(sizeof(type)*CACHE_SIZE);                             \
 	uint64_t *b = malloc(sizeof(uint64_t)*CACHE_BSIZE);                    \
 	CACHE_BRESET(b);                                                       \

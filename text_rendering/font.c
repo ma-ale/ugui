@@ -19,7 +19,7 @@ static unsigned int hash(unsigned int code)
 	return (uint32_t)((uint64_t)(code*2654435761)>>32);
 }
 #include "generic_cache.h"
-CACHE_DECL(cache, struct font_glyph, hash, hash_cp_u32)
+CACHE_DECL(cache, struct font_glyph, hash, hash_cmp_u32)
 
 
 #define UTF8(c) (c&0x80)
