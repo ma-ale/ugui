@@ -12,13 +12,12 @@
 #include "util.h"
 
 // generic cache type
-static unsigned int hash(unsigned int code)
+#include "generic_cache.h"
+static inline unsigned int hash(unsigned int code)
 {
 	// identity map the ascii range
-	if (code < 128) return code;
-	return (uint32_t)((uint64_t)(code*2654435761)>>32);
+	return code < 128 ? code : hash_u32(code);
 }
-#include "generic_cache.h"
 CACHE_DECL(cache, struct font_glyph, hash, hash_cmp_u32)
 
 
