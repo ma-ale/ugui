@@ -25,7 +25,8 @@
 // TODO: the advance isn't unique for every pair of characters
 struct font_glyph {
 	unsigned int codepoint;
-	unsigned int u, v, w, h, a, x, y;
+	unsigned int u, v;
+	unsigned short int w, h, a, x, y;
 };
 
 struct font_atlas {

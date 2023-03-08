@@ -708,7 +708,7 @@ int ren_render_text(const char *str, int x, int y, int w, int h, int size)
 	const struct font_glyph *g;
 	size_t ret, off;
 	uint32_t cp;
-	int updated, gx = x, gy = y;
+	int gx = x, gy = y;
 	int idx = ren_get_font(size);
 	if (idx < 0)
 		return -1;
