@@ -123,32 +123,12 @@ struct htname##_entry * htname##_insert(struct htname##_ref *ht, struct htname##
 }                                                                              \
 \
 \
-
-#if 0
-/* returns the number of removed items */                                      \
-int htname##_remove(struct htname##_ref *ht, codetype code)                    \
+struct htname##_ref * htname##_remove(struct htname##_ref *ht, codetype code)  \
 {                                                                              \
-	if (!ht)                                                               \
-		return -1;                                                     \
-	uint32_t mask = ht->size - 1;                                          \
-	uint32_t s = hashfn(code)&mask, inc = 0;                               \
-	struct htname##_entry *r;                                              \
-	/* Flag for removal */                                                 \
-	while (ht->items > 0 && (r = htname##lookup(ht, code)) && r->code) {   \
-		/* FIXME: this cast may not work */                            \
-		r->code = (codetype)(-1);                                      \
-		ht->items--;                                                   \
-	}                                                                      \
-	/* Remove */                                                           \
-	for (uint32_t i = s; i < ht->items; i++) {                             \
-		if (ht->bucket[i].code == (codetype)(-1)) {                    \
-			ht->bucket[i] = (struct htname##_entry){0};            \
-			inc++;                                                 \
-		}                                                              \
-	}                                                                      \
-	return inc;                                                            \
+	if (!ht) return NULL;                                                  \
+	struct htname##_entry *r = htname##_search(ht, code);                  \
+	if (r) r->code = 0;                                                    \
+	return r;                                                              \
 }                                                                              \
-
-#endif
 
 #endif
