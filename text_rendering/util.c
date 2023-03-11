@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <err.h>
+#include <time.h>
 
 #include "util.h"
 
@@ -107,4 +108,19 @@ void dump_file(const char *path, char **buf, int *buf_len)
 void print_byte(unsigned char byte)
 {
 	printf("%s%s", bit_rep[byte >> 4], bit_rep[byte & 0x0F]);
+}
+
+
+static struct timespec clock_start, clock_stop;
+
+void stopwatch_start(void)
+{
+	clock_gettime(CLOCK_MONOTONIC_COARSE, &clock_start);
+}
+
+
+double stopwatch_get(void)
+{
+	clock_gettime(CLOCK_MONOTONIC_COARSE, &clock_stop);
+	return (clock_stop.tv_sec-clock_start.tv_sec)+(double)(clock_stop.tv_nsec-clock_start.tv_nsec)/(double)1000000000L;
 }

@@ -123,7 +123,7 @@ struct htname##_entry * htname##_insert(struct htname##_ref *ht, struct htname##
 }                                                                              \
 \
 \
-struct htname##_ref * htname##_remove(struct htname##_ref *ht, codetype code)  \
+struct htname##_entry * htname##_remove(struct htname##_ref *ht, codetype code)\
 {                                                                              \
 	if (!ht) return NULL;                                                  \
 	struct htname##_entry *r = htname##_search(ht, code);                  \

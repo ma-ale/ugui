@@ -15,4 +15,7 @@ void dump_file(const char *path, char **buf, int *buf_len);
 
 void print_byte(unsigned char byte);
 
+void stopwatch_start(void);
+double stopwatch_get(void);
+
 #endif
