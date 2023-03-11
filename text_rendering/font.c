@@ -11,7 +11,6 @@
 #include "stb_image_write.h"
 #include "util.h"
 
-// generic cache type
 #include "generic_cache.h"
 static inline unsigned int hash(unsigned int code)
 {
@@ -106,8 +105,8 @@ int font_free(struct font_atlas *atlas)
 }
 
 
-// FIXME: when generating the sdf I only use the height, so to not encounter memory
-//        errors height and width must be equal
+// TODO: time and take the median of the time it takes to generate the cache and
+//       the time it takes to draw the glyph
 const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsigned int code, int *updated)
 {
 	int _u = 0;

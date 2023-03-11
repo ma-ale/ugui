@@ -22,55 +22,53 @@
 }
 
 
-#define CACHE_DECL(cachename, type, hashfn, cmpfn)                             \
-HASH_DECL(cachename##table, unsigned int, void *, hashfn, cmpfn)               \
-struct cachename {                                                             \
-	struct cachename##table_ref *table;                                    \
+#define CACHE_DECL(name, type, hashfn, cmpfn)                                  \
+HASH_DECL(name##table, uint32_t, void *, hashfn, cmpfn)                        \
+struct name {                                                                  \
+	struct name##table_ref *table;                                         \
 	type *array;                                                           \
 	uint64_t *bitmap;                                                      \
 	int cycles;                                                            \
 };                                                                             \
 \
 \
-struct cachename cachename##_init(void)                                        \
+struct name name##_init(void)                                                  \
 {                                                                              \
-	struct cachename##table_ref *t = cachename##table_create(CACHE_SIZE);  \
+	struct name##table_ref *t = name##table_create(CACHE_SIZE);            \
 	type *a = malloc(sizeof(type)*CACHE_SIZE);                             \
 	uint64_t *b = malloc(sizeof(uint64_t)*CACHE_BSIZE);                    \
 	CACHE_BRESET(b);                                                       \
-	return (struct cachename){ .table = t, .array = a, .bitmap = b, 0};    \
+	return (struct name){ .table = t, .array = a, .bitmap = b, 0};         \
 }                                                                              \
 \
 \
-void cachename##_free(struct cachename *cache)                                 \
+void name##_free(struct name *cache)                                           \
 {                                                                              \
 	if (cache) {                                                           \
-		cachename##table_destroy(cache->table);                        \
+		name##table_destroy(cache->table);                             \
 		free(cache->array);                                            \
 		free(cache->bitmap);                                           \
 	}                                                                      \
 }                                                                              \
 \
 \
-const type * cachename##_search(struct cachename *cache, unsigned int code)    \
+const type * name##_search(struct name *cache, uint32_t code)                  \
 {                                                                              \
-	if (!cache)                                                            \
-		return NULL;                                                   \
-	struct cachename##table_entry *r;                                      \
-	r = cachename##table_search(cache->table, code);                       \
+	if (!cache) return NULL;                                               \
+	struct name##table_entry *r;                                           \
+	r = name##table_search(cache->table, code);                            \
 	/* MISS */                                                             \
-	if (!r)                                                                \
+	if (!r || !cmpfn(code, r->code))                                       \
 		return NULL;                                                   \
-	/* HIT */                                                              \
-	CACHE_SET(cache, (type *)(r->data)-cache->array);                      \
+	/* HIT, set as recently used */                                        \
+	CACHE_SET(cache, (type *)(r->data)-(cache->array));                    \
 	return (const type *)(r->data);                                        \
 }                                                                              \
 \
 \
-int cachename##_get(struct cachename *cache)                                   \
+int name##_get(struct name *cache)                                             \
 {                                                                              \
-	if (!cache)                                                            \
-		return -1;                                                     \
+	if (!cache) return -1;                                                 \
 	int x = 0;                                                             \
 	for (int b = 0; b < CACHE_BSIZE; b++) {                                \
 		if (cache->bitmap[b] == 0) x = 64;                             \
@@ -83,10 +81,9 @@ int cachename##_get(struct cachename *cache)                                   \
 }                                                                              \
 \
 \
-const type * cachename##_insert(struct cachename *cache, const type *g, unsigned int code, int x)     \
+const type * name##_insert(struct name *cache, const type *g, uint32_t code, int x)\
 {                                                                              \
-	if (!cache)                                                            \
-		return NULL;                                                   \
+	if (!cache) return NULL;                                               \
 	type *spot = NULL;                                                     \
 	/* x is the index to the cache array, it has to come from the user */  \
 	/* check if the spot is free */                                        \
@@ -95,8 +92,8 @@ const type * cachename##_insert(struct cachename *cache, const type *g, unsigned
 	CACHE_SET(cache, x)                                                    \
 	spot = &(cache->array[x]);                                             \
 	*spot = *g;                                                            \
-	struct cachename##table_entry e = { .code = code, .data = spot};       \
-	if (!cachename##table_insert(cache->table, &e))                        \
+	struct name##table_entry e = { .code = code, .data = spot};            \
+	if (!name##table_insert(cache->table, &e))                             \
 		return NULL;                                                   \
 	return spot;                                                           \
 }                                                                              \

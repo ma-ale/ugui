@@ -3,35 +3,36 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 
 #define HASH_MAXSIZE 4096
 // for fibonacci hashing, 2^{32,64}/<golden ratio>
-#define HASH_RATIO32 (unsigned int)2654435769u
-#define HASH_RATIO64 (unsigned long long int)11400714819322457583u
+#define HASH_RATIO32 ((uint64_t)2654435769u)
+#define HASH_RATIO64 ((uint64_t)11400714819322457583u)
 // salt for string hashing
-#define HASH_STRSALT 0xbabb0cac
+#define HASH_SALT ((uint64_t)0xbabb0cac)
 
 
 /* Ready-made compares */
-static inline int hash_cmp_u32(unsigned int a, unsigned int b) { return a == b; }
-static inline int hash_cmp_u64(unsigned long long int a, unsigned long long int b) { return a == b; }
+static inline int hash_cmp_u32(uint32_t a, uint32_t b) { return a == b; }
+static inline int hash_cmp_u64(uint64_t a, uint64_t b) { return a == b; }
 static inline int hash_cmp_str(const char *a, const char *b) { return strcmp(a, b) == 0; }
 
 
 /* Ready-made hashes */
-static inline unsigned int hash_u64(unsigned long long int c)
+static inline uint32_t hash_u64(uint64_t c)
 {
-	return (unsigned long long int)((unsigned long long int)(c*HASH_RATIO64)>>32);
+	return (uint64_t)((((uint64_t)c+HASH_SALT)*HASH_RATIO64)>>32);
 }
-static inline unsigned int hash_u32(unsigned int c)
+static inline uint32_t hash_u32(uint32_t c)
 {
-	return (unsigned int)((unsigned long long int)(c*HASH_RATIO32)>>32);
+	return (uint32_t)((((uint64_t)c<<31)*HASH_RATIO64)>>32);
 }
-static inline unsigned int hash_str(const char *s)
+static inline uint32_t hash_str(const char *s)
 {
-	unsigned int h = HASH_STRSALT;
-	const unsigned char *v = (const unsigned char *)(s);
+	uint32_t h = HASH_SALT;
+	const uint8_t *v = (const uint8_t *)(s);
 	for (int x = *s; x; x--) {
 		h += v[x-1];
 		h += h << 10;
@@ -44,74 +45,75 @@ static inline unsigned int hash_str(const char *s)
 }
 
 
-#define HASH_DECL(hashname, codetype, datatype, hashfn, cmpfn)                 \
-struct hashname##_entry {                                                      \
+#define HASH_DECL(htname, codetype, datatype, hashfn, cmpfn)                   \
+struct htname##_entry {                                                        \
 	codetype code;                                                         \
 	datatype data;                                                         \
 };                                                                             \
 \
-struct hashname##_ref {                                                        \
-	unsigned int items, size;                                              \
-	struct hashname##_entry bucket[];                                      \
+struct htname##_ref {                                                          \
+	uint32_t items, size, exp;                                             \
+	struct htname##_entry bucket[];                                        \
 };                                                                             \
 \
 \
-struct hashname##_ref * hashname##_create(unsigned int size)                   \
+struct htname##_ref * htname##_create(uint32_t size)                           \
 {                                                                              \
 	if (!size || size > HASH_MAXSIZE)                                      \
 		return NULL;                                                   \
 	/* round to the greater power of two */                                \
 	/* FIXME: check for intger overflow here */                            \
-	size = 1<<__builtin_clz(size);                                         \
+	uint32_t exp = 32-__builtin_clz(size-1);                               \
+	size = 1<<(exp);                                                       \
 	/* FIXME: check for intger overflow here */                            \
-	struct hashname##_ref *ht = malloc(sizeof(struct hashname##_ref)+sizeof(struct hashname##_entry)*size); \
+	struct htname##_ref *ht = malloc(sizeof(struct htname##_ref)+sizeof(struct htname##_entry)*size); \
 	if (ht) {                                                              \
 		ht->items = 0;                                                 \
 		ht->size  = size;                                              \
-		memset(ht->bucket, 0, sizeof(struct hashname##_entry)*size);   \
+		ht->exp   = exp;                                               \
+		memset(ht->bucket, 0, sizeof(struct htname##_entry)*size);     \
 	}                                                                      \
 	return ht;                                                             \
 }                                                                              \
 \
 \
-void hashname##_destroy(struct hashname##_ref *ht)                             \
+void htname##_destroy(struct htname##_ref *ht)                                 \
 {                                                                              \
-	if (ht)                                                                \
-		free(ht);                                                      \
+	if (ht) free(ht);                                                      \
 }                                                                              \
 \
 \
-static struct hashname##_entry * hashname##lookup(struct hashname##_ref *ht, codetype code) \
+static uint32_t htname##_lookup(struct htname##_ref *ht, uint32_t hash, uint32_t idx) \
 {                                                                              \
-	if (!ht)                                                               \
-		return NULL;                                                   \
-	/* fast modulo operation for power-of-2 size */                        \
-	unsigned int mask = ht->size - 1;                                      \
-	unsigned int i = hashfn(code);                                         \
-	for (unsigned int j = 1; ; i += j++) {                                 \
-		if (!ht->bucket[i&mask].code || cmpfn(ht->bucket[i].code, code)) \
-			return &(ht->bucket[i&mask]);                          \
+	if (!ht) return 0;                                                     \
+	uint32_t mask = ht->size-1;                                            \
+	uint32_t step = (hash >> (32 - ht->exp)) | 1;                          \
+	return (idx + step) & mask;                                            \
+}                                                                              \
+\
+\
+/* Find and return the element by code */                                      \
+struct htname##_entry * htname##_search(struct htname##_ref *ht, codetype code)\
+{                                                                              \
+	if (!ht) return NULL;                                                  \
+	uint32_t h = hashfn(code);                                             \
+	for (uint32_t i=h, x=0; ; x++) {                                       \
+		i = htname##_lookup(ht, h, i);                                 \
+		if (x > (ht->size<<1)   ||                                     \
+		    !ht->bucket[i].code ||                                     \
+		    cmpfn(ht->bucket[i].code, code)                            \
+		) {                                                            \
+			return &(ht->bucket[i]);                               \
+		}                                                              \
 	}                                                                      \
 	return NULL;                                                           \
 }                                                                              \
 \
 \
-/* Find and return the element by code */                                      \
-struct hashname##_entry * hashname##_search(struct hashname##_ref *ht, codetype code) \
-{                                                                              \
-	if (!ht)                                                               \
-		return NULL;                                                   \
-	struct hashname##_entry *r = hashname##lookup(ht, code);               \
-	if (r && cmpfn(r->code, code))                                         \
-			return r;                                              \
-	return NULL;                                                           \
-}                                                                              \
-\
-\
 /* FIXME: this simply overrides the found item */                              \
-struct hashname##_entry * hashname##_insert(struct hashname##_ref *ht, struct hashname##_entry *entry) \
+struct htname##_entry * htname##_insert(struct htname##_ref *ht, struct htname##_entry *entry) \
 {                                                                              \
-	struct hashname##_entry *r = hashname##lookup(ht, entry->code);        \
+	struct htname##_entry *r = htname##_search(ht, entry->code);           \
 	if (r) {                                                               \
 		if (!r->code)                                                  \
 			ht->items++;                                           \
@@ -121,28 +123,32 @@ struct hashname##_entry * hashname##_insert(struct hashname##_ref *ht, struct ha
 }                                                                              \
 \
 \
+
+#if 0
 /* returns the number of removed items */                                      \
-int hashname##_remove(struct hashname##_ref *ht, codetype code)                \
+int htname##_remove(struct htname##_ref *ht, codetype code)                    \
 {                                                                              \
 	if (!ht)                                                               \
 		return -1;                                                     \
-	unsigned int mask = ht->size - 1;                                      \
-	unsigned int s = hashfn(code)&mask, inc = 0;                           \
-	struct hashname##_entry *r;                                            \
+	uint32_t mask = ht->size - 1;                                          \
+	uint32_t s = hashfn(code)&mask, inc = 0;                               \
+	struct htname##_entry *r;                                              \
 	/* Flag for removal */                                                 \
-	while (ht->items > 0 && (r = hashname##lookup(ht, code)) && r->code) { \
+	while (ht->items > 0 && (r = htname##lookup(ht, code)) && r->code) {   \
 		/* FIXME: this cast may not work */                            \
 		r->code = (codetype)(-1);                                      \
 		ht->items--;                                                   \
 	}                                                                      \
 	/* Remove */                                                           \
-	for (unsigned int i = s; i < ht->items; i++) {                         \
+	for (uint32_t i = s; i < ht->items; i++) {                             \
 		if (ht->bucket[i].code == (codetype)(-1)) {                    \
-			ht->bucket[i] = (struct hashname##_entry){0};          \
+			ht->bucket[i] = (struct htname##_entry){0};            \
 			inc++;                                                 \
 		}                                                              \
 	}                                                                      \
 	return inc;                                                            \
 }                                                                              \
+
+#endif
 
 #endif

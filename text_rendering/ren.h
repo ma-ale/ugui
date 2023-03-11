@@ -4,7 +4,7 @@
 #include <SDL2/SDL.h>
 
 
-#define DEFAULT_FONT   "/usr/share/fonts/TTF/DejaVuSansMono.ttf"
+#define DEFAULT_FONT   "/usr/share/fonts/TTF/FiraCode-Regular.ttf"
 #define FONT_VERSHADER "./font_vertshader.glsl"
 #define FONT_FRAGSHADER "./font_fragshader.glsl"
 #define BOX_VERSHADER "./box_vertshader.glsl"

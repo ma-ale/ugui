@@ -314,7 +314,7 @@ static int update_font_texture(int idx)
 		GL_RED,
 		GL_UNSIGNED_BYTE,
 		ren.fonts[idx].font->atlas))
-	font_dump(ren.fonts[idx].font, "./atlas.png");
+	//font_dump(ren.fonts[idx].font, "./atlas.png");
 	GL(glUseProgram(0));
 	return 0;
 }
@@ -336,7 +336,7 @@ static int ren_load_font(int size, const char *path)
 
 	if (font_load(f, path, size))
 		REN_RET(-1, REN_FONT)
-	font_dump(f, "./atlas.png");
+	//font_dump(f, "./atlas.png");
 
 	// load font texture (atlas)
 	ren.fonts[idx].texture = ren_texturer_rect(
