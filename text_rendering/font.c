@@ -62,7 +62,7 @@ int font_load(struct font_atlas *atlas, const char *path, int size)
 	dump_file(path, &(atlas->file), &(atlas->file_size));
 
 	err = stbtt_InitFont(&(PRIV(atlas)->stb), (unsigned char *)atlas->file, 0);
-	ERROR(err == 0, -1);
+	if (err == 0) return -1;
 
 	int ascent, descent, linegap, baseline;
 	int x0,y0,x1,y1;

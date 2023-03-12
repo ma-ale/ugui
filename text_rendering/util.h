@@ -1,8 +1,7 @@
 #ifndef _UTIL_H
 #define _UTIL_H
 
-
-#define ERROR(expr, ret, ...) if (expr) { __VA_ARGS__; return ret; }
+#include <stdio.h>
 
 
 void * emalloc(unsigned long int size);
@@ -17,5 +16,19 @@ void print_byte(unsigned char byte);
 
 void stopwatch_start(void);
 double stopwatch_get(void);
+
+#define TIME_SEC(f)                                                            \
+{                                                                              \
+	stopwatch_start();                                                     \
+	f;                                                                     \
+	printf("\"%s\" took %f seconds", #f, stopwatch_get());                 \
+}
+
+#define TIME_MS(f)                                                             \
+{                                                                              \
+	stopwatch_start();                                                     \
+	f;                                                                     \
+	printf("\"%s\" took %f ms", #f, stopwatch_get()*1000.0f);              \
+}
 
 #endif

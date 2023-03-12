@@ -16,7 +16,8 @@ rm -f objlist
 cat > Makefile << EOF
 CC      = gcc
 LDFLAGS = -lm -lgrapheme -lSDL2 -lGLEW -lGL
-CFLAGS  = -ggdb3 -Wall -Wextra -pedantic -fno-omit-frame-pointer
+CFLAGS  = -ggdb3 -Wall -Wextra -pedantic -std=c11 \
+-Wno-unused-function -fno-omit-frame-pointer
 
 .PHONY: clean all
 all: test
@@ -30,7 +31,7 @@ done
 
 mainrule='test: '
 linkcmd='	${CC} ${LDFLAGS} -o test '
-cleanrule='clean: 
+cleanrule='clean:
 	rm -f test '
 while IFS="" read -r line; do
 	mainrule="$mainrule $line"

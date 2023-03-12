@@ -1,6 +1,6 @@
 CC      = gcc
 LDFLAGS = -lm -lgrapheme -lSDL2 -lGLEW -lGL
-CFLAGS  = -ggdb3 -Wall -Wextra -pedantic -fno-omit-frame-pointer
+CFLAGS  = -ggdb3 -Wall -Wextra -pedantic -std=c11 -Wno-unused-function -fno-omit-frame-pointer
 
 .PHONY: clean all
 all: test
@@ -12,5 +12,5 @@ ren.o: ren.c util.h font.h ren.h generic_stack.h
 util.o: util.c util.h
 test:  font.o main.o ren.o util.o
 	${CC} ${LDFLAGS} -o test  font.o main.o ren.o util.o
-clean: 
+clean:
 	rm -f test  font.o main.o ren.o util.o
