@@ -1,6 +1,7 @@
 #ifndef _FONT_H
 #define _FONT_H
 
+#include <stdint.h>
 
 /* width and height of a glyph contain the kering advance
  * (u,v)
@@ -24,9 +25,9 @@
  */
 // TODO: the advance isn't unique for every pair of characters
 struct font_glyph {
-	unsigned int codepoint;
-	unsigned int u, v;
-	unsigned short int w, h, a, x, y;
+	uint32_t codepoint;
+	uint32_t u, v;
+	uint16_t w, h, a, x, y;
 };
 
 struct font_atlas {

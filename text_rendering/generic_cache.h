@@ -14,16 +14,22 @@
 // FIXME: this cache implementation is not really generic since it expects an unsigned
 //        as the code and not a generic type
 
+// FIXME: when resetting the bitmap all references to overwritten elements are 
+//        invalidated, this really means that 
+//        1) we get data mismatches 
+//        2) this is not a good LRU cache
+
 #define CACHE_SET(c, x)                                                        \
 {                                                                              \
-	c->cycles = (c->cycles+1)%CACHE_NCYCLES;                               \
-	if (!c->cycles) CACHE_BRESET(c->bitmap);                               \
+	if (++(c->cycles) > CACHE_NCYCLES) {                                   \
+		CACHE_BRESET(c->bitmap);                                       \
+		c->cycles=0;}                                                  \
 	CACHE_BSET(c->bitmap, x);                                              \
 }
 
 
 #define CACHE_DECL(name, type, hashfn, cmpfn)                                  \
-HASH_DECL(name##table, uint32_t, void *, hashfn, cmpfn)                        \
+HASH_DECL(name##table, uint32_t, uint32_t, hashfn, cmpfn)                      \
 struct name {                                                                  \
 	struct name##table_ref *table;                                         \
 	type *array;                                                           \
@@ -61,8 +67,8 @@ const type * name##_search(struct name *cache, uint32_t code)                  \
 	if (!r || !cmpfn(code, r->code))                                       \
 		return NULL;                                                   \
 	/* HIT, set as recently used */                                        \
-	CACHE_SET(cache, (type *)(r->data)-(cache->array));                    \
-	return (const type *)(r->data);                                        \
+	CACHE_SET(cache, r->data);                                             \
+	return (&cache->array[r->data]);                                       \
 }                                                                              \
 \
 \
@@ -92,7 +98,7 @@ const type * name##_insert(struct name *cache, const type *g, uint32_t code, int
 	CACHE_SET(cache, x)                                                    \
 	spot = &(cache->array[x]);                                             \
 	*spot = *g;                                                            \
-	struct name##table_entry e = { .code = code, .data = spot};            \
+	struct name##table_entry e = { .code = code, .data = x};               \
 	if (!name##table_insert(cache->table, &e))                             \
 		return NULL;                                                   \
 	return spot;                                                           \

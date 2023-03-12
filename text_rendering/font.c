@@ -169,7 +169,6 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 		}
 	}
 
-	// FIXME: get the advance
 	struct font_glyph g = {
 		.codepoint = code,
 		.u = tx,
