@@ -8,6 +8,9 @@
 // FIXME: find a way to not re-hash the whole stack when removing one item
 
 // incremental hash for every grow
+#if STACK_DISABLE_HASH
+#define STACK_HASH(p, s, h) {}
+#else
 #define STACK_HASH(p, s, h)                                                    \
 {                                                                              \
 	unsigned char *v = (unsigned char *)(p);                               \
@@ -20,6 +23,7 @@
   	(h) ^= (h) >> 11;                                                      \
   	(h) += (h) << 15;                                                      \
 }
+#endif
 
 
 // TODO: add a rolling hash
