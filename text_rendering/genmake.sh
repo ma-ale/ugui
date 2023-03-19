@@ -15,9 +15,11 @@ rm -f objlist
 
 cat > Makefile << EOF
 CC      = gcc
-LDFLAGS = -lm -lgrapheme -lSDL2 -lGLEW -lGL
+# instrumentation flags
+INFLAGS = -fsanitize=address,builtin,undefined
+LDFLAGS = -lm -lgrapheme -lSDL2 -lGLEW -lGL \${INFLAGS}
 CFLAGS  = -ggdb3 -Wall -Wextra -pedantic -std=c11 \
--Wno-unused-function -fno-omit-frame-pointer
+-Wno-unused-function -fno-omit-frame-pointer \${INFLAGS}
 
 .PHONY: clean all
 all: test

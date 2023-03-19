@@ -20,25 +20,27 @@ const char *str2 = "The quick brown fox jumps over the lazy dog\n"
 SDL_Window *win;
 
 
+#define red  0xff0000ff
+#define blue 0xffff0000
 void draw(void)
 {
 	static unsigned int frame = 0;
 	printf("frame: %d\n", frame++);
 	ren_clear();
-	//ren_render_box(10, 10, 400, 50, 0xffff0000);
+	//ren_render_box(10, 10, 400, 50, blue);
 	//if (ren_render_text(str1, 10, 10, 400, 50, 20))
 	//	printf("text: %s\n", ren_strerror());
 	int w, h;
 	ren_get_text_box(str2, &w, &h, 20);
 	//printf("box for: %s -> (%d, %d)\n", str2, w, h);
-	ren_render_box(0, 0, w, h, 0xffff0000);
+	ren_render_box(0, 0, w, h, blue);
 	ren_render_text(str2, 0, 0, w, h, 20);
 
 	// fixme: this causes a bug
 	const char *s = "ciao mamma";
 	ren_get_text_box(s, &w, &h, 12);
 	s = "stuff that was not in font size 12 -> чащаx";
-	ren_render_box(0, 200, w, h, 0xff0000ff);
+	ren_render_box(0, 200, w, h, red);
 	if (ren_render_text(s, 0, 200, 0xffff, 0xffff, 12))
 		printf("BUG\n");
 

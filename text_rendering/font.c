@@ -151,7 +151,7 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 
 	// TODO: bounds check usign atlas height
 	// TODO: clear spot area in the atlas before writing on it
-	unsigned int spot = cache_get(&PRIV(atlas)->c);
+	unsigned int spot = cache_get_free_spot(&PRIV(atlas)->c);
 	unsigned int ty   = ((atlas->glyph_max_w * spot) / atlas->width) * atlas->glyph_max_h;
 	unsigned int tx   = (atlas->glyph_max_w * spot) % atlas->width;
 	unsigned int w    = atlas->width;
@@ -179,7 +179,7 @@ const struct font_glyph * font_get_glyph_texture(struct font_atlas *atlas, unsig
 		.y = off_y-base,
 		.a = adv,
 	};
-	return cache_insert(&PRIV(atlas)->c, &g, g.codepoint, spot);
+	return cache_insert_at(&PRIV(atlas)->c, &g, g.codepoint, spot);
 }
 
 
