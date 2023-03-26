@@ -15,7 +15,7 @@
 //        as the code and not a generic type
 
 
-#define CACHE_USED(c, x)                                                       \
+#define CACHE_CYCLE(c)                                                         \
 {                                                                              \
 	if (++(c->cycles) > CACHE_NCYCLES) {                                   \
 		for (int i = 0; i < CACHE_BSIZE; i++) {                        \
@@ -24,7 +24,6 @@
 		}                                                              \
 		c->cycles = 0;                                                 \
 	}                                                                      \
-	CACHE_BSET(c->used, x);                                                \
 }
 
 
@@ -74,13 +73,14 @@ const type * name##_search(struct name *cache, uint32_t code)                  \
 	if (!CACHE_BTEST(cache->present, r->data))                             \
 		return NULL;                                                   \
 	/* HIT, set as recently used */                                        \
-	CACHE_USED(cache, r->data);                                            \
+	CACHE_BSET(cache->used, r->data);                                      \
 	return (&cache->array[r->data]);                                       \
 }                                                                              \
 \
 \
 /* Look for a free spot in the present bitmap and return its index */          \
-int name##_get(struct name *cache)                                             \
+/* If there is no free space left then just return the first position */       \
+int name##_get_free_spot(struct name *cache)                                   \
 {                                                                              \
 	if (!cache) return -1;                                                 \
 	int x = 0;                                                             \
@@ -95,24 +95,31 @@ int name##_get(struct name *cache)                                             \
 }                                                                              \
 \
 \
-const type * name##_insert(struct name *cache, const type *g, uint32_t code, int x)\
+const type * name##_insert_at(struct name *cache, const type *g, uint32_t code, int x)\
 {                                                                              \
 	if (!cache) return NULL;                                               \
 	type *spot = NULL;                                                     \
-	/* x is the index to the cache array, it has to come from the user */  \
-	/* check if the spot is free */                                        \
-	if (x < 0 || CACHE_BTEST(cache->present, x))                           \
-		return NULL;                                                   \
+	/* check if the spot is valid */                                       \
+	if (x < 0) return NULL;                                                \
 	/* Set used and present */                                             \
-	CACHE_USED(cache, x)                                                   \
 	CACHE_BSET(cache->present, x);                                         \
 	CACHE_BSET(cache->used, x);                                            \
+	CACHE_CYCLE(cache)                                                     \
 	spot = &(cache->array[x]);                                             \
 	*spot = *g;                                                            \
 	struct name##table_entry e = { .code = code, .data = x};               \
 	if (!name##table_insert(cache->table, &e))                             \
 		return NULL;                                                   \
 	return spot;                                                           \
+}                                                                              \
+\
+\
+const type * name##_insert(struct name *cache, const type *g, uint32_t code, int *x)\
+{                                                                              \
+	int y;                                                                 \
+	if (!x) x = &y;                                                        \
+	*x = name##_get_free_spot(cache);                                      \
+	return name##_insert_at(cache, g, code, *x);                           \
 }                                                                              \
 
 
