@@ -3,3 +3,4 @@ microgui
 test/test
 **/compile_commands.json
 **/.cache
+test

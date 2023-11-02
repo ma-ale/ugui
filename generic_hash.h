@@ -6,6 +6,9 @@
 #include <stdint.h>
 
 
+// FIXME: change the api to just one HASH_DECL to HASH_PROTO and HASH_DEFINE
+
+
 #define HASH_MAXSIZE 4096
 // for fibonacci hashing, 2^{32,64}/<golden ratio>
 #define HASH_RATIO32 ((uint64_t)2654435769u)
