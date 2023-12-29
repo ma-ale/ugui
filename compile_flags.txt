@@ -1,0 +1,5 @@
+-Iraylib/src
+-Wall
+-Wextra
+-pedantic
+-std=c11
