@@ -12,7 +12,7 @@ int ug_tree_init(UgTree *tree, unsigned int size)
 		return -1;
 	}
 
-	tree->vector = malloc(sizeof(UgElem) * size);
+	tree->vector = malloc(sizeof(UgId) * size);
 	if (tree->vector == NULL) {
 		return -1;
 	}
@@ -37,7 +37,7 @@ int ug_tree_init(UgTree *tree, unsigned int size)
 	}
 
 	// fill vector with zeroes
-	memset(tree->vector, 0, size * sizeof(UgElem));
+	memset(tree->vector, 0, size * sizeof(UgId));
 
 	tree->size     = size;
 	tree->elements = 0;
@@ -118,7 +118,7 @@ int ug_tree_resize(UgTree *tree, unsigned int newsize)
 		return -1;
 	}
 
-	uint32_t *newvec = realloc(tree->vector, newsize * sizeof(uint32_t));
+	UgId *newvec = realloc(tree->vector, newsize * sizeof(UgId));
 	if (newvec == NULL) {
 		return -1;
 	}
@@ -149,7 +149,7 @@ int ug_tree_resize(UgTree *tree, unsigned int newsize)
 }
 
 // add an element to the tree, return it's ref
-int ug_tree_add(UgTree *tree, uint32_t elem, int parent)
+int ug_tree_add(UgTree *tree, UgId elem, int parent)
 {
 	if (tree == NULL) {
 		return -1;
@@ -332,4 +332,13 @@ int ug_tree_level_order_it(UgTree *tree, int ref, int *cursor)
 	}
 
 	return -1;
+}
+
+int ug_tree_parentof(UgTree *tree, int node)
+{
+	if (tree == NULL || !IS_VALID_REF(tree, node) ||
+	    !REF_IS_PRESENT(tree, node)) {
+		return -1;
+	}
+	return tree->refs[node];
 }

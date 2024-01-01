@@ -15,16 +15,15 @@ typedef struct {
 	uint8_t r, g, b, a;
 } UgColor;
 
+typedef uint64_t UgId;
+
 typedef enum {
 	ETYPE_NONE = 0,
-	ETYPE_BUTTON,
-	ETYPE_TEXT,
-	ETYPE_SCROLL,
-	ETYPE_SLIDER,
+	ETYPE_DIV,
 } UgElemType;
 
 typedef struct {
-	uint64_t id;
+	UgId id;
 	UgRect rec;
 	union {
 		uint32_t type_int;
@@ -37,27 +36,42 @@ typedef struct {
 
 typedef struct {
 	int size, elements;
-	uint32_t *vector; // vector of element ids
+	UgId *vector; // vector of element ids
 	int *refs, *ordered_refs;
 } UgTree;
 
 typedef struct {
-	UgTree tree;
-} UgCtx;
+	struct _IdTable  *table;
+	UgElem   *array;
+	uint64_t *present, *used;
+	int       cycles;
+} UgElemCache;
+
+typedef struct _UgCtx UgCtx;
 
 // tree implementation
-int ug_tree_init(UgTree *tree, unsigned int size); 
+int ug_tree_init(UgTree *tree, unsigned int size);
 int ug_tree_pack(UgTree *tree);
 int ug_tree_resize(UgTree *tree, unsigned int newsize);
-int ug_tree_add(UgTree *tree, uint32_t elem, int parent);
+int ug_tree_add(UgTree *tree, UgId elem, int parent);
 int ug_tree_prune(UgTree *tree, int ref);
 int ug_tree_subtree_size(UgTree *tree, int ref);
 int ug_tree_children_it(UgTree *tree, int parent, int *cursor);
 int ug_tree_level_order_it(UgTree *tree, int ref, int *cursor);
+int ug_tree_parentof(UgTree *tree, int node);
 int ug_tree_destroy(UgTree *tree);
+
+// cache implementation
+UgElemCache ug_cache_init(void);
+void ug_cache_free(UgElemCache *cache);
+UgElem *ug_cache_search(UgElemCache *cache, UgId id);
+UgElem *ug_cache_insert(UgElemCache *cache, const UgElem *g, uint32_t *index);
+
 
 int ug_init(UgCtx *ctx);
 int ug_destroy(UgCtx *ctx);
+int ug_frame_begin(UgCtx *ctx);
+int ug_frame_end(UgCtx *ctx);
 
 #endif // _UGUI_H
 

@@ -24,13 +24,13 @@
 
 #define HASH_MAXSIZE 4096
 
-// hash table (id -> index)
+// hash table (id -> cache index)
 typedef struct {
-	uint32_t id;
+	UgId id;
 	uint32_t index;
 } IdElem;
 
-typedef struct {
+typedef struct _IdTable {
 	uint32_t items, size, exp;
 	IdElem   bucket[];
 } IdTable;
@@ -62,7 +62,7 @@ void table_destroy(IdTable *ht)
 }
 
 // Find and return the element by pointer
-IdElem *table_search(IdTable *ht, uint32_t id)
+IdElem *table_search(IdTable *ht, UgId id)
 {
 	if (!ht) {
 		return NULL;
@@ -93,7 +93,7 @@ IdElem *table_insert(IdTable *ht, IdElem entry)
 	return r;
 }
 
-IdElem *table_remove(IdTable *ht, uint32_t id)
+IdElem *table_remove(IdTable *ht, UgId id)
 {
 	if (!ht) {
 		return NULL;
@@ -119,13 +119,6 @@ IdElem *table_remove(IdTable *ht, uint32_t id)
 		}                                                                   \
 	} while (0)
 
-typedef struct {
-	IdTable  *table;
-	UgElem   *array;
-	uint64_t *present, *used;
-	int       cycles;
-} UgElemCache;
-
 /* FIXME: check for allocation errors */
 UgElemCache ug_cache_init(void)
 {
@@ -148,7 +141,7 @@ void ug_cache_free(UgElemCache *cache)
 	}
 }
 
-const UgElem *ug_cache_search(UgElemCache *cache, uint32_t id)
+UgElem *ug_cache_search(UgElemCache *cache, UgId id)
 {
 	if (!cache) {
 		return NULL;
@@ -190,7 +183,7 @@ int ug_cache_get_free_spot(UgElemCache *cache)
 	return 0;
 }
 
-const UgElem *ug_cache_insert_at(UgElemCache *cache, const UgElem *g, uint32_t index)
+UgElem *ug_cache_insert_at(UgElemCache *cache, const UgElem *g, uint32_t index)
 {
 	if (!cache) {
 		return NULL;
@@ -211,7 +204,7 @@ const UgElem *ug_cache_insert_at(UgElemCache *cache, const UgElem *g, uint32_t i
 }
 
 // Insert an element in the cache
-const UgElem *ug_cache_insert(UgElemCache *cache, const UgElem *g, int32_t *index)
+UgElem *ug_cache_insert(UgElemCache *cache, const UgElem *g, uint32_t *index)
 {
 	*index = ug_cache_get_free_spot(cache);
 	return ug_cache_insert_at(cache, g, *index);
