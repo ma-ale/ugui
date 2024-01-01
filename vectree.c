@@ -24,7 +24,7 @@ int ug_tree_init(UgTree *tree, unsigned int size)
 	}
 
 	// ordered refs are used in the iterators
-	tree->ordered_refs = malloc(sizeof(int) * size);
+	tree->ordered_refs = malloc(sizeof(int) * (size + 1));
 	if (tree->ordered_refs == NULL) {
 		free(tree->vector);
 		free(tree->refs);
@@ -128,7 +128,7 @@ int ug_tree_resize(UgTree *tree, unsigned int newsize)
 		return -1;
 	}
 
-	int *neworrefs = realloc(tree->ordered_refs, newsize * sizeof(int));
+	int *neworrefs = realloc(tree->ordered_refs, (newsize + 1)* sizeof(int));
 	if (neworrefs == NULL) {
 		return -1;
 	}
@@ -209,9 +209,10 @@ int ug_tree_prune(UgTree *tree, int ref)
 
 	tree->vector[ref] = 0;
 	tree->refs[ref]   = -1;
+	tree->elements--;
 
 	int count = 1;
-	for (int i = 0; i < tree->size; i++) {
+	for (int i = 0; tree->elements > 0 && i < tree->size; i++) {
 		if (tree->refs[i] == ref) {
 			count += ug_tree_prune(tree, i);
 		}
@@ -295,7 +296,7 @@ int ug_tree_level_order_it(UgTree *tree, int ref, int *cursor)
 
 	// TODO: this could also be done when adding or removing elements
 	// first call, create a ref array ordered like we desire
-	if (queue == NULL) {
+	if (*cursor == -1) {
 		*cursor = 0;
 		for (int i = 0; i < tree->size; i++) {
 			queue[i] = -1;
@@ -317,6 +318,8 @@ int ug_tree_level_order_it(UgTree *tree, int ref, int *cursor)
 			ref = queue[off];
 
 		} while (IS_VALID_REF(tree, ref));
+		// This line is why tree->ordered_refs has to be size+1
+		queue[off+1] = -1;
 	}
 
 	// PRINT_ARR(queue, tree->size);
