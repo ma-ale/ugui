@@ -88,6 +88,88 @@ multiple +--------v---------+     |
            +--------------+
 ```
 
+### Layouting
+
+```text
+                         parent div
+[0,0]->+------------------------------------------------+
+       |                                                |
+       |                                                |
+       |                                                |
+       |                                                |
+       |                                                |
+       |                                                |
+       |                                                |
+       |                   space_r                      |
+       |                   space_c                      | begin div1
+       |                                                | ----+
+       |                                                |     |
+       |                                                |     |
+       |                                                |     |
+       |                                                |     |
+       |                                                |     |
+       |                                                |     |
+       |                                                |     |
+       +------------------------------------------------+     |
+                                                              |
+                                                              |
+                         parent div                           |
+[0,0]->+----------------------+-------------------------+     |
+       |                      |                         |     |
+       |                      |                         |     |
+       |                      |                         | <---+
+       |        div 1         |                         | end div1
+       |                      |                         |
+       |                      |                         |
+       |                      |                         |
+       |                      |                         |
+       +----------------------+          space_r        |
+       |                      |                         |
+       |                      |                         | begin div2
+       |                      |                         | ----+
+       |                      |                         |     |
+       |       space_c        |                         |     |
+       |                      |                         |     |
+       |                      |                         |     |
+       |                      |                         |     |
+       +----------------------+-------------------------+     |
+                                                              |
+                                                              |
+                         parent div                           |
+[0,0]->+----------------------+--------+----------------+     |
+       |                      |        |                |     |
+       |                      | div 2  |                |     |
+       |                      |        |                |     |
+       |       div 1          +--------+                |     |
+       |                      |xxxxxxxx|                |     |
+       |                      |xxxxxxxx|                | <---+
+       |                      |xxxxxxxx|                | end div2
+       |                      |xxxxxxxx|                |
+       +----------------------+--------+    space_r     |
+       |                               |                |
+       |                               |                |
+       |                               |                |
+       |                               |                |
+       |             space_c           |                |
+       |                               |                |
+       |                               |                |
+       |                               |                |
+       +-------------------------------+----------------+
+
+           +-+
+           |x|: Lost Space
+           +-+
+```
+
+TODO: handle when the content overflows the div
+- Use a different concept, like a view or relative space, for example the child
+div could have position `[0,0]` but in reality it is relative to the origin of the
+parent div
+- each div could have a view and a total area of the content, when drawing everything
+is clipped to the view and scrollbars are shown
+- individual elements accept dimensions and the x/y coordinates could be interpreted
+as offset if the layout is row/column or absolute coordinates if the leayout is floating
+
 ### Notes
 
 How elements determine if they have focus or not
