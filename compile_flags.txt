@@ -1,4 +1,4 @@
--Iraylib/src
+-Iraylib/include
 -Wall
 -Wextra
 -pedantic

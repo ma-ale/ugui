@@ -1,13 +1,10 @@
-CFLAGS = -Wall -Wextra -pedantic -std=c11 -g -Iraylib/src
+CFLAGS = -Wall -Wextra -pedantic -std=c11 -g -Iraylib/include
 CC = gcc
-LDFLAGS = -Lraylib/src -lm
+LDFLAGS = -Lraylib/lib -lm
 
 all: ugui
 
-raylib/src/libraylib.a: raylib/src/Makefile
-	cd raylib/src; $(MAKE) PLATFORM=PLATFORM_DESKTOP
-
-ugui: ugui.o vectree.o cache.o raylib/src/libraylib.a
+ugui: ugui.o vectree.o cache.o raylib/lib/libraylib.a
 
 ugui.o: ugui.c ugui.h
 

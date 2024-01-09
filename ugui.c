@@ -21,81 +21,91 @@ typedef struct _UgCmd {
 	};
 } UgCmd;
 
-typedef struct _UgStack {
-	int size, count;
-	UgCmd   *stack;
-} UgStack;
+typedef struct _UgFifo {
+	int    size, in, out, count;
+	UgCmd *vec;
+} UgFifo;
 
-int ug_stack_init(UgStack *stack, uint32_t size);
-int ug_stack_free(UgStack *stack);
-int ug_stack_push(UgStack *stack, UgCmd *cmd);
-int ug_stack_pop(UgStack *stack, UgCmd *cmd);
+int ug_fifo_init(UgFifo *fifo, uint32_t size);
+int ug_fifo_free(UgFifo *fifo);
+int ug_fifo_enqueue(UgFifo *fifo, UgCmd *cmd);
+int ug_fifo_dequeue(UgFifo *fifo, UgCmd *cmd);
 
-int ug_stack_init(UgStack *stack, uint32_t size)
+int ug_fifo_init(UgFifo *fifo, uint32_t size)
 {
-	if (stack == NULL) {
+	if (fifo == NULL) {
 		return -1;
 	}
 
-	stack->size  = size;
-	stack->count = 0;
-	stack->stack = calloc(size, sizeof(UgCmd));
+	fifo->size  = size;
+	fifo->in    = 0;
+	fifo->out   = 0;
+	fifo->count = 0;
+	fifo->vec   = calloc(size, sizeof(UgCmd));
 
-	if (stack->stack == NULL) {
+	if (fifo->vec == NULL) {
 		return -1;
 	}
 
 	return 0;
 }
 
-int ug_stack_free(UgStack *stack)
+int ug_fifo_free(UgFifo *fifo)
 {
-	if (stack != NULL && stack->stack != NULL) {
-		free(stack->stack);
-		stack->size  = 0;
-		stack->count = 0;
+	if (fifo != NULL && fifo->vec != NULL) {
+		free(fifo->vec);
+		fifo->size  = 0;
+		fifo->in    = 0;
+		fifo->out   = 0;
+		fifo->count = 0;
 	}
 	return 0;
 }
 
-#define STACK_STEP 10
+#define FIFO_STEP 10
 
-int ug_stack_push(UgStack *stack, UgCmd *cmd)
+int ug_fifo_enqueue(UgFifo *fifo, UgCmd *cmd)
 {
-	if (stack == NULL || cmd == NULL) {
+	if (fifo == NULL || cmd == NULL) {
 		return -1;
 	}
 
-	if (stack->count >= stack->size) {
-		//	UgCmd *tmp = reallocarray(stack->stack, stack->size +
-		// STACK_STEP, sizeof(UgCmd)); 	if (tmp == NULL) { return -1;
+	if (fifo->count >= fifo->size) {
+		//	UgCmd *tmp = reallocarray(fifo->vec, fifo->size +
+		// fifo_STEP, sizeof(UgCmd)); 	if (tmp == NULL) { return -1;
 		//	}
-		//	stack->stack = tmp;
-		//	stack->size += STACK_STEP;
+		//	fifo->vec = tmp;
+		//	fifo->size += fifo_STEP;
 		return -1;
 	}
 
-	stack->stack[stack->count++] = *cmd;
+	fifo->vec[fifo->in] = *cmd;
+
+	fifo->in = (fifo->in + 1) % fifo->size;
+	fifo->count++;
 
 	return 0;
 }
 
-int ug_stack_pop(UgStack *stack, UgCmd *cmd)
+int ug_fifo_dequeue(UgFifo *fifo, UgCmd *cmd)
 {
-	if (stack == NULL || cmd == NULL) {
+	if (fifo == NULL || cmd == NULL) {
 		return -1;
 	}
 
-	if (stack->count <= 0) {
-		//	UgCmd *tmp = reallocarray(stack->stack, stack->size +
-		// STACK_STEP, sizeof(UgCmd)); 	if (tmp == NULL) { return -1;
+	if (fifo->count <= 0) {
+		//	UgCmd *tmp = reallocarray(fifo->vec, fifo->size +
+		// fifo_STEP, sizeof(UgCmd)); 	if (tmp == NULL) { return -1;
 		//	}
-		//	stack->stack = tmp;
-		//	stack->size += STACK_STEP;
+		//	fifo->vec = tmp;
+		//	fifo->size += fifo_STEP;
 		return -1;
 	}
 
-	*cmd = stack->stack[--stack->count];
+	*cmd = fifo->vec[fifo->out];
+
+	fifo->out = (fifo->out + 1) % fifo->size;
+	fifo->count--;
 
 	return 0;
 }
@@ -109,7 +119,7 @@ struct _UgCtx {
 
 	UgTree      tree;
 	UgElemCache cache;
-	UgStack     stack;
+	UgFifo      fifo;
 
 	struct {
 		int width, height;
@@ -158,7 +168,7 @@ int main(void)
 
 		Rectangle r;
 		Color     c;
-		for (UgCmd cmd; ug_stack_pop(&ctx.stack, &cmd) >= 0;) {
+		for (UgCmd cmd; ug_fifo_dequeue(&ctx.fifo, &cmd) >= 0;) {
 			switch (cmd.type) {
 			case CMD_RECT:
 				printf(
@@ -205,7 +215,7 @@ int ug_init(UgCtx *ctx)
 	}
 
 	ug_tree_init(&ctx->tree, MAX_ELEMS);
-	ug_stack_init(&ctx->stack, MAX_CMDS);
+	ug_fifo_init(&ctx->fifo, MAX_CMDS);
 
 	ctx->cache     = ug_cache_init();
 	ctx->layout    = row;
@@ -222,6 +232,7 @@ int ug_destroy(UgCtx *ctx)
 
 	ug_tree_destroy(&ctx->tree);
 	ug_cache_free(&ctx->cache);
+	ug_fifo_free(&ctx->fifo);
 
 	return 0;
 }
@@ -295,13 +306,13 @@ int ug_div_begin(UgCtx *ctx, const char *name, UgRect div)
 	}
 	ctx->div_using = div_node;
 
-//	printf(
-//	    "elem.rect: x=%d x=%d w=%d h=%d\n",
-//	    c_elem->rec.x,
-//	    c_elem->rec.y,
-//	    c_elem->rec.w,
-//	    c_elem->rec.h
-//	);
+	//	printf(
+	//	    "elem.rect: x=%d x=%d w=%d h=%d\n",
+	//	    c_elem->rec.x,
+	//	    c_elem->rec.y,
+	//	    c_elem->rec.w,
+	//	    c_elem->rec.h
+	//	);
 	UgCmd cmd = {
 	    .type = CMD_RECT,
 	    .rect =
@@ -313,7 +324,7 @@ int ug_div_begin(UgCtx *ctx, const char *name, UgRect div)
 		    .color = {0xff, 0x00, 0x00, 0xff}, // red
 		},
 	};
-	ug_stack_push(&ctx->stack, &cmd);
+	ug_fifo_enqueue(&ctx->fifo, &cmd);
 
 	return 0;
 }
