@@ -8,6 +8,20 @@
 #include "raylib.h"
 #include "ugui.h"
 
+#define RGBA(u)                                                                     \
+	(UgColor)                                                                   \
+	{                                                                           \
+		.r = (u >> 24) & 0xff, .g = (u >> 16) & 0xff, .b = (u >> 8) & 0xff, \
+		.a = (u >> 0) & 0xff                                                \
+	}
+#define DIV_FILL                                                                    \
+	(UgRect) { .x = 0, .y = 0, .w = 0, .h = 0 }
+
+#define STACK_STEP 10
+#define MAX_ELEMS  128
+#define MAX_CMDS   256
+#define ROOT_ID    1
+
 typedef struct _UgCmd {
 	enum {
 		CMD_RECT = 0,
@@ -15,8 +29,8 @@ typedef struct _UgCmd {
 
 	union {
 		struct {
-			int32_t x, y, w, h;
-			uint8_t color[4]; // rgba, [0] = r
+			UgRect  rect;
+			UgColor color;
 		} rect;
 	};
 } UgCmd;
@@ -110,6 +124,10 @@ int ug_fifo_dequeue(UgFifo *fifo, UgCmd *cmd)
 	return 0;
 }
 
+enum InputEventFlags {
+	INPUT_CTX_SIZE = 1 << 0, // window size was changed
+};
+
 struct _UgCtx {
 	enum {
 		row = 0,
@@ -125,13 +143,27 @@ struct _UgCtx {
 		int width, height;
 	} size;
 
+	// input structure, it describes the events received between frames
+	struct {
+		uint32_t flags;
+	} input;
+
 	int div_using; // tree node indicating the current active div
 };
 
-int  ug_div_begin(UgCtx *ctx, const char *name, UgRect div);
+// layouting
+int ug_layout_row(void);
+int ug_layout_column(void);
+int ug_layout_floating(void);
+int ug_layout_next_row(void);
+int ug_layout_next_column(void);
+
+int  ug_div_begin(UgCtx *ctx, const char *label, UgRect div);
 int  ug_div_end(UgCtx *ctx);
 int  ug_input_window_size(UgCtx *ctx, int width, int height);
 UgId djb2(const char *str);
+
+int ug_button(UgCtx *ctx, const char *label, UgRect size);
 
 int main(void)
 {
@@ -146,18 +178,21 @@ int main(void)
 	// Main loop
 	while (!WindowShouldClose()) {
 
-		// UI handling
-		ug_frame_begin(&ctx);
-
+		// Input handling
 		if (IsWindowResized()) {
 			width  = GetScreenWidth();
 			height = GetScreenHeight();
 			ug_input_window_size(&ctx, width, height);
 		}
 
-// main div, fill the whole window
-#define DIV_FILL (UgRect) {.x = 0, .y = 0, .w = -1, .h = -1}
+		// UI handling
+		ug_frame_begin(&ctx);
+
+		// main div, fill the whole window
 		ug_div_begin(&ctx, "main", DIV_FILL);
+
+		ug_button(&ctx, "button0", (UgRect) {.w = 100, .h = 16});
+
 		ug_div_end(&ctx);
 
 		ug_frame_end(&ctx);
@@ -166,26 +201,29 @@ int main(void)
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		Rectangle r;
-		Color     c;
+		Color c;
 		for (UgCmd cmd; ug_fifo_dequeue(&ctx.fifo, &cmd) >= 0;) {
 			switch (cmd.type) {
 			case CMD_RECT:
-				printf(
-				    "rect x=%d y=%d w=%d h=%d\n",
-				    cmd.rect.x,
-				    cmd.rect.y,
-				    cmd.rect.w,
-				    cmd.rect.h
-				);
+				// printf(
+				//     "rect x=%d y=%d w=%d h=%d\n",
+				//     cmd.rect.rect.x,
+				//     cmd.rect.rect.y,
+				//     cmd.rect.rect.w,
+				//     cmd.rect.rect.h
+				//);
 				c = (Color) {
-				    .r = cmd.rect.color[0],
-				    .g = cmd.rect.color[1],
-				    .b = cmd.rect.color[2],
-				    .a = cmd.rect.color[3],
+				    .r = cmd.rect.color.r,
+				    .g = cmd.rect.color.g,
+				    .b = cmd.rect.color.b,
+				    .a = cmd.rect.color.a,
 				};
 				DrawRectangle(
-				    cmd.rect.x, cmd.rect.y, cmd.rect.w, cmd.rect.h, c
+				    cmd.rect.rect.x,
+				    cmd.rect.rect.y,
+				    cmd.rect.rect.w,
+				    cmd.rect.rect.h,
+				    c
 				);
 				break;
 			default:
@@ -204,9 +242,6 @@ int main(void)
 	ug_destroy(&ctx);
 	return 0;
 }
-
-#define MAX_ELEMS 128
-#define MAX_CMDS  256
 
 int ug_init(UgCtx *ctx)
 {
@@ -237,9 +272,80 @@ int ug_destroy(UgCtx *ctx)
 	return 0;
 }
 
-int ug_frame_begin(UgCtx *ctx) { return 0; }
+void print_tree(UgCtx *ctx)
+{
+	printf("ctx->tree: [");
+	for (int c = -1, x; (x = ug_tree_level_order_it(&ctx->tree, 0, &c)) != -1;) {
+		printf("%d, ", x);
+	}
+	printf("-1]\n");
+}
 
-int ug_frame_end(UgCtx *ctx) { return 0; }
+int ug_frame_begin(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	// 1. Create the root div element
+	UgRect space = {
+	    .x = 0,
+	    .y = 0,
+	    .w = ctx->size.width,
+	    .h = ctx->size.height,
+	};
+	UgElem root = {
+	    .id    = ROOT_ID,
+	    .type  = ETYPE_DIV,
+	    .flags = 0,
+	    .rect  = space,
+	    .div =
+		{
+		    .layout   = DIV_LAYOUT_ROW,
+		    .origin_r = {0},
+		    .origin_c = {0},
+		    .color_bg = {0},
+		},
+	};
+	// The root should have the updated flag only if the size of the window
+	// was changed between frames, this propagates an element size recalculation
+	// down the element tree
+	if (ctx->input.flags & INPUT_CTX_SIZE) {
+		root.flags |= ELEM_UPDATED;
+	}
+
+	// FIXME: check errors
+	uint32_t cache_idx;
+	ug_cache_insert(&ctx->cache, &root, &cache_idx);
+	ctx->div_using = ug_tree_add(&ctx->tree, root.id, 0);
+
+	if (ctx->div_using < 0) {
+		printf("why?\n");
+		return -1;
+	}
+
+	// print_tree(ctx);
+
+	// The root element does not push anything to the stack
+	// TODO: add a background color taken from a theme or config
+
+	return 0;
+}
+
+int ug_frame_end(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	// 1. clear the tree
+	ug_tree_prune(&ctx->tree, 0);
+
+	// 2. clear input fields
+	ctx->input.flags = 0;
+
+	return 0;
+}
 
 int ug_input_window_size(UgCtx *ctx, int width, int height)
 {
@@ -273,28 +379,34 @@ UgId djb2(const char *str)
 	return hash;
 }
 
-int ug_div_begin(UgCtx *ctx, const char *name, UgRect div)
+int ug_div_begin(UgCtx *ctx, const char *label, UgRect div)
 {
-	if (ctx == NULL || name == NULL) {
+	if (ctx == NULL || label == NULL) {
 		return -1;
 	}
 
-	UgId id = djb2(name);
+	UgId id = djb2(label);
+
+	// TODO: do layouting if the element is new or the parent has updated
+	int is_new_elem = 0;
 
 	// add the element if it does not exist
 	UgElem *c_elem = ug_cache_search(&ctx->cache, id);
 	if (c_elem == NULL) {
-		UgElem elem = {
-		    .id   = id,
-		    .type = ETYPE_DIV,
-		    .rec  = (UgRect) {
-			 .x = div.x,
-			 .y = div.y,
-			 .w = div.w >= 0 ? div.w : ctx->size.width,
-			 .h = div.h >= 0 ? div.h : ctx->size.height,
-                    }};
+		UgElem   elem = {0};
 		uint32_t c_idx;
-		c_elem = ug_cache_insert(&ctx->cache, &elem, &c_idx);
+		c_elem      = ug_cache_insert(&ctx->cache, &elem, &c_idx);
+		is_new_elem = 1;
+	}
+
+	// take a reference to the parent
+	// FIXME: if the tree held pointers to the elements then no more
+	//        redundant cache search
+	UgId    parent_id = ctx->tree.vector[ctx->div_using];
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
 	}
 
 	// FIXME: why save the id in the tree and not something more direct like
@@ -306,22 +418,78 @@ int ug_div_begin(UgCtx *ctx, const char *name, UgRect div)
 	}
 	ctx->div_using = div_node;
 
-	//	printf(
-	//	    "elem.rect: x=%d x=%d w=%d h=%d\n",
-	//	    c_elem->rec.x,
-	//	    c_elem->rec.y,
-	//	    c_elem->rec.w,
-	//	    c_elem->rec.h
-	//	);
+	// print_tree(ctx);
+
+	// layouting
+	// TODO: do layout
+	if (is_new_elem || parent->flags & ELEM_UPDATED) {
+		c_elem->id   = id;
+		c_elem->type = ETYPE_DIV;
+
+		// 1. Select the right origin offset
+		switch (parent->div.layout) {
+		case DIV_LAYOUT_ROW:
+			c_elem->rect = (UgRect) {
+			    .x = parent->div.origin_r.x + div.x,
+			    .y = parent->div.origin_r.y + div.y,
+			};
+			break;
+		case DIV_LAYOUT_COLUMN:
+			c_elem->rect = (UgRect) {
+			    .x = parent->div.origin_c.x + div.x,
+			    .y = parent->div.origin_c.y + div.y,
+			};
+			break;
+		case DIV_LAYOUT_FLOATING:
+			c_elem->rect = (UgRect) {
+			    .x = div.x,
+			    .y = div.y,
+			};
+			break;
+		default:
+			// Error
+			break;
+		}
+
+		// 2. Calculate width & height
+		// TODO: what about negative values?
+		c_elem->rect.w = div.w != 0 ? div.w : parent->rect.w;
+		c_elem->rect.h = div.h != 0 ? div.h : parent->rect.h;
+
+		// 3. Mark the element as updated
+		c_elem->flags |= ELEM_UPDATED;
+
+		// 4. Set div information
+		c_elem->div.layout   = parent->div.layout;
+		c_elem->div.origin_c = (UgPoint) {
+		    .x = c_elem->rect.x,
+		    .y = c_elem->rect.y,
+		};
+		c_elem->div.origin_r = c_elem->div.origin_c;
+		c_elem->div.color_bg = RGBA(0xff0000ff);
+
+		// 4. Update the origins of the parent
+		parent->div.origin_r = (UgPoint) {
+		    .x = c_elem->rect.x + c_elem->rect.w,
+		    .y = c_elem->rect.y,
+		};
+		parent->div.origin_c = (UgPoint) {
+		    .x = c_elem->rect.x,
+		    .y = c_elem->rect.y + c_elem->rect.h,
+		};
+	} else {
+		// TODO: check active
+		// TODO: check resizeable
+		// TODO: check scrollbars
+	}
+
+	// Add the background to the draw stack
 	UgCmd cmd = {
 	    .type = CMD_RECT,
 	    .rect =
 		{
-		    .x     = c_elem->rec.x,
-		    .y     = c_elem->rec.y,
-		    .w     = c_elem->rec.w,
-		    .h     = c_elem->rec.h,
-		    .color = {0xff, 0x00, 0x00, 0xff}, // red
+		    .rect  = c_elem->rect,
+		    .color = c_elem->div.color_bg,
 		},
 	};
 	ug_fifo_enqueue(&ctx->fifo, &cmd);
@@ -333,5 +501,101 @@ int ug_div_end(UgCtx *ctx)
 {
 	// the div_using returns to the parent of the current one
 	ctx->div_using = ug_tree_parentof(&ctx->tree, ctx->div_using);
+	return 0;
+}
+
+int ug_button(UgCtx *ctx, const char *label, UgRect size)
+{
+	if (ctx == NULL || label == NULL) {
+		return -1;
+	}
+
+	UgId id = djb2(label);
+
+	// TODO: do layouting if the element is new or the parent has updated
+	int is_new_elem = 0;
+
+	// add the element if it does not exist
+	UgElem *c_elem = ug_cache_search(&ctx->cache, id);
+	if (c_elem == NULL) {
+		UgElem   elem = {0};
+		uint32_t c_idx;
+		c_elem      = ug_cache_insert(&ctx->cache, &elem, &c_idx);
+		is_new_elem = 1;
+	}
+
+	// take a reference to the parent
+	// FIXME: if the tree held pointers to the elements then no more
+	//        redundant cache search
+	UgId    parent_id = ctx->tree.vector[ctx->div_using];
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	// if the element is new or the parent was updated then redo layout
+	if (is_new_elem || parent->flags & ELEM_UPDATED) {
+		c_elem->id   = id;
+		c_elem->type = ETYPE_BUTTON;
+
+		// 1. Select the right origin offset
+		switch (parent->div.layout) {
+		case DIV_LAYOUT_ROW:
+			c_elem->rect = (UgRect) {
+			    .x = parent->div.origin_r.x + size.x,
+			    .y = parent->div.origin_r.y + size.y,
+			};
+			break;
+		case DIV_LAYOUT_COLUMN:
+			c_elem->rect = (UgRect) {
+			    .x = parent->div.origin_c.x + size.x,
+			    .y = parent->div.origin_c.y + size.y,
+			};
+			break;
+		case DIV_LAYOUT_FLOATING:
+			c_elem->rect = (UgRect) {
+			    .x = size.x,
+			    .y = size.y,
+			};
+			break;
+		default:
+			// Error
+			break;
+		}
+
+		// 2. Calculate width & height
+		// TODO: what about negative values?
+		c_elem->rect.w = size.w != 0 ? size.w : parent->rect.w;
+		c_elem->rect.h = size.h != 0 ? size.h : parent->rect.h;
+
+		/// Not a div, so not needed
+		// 3. Mark the element as updated
+		// 4. Set div information
+
+		// 4. Update the origins of the parent
+		parent->div.origin_r = (UgPoint) {
+		    .x = c_elem->rect.x + c_elem->rect.w,
+		    .y = c_elem->rect.y,
+		};
+		parent->div.origin_c = (UgPoint) {
+		    .x = c_elem->rect.x,
+		    .y = c_elem->rect.y + c_elem->rect.h,
+		};
+	} else {
+		// TODO: Check for interactions
+	}
+
+	// Draw the button
+	UgCmd cmd = {
+	    .type = CMD_RECT,
+	    .rect =
+		{
+		    .rect  = c_elem->rect,
+		    .color = RGBA(0x0000ffff),
+		},
+	};
+	ug_fifo_enqueue(&ctx->fifo, &cmd);
+
 	return 0;
 }
