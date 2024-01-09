@@ -20,14 +20,34 @@ typedef uint64_t UgId;
 typedef enum {
 	ETYPE_NONE = 0,
 	ETYPE_DIV,
+	ETYPE_BUTTON,
 } UgElemType;
 
+enum UgElemFlags {
+	ELEM_UPDATED = 1 << 0,
+};
+
 typedef struct {
-	UgId id;
-	UgRect rec;
+	UgId     id;
+	uint32_t flags;
+	UgRect   rect;
+
 	union {
-		uint32_t type_int;
+		uint32_t   type_int;
 		UgElemType type;
+	};
+
+	// type-specific fields
+	union {
+		struct {
+			enum {
+				DIV_LAYOUT_ROW = 0,
+				DIV_LAYOUT_COLUMN,
+				DIV_LAYOUT_FLOATING,
+			} layout;
+			UgPoint origin_r, origin_c;
+			UgColor color_bg;
+		} div; // Div
 	};
 } UgElem;
 
@@ -35,16 +55,16 @@ typedef struct {
 // TODO: add a fill index to skip some searching for free spots
 
 typedef struct {
-	int size, elements;
+	int   size, elements;
 	UgId *vector; // vector of element ids
-	int *refs, *ordered_refs;
+	int  *refs, *ordered_refs;
 } UgTree;
 
 typedef struct {
-	struct _IdTable  *table;
-	UgElem   *array;
-	uint64_t *present, *used;
-	int       cycles;
+	struct _IdTable *table;
+	UgElem          *array;
+	uint64_t        *present, *used;
+	int              cycles;
 } UgElemCache;
 
 typedef struct _UgCtx UgCtx;
@@ -63,10 +83,9 @@ int ug_tree_destroy(UgTree *tree);
 
 // cache implementation
 UgElemCache ug_cache_init(void);
-void ug_cache_free(UgElemCache *cache);
-UgElem *ug_cache_search(UgElemCache *cache, UgId id);
-UgElem *ug_cache_insert(UgElemCache *cache, const UgElem *g, uint32_t *index);
-
+void        ug_cache_free(UgElemCache *cache);
+UgElem     *ug_cache_search(UgElemCache *cache, UgId id);
+UgElem     *ug_cache_insert(UgElemCache *cache, const UgElem *g, uint32_t *index);
 
 int ug_init(UgCtx *ctx);
 int ug_destroy(UgCtx *ctx);
@@ -74,4 +93,3 @@ int ug_frame_begin(UgCtx *ctx);
 int ug_frame_end(UgCtx *ctx);
 
 #endif // _UGUI_H
-
