@@ -26,7 +26,7 @@
 
 // hash table (id -> cache index)
 typedef struct {
-	UgId id;
+	UgId     id;
 	uint32_t index;
 } IdElem;
 
@@ -204,9 +204,8 @@ UgElem *ug_cache_insert_at(UgElemCache *cache, const UgElem *g, uint32_t index)
 }
 
 // Insert an element in the cache
-UgElem *ug_cache_insert(UgElemCache *cache, const UgElem *g, uint32_t *index)
+UgElem *ug_cache_insert_new(UgElemCache *cache, const UgElem *g, uint32_t *index)
 {
 	*index = ug_cache_get_free_spot(cache);
 	return ug_cache_insert_at(cache, g, *index);
 }
-

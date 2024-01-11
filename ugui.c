@@ -17,6 +17,13 @@
 #define DIV_FILL                                                                    \
 	(UgRect) { .x = 0, .y = 0, .w = 0, .h = 0 }
 
+#define MARK()                                                                      \
+	do {                                                                        \
+		printf("lmao\n");                                                   \
+	} while (0)
+
+#define FTEST(e, f) ((e)->flags & (f))
+
 #define STACK_STEP 10
 #define MAX_ELEMS  128
 #define MAX_CMDS   256
@@ -162,8 +169,11 @@ int  ug_div_begin(UgCtx *ctx, const char *label, UgRect div);
 int  ug_div_end(UgCtx *ctx);
 int  ug_input_window_size(UgCtx *ctx, int width, int height);
 UgId djb2(const char *str);
+UgId FNV_1a(const char *str);
 
 int ug_button(UgCtx *ctx, const char *label, UgRect size);
+
+UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect);
 
 int main(void)
 {
@@ -190,28 +200,43 @@ int main(void)
 
 		// main div, fill the whole window
 		ug_div_begin(&ctx, "main", DIV_FILL);
-
-		ug_button(&ctx, "button0", (UgRect) {.w = 100, .h = 16});
-
+		{
+			ug_button(
+			    &ctx,
+			    "batt342353453452wrwea",
+			    (UgRect) {.y = 100, .x = 130, .w = 100, .h = 16}
+			);
+			ug_button(
+			    &ctx,
+			    "arieasd3ree2234tast",
+			    (UgRect) {.x = 10, .w = 30, .h = 30}
+			);
+			ug_button(
+			    &ctx,
+			    "bughsdfsfdstton2",
+			    (UgRect) {.x = 10, .w = 30, .h = 30}
+			);
+		}
 		ug_div_end(&ctx);
 
 		ug_frame_end(&ctx);
 
 		// drawing
 		BeginDrawing();
-		ClearBackground(BLACK);
+		// ClearBackground(BLACK);
 
+		printf("----- Draw Begin -----\n");
 		Color c;
 		for (UgCmd cmd; ug_fifo_dequeue(&ctx.fifo, &cmd) >= 0;) {
 			switch (cmd.type) {
 			case CMD_RECT:
-				// printf(
-				//     "rect x=%d y=%d w=%d h=%d\n",
-				//     cmd.rect.rect.x,
-				//     cmd.rect.rect.y,
-				//     cmd.rect.rect.w,
-				//     cmd.rect.rect.h
-				//);
+				printf(
+				    "draw rect x=%d y=%d w=%d h=%d\n",
+				    cmd.rect.rect.x,
+				    cmd.rect.rect.y,
+				    cmd.rect.rect.w,
+				    cmd.rect.rect.h
+				);
 				c = (Color) {
 				    .r = cmd.rect.color.r,
 				    .g = cmd.rect.color.g,
@@ -231,6 +256,7 @@ int main(void)
 				break;
 			}
 		}
+		printf("----- Draw End -----\n\n");
 
 		EndDrawing();
 
@@ -241,6 +267,24 @@ int main(void)
 
 	ug_destroy(&ctx);
 	return 0;
+}
+
+// search the element of the corresponding id in the cache, if no element is found
+// insert a new one of that id. Return the pointer to the element
+int search_or_insert(UgCtx *ctx, UgElem **elem, UgId id)
+{
+	int      is_new = 0;
+	uint32_t cache_idx;
+
+	UgElem *c_elem = ug_cache_search(&ctx->cache, id);
+	if (c_elem == NULL) {
+		UgElem tmp = {.id = id};
+		c_elem     = ug_cache_insert_new(&ctx->cache, &tmp, &cache_idx);
+		is_new     = 1;
+	}
+
+	*elem = c_elem;
+	return is_new;
 }
 
 int ug_init(UgCtx *ctx)
@@ -276,9 +320,14 @@ void print_tree(UgCtx *ctx)
 {
 	printf("ctx->tree: [");
 	for (int c = -1, x; (x = ug_tree_level_order_it(&ctx->tree, 0, &c)) != -1;) {
-		printf("%d, ", x);
+		printf(
+		    "[%d:%d,%.4lx], ",
+		    x,
+		    ug_tree_parentof(&ctx->tree, x),
+		    ug_tree_get(&ctx->tree, x) & 0xffff
+		);
 	}
-	printf("-1]\n");
+	printf("[-1]]\n");
 }
 
 int ug_frame_begin(UgCtx *ctx)
@@ -315,8 +364,12 @@ int ug_frame_begin(UgCtx *ctx)
 	}
 
 	// FIXME: check errors
-	uint32_t cache_idx;
-	ug_cache_insert(&ctx->cache, &root, &cache_idx);
+	UgElem *c_elem;
+	int     is_new = search_or_insert(ctx, &c_elem, root.id);
+	if (is_new || FTEST(&root, ELEM_UPDATED)) {
+		*c_elem = root;
+	}
+
 	ctx->div_using = ug_tree_add(&ctx->tree, root.id, 0);
 
 	if (ctx->div_using < 0) {
@@ -328,6 +381,8 @@ int ug_frame_begin(UgCtx *ctx)
 
 	// The root element does not push anything to the stack
 	// TODO: add a background color taken from a theme or config
+
+	printf("##### Frame Begin #####\n");
 
 	return 0;
 }
@@ -344,6 +399,7 @@ int ug_frame_end(UgCtx *ctx)
 	// 2. clear input fields
 	ctx->input.flags = 0;
 
+	printf("##### Frame End #####\n\n");
 	return 0;
 }
 
@@ -367,6 +423,20 @@ int ug_input_window_size(UgCtx *ctx, int width, int height)
 	return 0;
 }
 
+UgId FNV_1a(const char *str)
+{
+	const uint64_t fnv_off   = 0xcbf29ce484222325;
+	const uint64_t fnv_prime = 0x100000001b3;
+
+	uint64_t hash = fnv_off;
+	for (uint32_t c; (c = str[0]) != 0; str++) {
+		hash ^= c;
+		hash *= fnv_prime;
+	}
+
+	return hash;
+}
+
 UgId djb2(const char *str)
 {
 	uint64_t hash = 5381;
@@ -385,98 +455,55 @@ int ug_div_begin(UgCtx *ctx, const char *label, UgRect div)
 		return -1;
 	}
 
-	UgId id = djb2(label);
+	UgId id = FNV_1a(label);
 
-	// TODO: do layouting if the element is new or the parent has updated
-	int is_new_elem = 0;
+	UgElem *c_elem;
+	int     is_new = search_or_insert(ctx, &c_elem, id);
 
-	// add the element if it does not exist
-	UgElem *c_elem = ug_cache_search(&ctx->cache, id);
-	if (c_elem == NULL) {
-		UgElem   elem = {0};
-		uint32_t c_idx;
-		c_elem      = ug_cache_insert(&ctx->cache, &elem, &c_idx);
-		is_new_elem = 1;
+	// FIXME: why save the id in the tree and not something more direct like
+	//        the element pointer or the index into the cache vector?
+	int div_node = ug_tree_add(&ctx->tree, id, ctx->div_using);
+	if (div_node < 0) {
+		// do something
+		printf("Error adding to tree\n");
 	}
 
 	// take a reference to the parent
 	// FIXME: if the tree held pointers to the elements then no more
 	//        redundant cache search
-	UgId    parent_id = ctx->tree.vector[ctx->div_using];
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
 	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
 	if (parent == NULL) {
 		// Error, did you forget to do frame_begin()?
 		return -1;
 	}
 
-	// FIXME: why save the id in the tree and not something more direct like
-	//        the element pointer or the index into the cache vector?
-	int div_node = ug_tree_add(&ctx->tree, c_elem->id, ctx->div_using);
-	if (div_node < 0) {
-		// do something
-		printf("Error adding to tree\n");
-	}
+	print_tree(ctx);
+
+	// Use the current div
 	ctx->div_using = div_node;
 
-	// print_tree(ctx);
+	// 1. Fill the element fields
+	// this resets the flags
+	c_elem->type  = ETYPE_DIV;
+	c_elem->flags = 0;
 
-	// layouting
-	// TODO: do layout
-	if (is_new_elem || parent->flags & ELEM_UPDATED) {
-		c_elem->id   = id;
-		c_elem->type = ETYPE_DIV;
-
-		// 1. Select the right origin offset
-		switch (parent->div.layout) {
-		case DIV_LAYOUT_ROW:
-			c_elem->rect = (UgRect) {
-			    .x = parent->div.origin_r.x + div.x,
-			    .y = parent->div.origin_r.y + div.y,
-			};
-			break;
-		case DIV_LAYOUT_COLUMN:
-			c_elem->rect = (UgRect) {
-			    .x = parent->div.origin_c.x + div.x,
-			    .y = parent->div.origin_c.y + div.y,
-			};
-			break;
-		case DIV_LAYOUT_FLOATING:
-			c_elem->rect = (UgRect) {
-			    .x = div.x,
-			    .y = div.y,
-			};
-			break;
-		default:
-			// Error
-			break;
-		}
-
-		// 2. Calculate width & height
-		// TODO: what about negative values?
-		c_elem->rect.w = div.w != 0 ? div.w : parent->rect.w;
-		c_elem->rect.h = div.h != 0 ? div.h : parent->rect.h;
+	// do layout and update flags only if the element was updated
+	if (is_new || FTEST(parent, ELEM_UPDATED)) {
+		// 2. layout the element
+		c_elem->rect = position_element(ctx, parent, div);
 
 		// 3. Mark the element as updated
 		c_elem->flags |= ELEM_UPDATED;
 
-		// 4. Set div information
+		// 4. Fill the div fields
 		c_elem->div.layout   = parent->div.layout;
 		c_elem->div.origin_c = (UgPoint) {
 		    .x = c_elem->rect.x,
 		    .y = c_elem->rect.y,
 		};
-		c_elem->div.origin_r = c_elem->div.origin_c;
 		c_elem->div.color_bg = RGBA(0xff0000ff);
-
-		// 4. Update the origins of the parent
-		parent->div.origin_r = (UgPoint) {
-		    .x = c_elem->rect.x + c_elem->rect.w,
-		    .y = c_elem->rect.y,
-		};
-		parent->div.origin_c = (UgPoint) {
-		    .x = c_elem->rect.x,
-		    .y = c_elem->rect.y + c_elem->rect.h,
-		};
+		c_elem->div.origin_r = c_elem->div.origin_c;
 	} else {
 		// TODO: check active
 		// TODO: check resizeable
@@ -504,84 +531,99 @@ int ug_div_end(UgCtx *ctx)
 	return 0;
 }
 
+// position the rectangle inside the parent according to the layout
+UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect)
+{
+	UgRect  elem_rect = {0};
+	UgPoint origin    = {0};
+
+	// 1. Select the right origin
+	switch (parent->div.layout) {
+	case DIV_LAYOUT_ROW:
+		origin = parent->div.origin_r;
+		break;
+	case DIV_LAYOUT_COLUMN:
+		origin = parent->div.origin_c;
+		break;
+	case DIV_LAYOUT_FLOATING: // none
+	default:
+		// Error
+		break;
+	}
+
+	// 2. Position the rect
+	elem_rect.x = origin.x + rect.x;
+	elem_rect.y = origin.y + rect.y;
+
+	// 3. Calculate width & height
+	// TODO: what about negative values?
+	// FIXME: account for origin offset!!
+	elem_rect.w = rect.w > 0 ? rect.w : parent->rect.w;
+	elem_rect.h = rect.h > 0 ? rect.h : parent->rect.h;
+
+	// 4. Update the origins of the parent
+	parent->div.origin_r = (UgPoint) {
+	    .x = elem_rect.x + elem_rect.w,
+	    .y = elem_rect.y,
+	};
+	parent->div.origin_c = (UgPoint) {
+	    .x = elem_rect.x,
+	    .y = elem_rect.y + elem_rect.h,
+	};
+
+	/*
+	        printf(
+	            "positioning rect: %lx {%d %d %d %d}(%d %d %d %d) -> {%d %d %d
+	   %d}\n", parent->id, rect.x, rect.y, rect.w, rect.h, parent->rect.x,
+	            parent->rect.y,
+	            parent->rect.w,
+	            parent->rect.h,
+	            elem_rect.x,
+	            elem_rect.y,
+	            elem_rect.w,
+	            elem_rect.h
+	        );
+	*/
+	return elem_rect;
+}
+
 int ug_button(UgCtx *ctx, const char *label, UgRect size)
 {
 	if (ctx == NULL || label == NULL) {
 		return -1;
 	}
 
-	UgId id = djb2(label);
+	UgId id = FNV_1a(label);
 
 	// TODO: do layouting if the element is new or the parent has updated
-	int is_new_elem = 0;
+	UgElem *c_elem;
+	int     is_new = search_or_insert(ctx, &c_elem, id);
 
-	// add the element if it does not exist
-	UgElem *c_elem = ug_cache_search(&ctx->cache, id);
-	if (c_elem == NULL) {
-		UgElem   elem = {0};
-		uint32_t c_idx;
-		c_elem      = ug_cache_insert(&ctx->cache, &elem, &c_idx);
-		is_new_elem = 1;
-	}
+	// add it to the tree
+	ug_tree_add(&ctx->tree, id, ctx->div_using);
+	print_tree(ctx);
 
 	// take a reference to the parent
 	// FIXME: if the tree held pointers to the elements then no more
 	//        redundant cache search
-	UgId    parent_id = ctx->tree.vector[ctx->div_using];
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
 	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
 	if (parent == NULL) {
 		// Error, did you forget to do frame_begin()?
 		return -1;
 	}
 
+	// 1. Fill the element fields
+	// this resets the flags
+	c_elem->type  = ETYPE_BUTTON;
+	c_elem->flags = 0;
+
 	// if the element is new or the parent was updated then redo layout
-	if (is_new_elem || parent->flags & ELEM_UPDATED) {
-		c_elem->id   = id;
-		c_elem->type = ETYPE_BUTTON;
+	if (is_new || parent->flags & ELEM_UPDATED) {
+		// 2. Layout
+		c_elem->rect = position_element(ctx, parent, size);
 
-		// 1. Select the right origin offset
-		switch (parent->div.layout) {
-		case DIV_LAYOUT_ROW:
-			c_elem->rect = (UgRect) {
-			    .x = parent->div.origin_r.x + size.x,
-			    .y = parent->div.origin_r.y + size.y,
-			};
-			break;
-		case DIV_LAYOUT_COLUMN:
-			c_elem->rect = (UgRect) {
-			    .x = parent->div.origin_c.x + size.x,
-			    .y = parent->div.origin_c.y + size.y,
-			};
-			break;
-		case DIV_LAYOUT_FLOATING:
-			c_elem->rect = (UgRect) {
-			    .x = size.x,
-			    .y = size.y,
-			};
-			break;
-		default:
-			// Error
-			break;
-		}
-
-		// 2. Calculate width & height
-		// TODO: what about negative values?
-		c_elem->rect.w = size.w != 0 ? size.w : parent->rect.w;
-		c_elem->rect.h = size.h != 0 ? size.h : parent->rect.h;
-
-		/// Not a div, so not needed
-		// 3. Mark the element as updated
-		// 4. Set div information
-
-		// 4. Update the origins of the parent
-		parent->div.origin_r = (UgPoint) {
-		    .x = c_elem->rect.x + c_elem->rect.w,
-		    .y = c_elem->rect.y,
-		};
-		parent->div.origin_c = (UgPoint) {
-		    .x = c_elem->rect.x,
-		    .y = c_elem->rect.y + c_elem->rect.h,
-		};
+		// 3. TODO: Fill the button specific fields
 	} else {
 		// TODO: Check for interactions
 	}

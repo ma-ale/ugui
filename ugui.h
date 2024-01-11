@@ -28,23 +28,20 @@ enum UgElemFlags {
 };
 
 typedef struct {
-	UgId     id;
-	uint32_t flags;
-	UgRect   rect;
-
-	union {
-		uint32_t   type_int;
-		UgElemType type;
-	};
+	UgId       id;
+	uint32_t   flags;
+	UgRect     rect;
+	UgElemType type;
 
 	// type-specific fields
 	union {
-		struct {
+		struct UgDiv {
 			enum {
 				DIV_LAYOUT_ROW = 0,
 				DIV_LAYOUT_COLUMN,
 				DIV_LAYOUT_FLOATING,
 			} layout;
+
 			UgPoint origin_r, origin_c;
 			UgColor color_bg;
 		} div; // Div
@@ -70,22 +67,23 @@ typedef struct {
 typedef struct _UgCtx UgCtx;
 
 // tree implementation
-int ug_tree_init(UgTree *tree, unsigned int size);
-int ug_tree_pack(UgTree *tree);
-int ug_tree_resize(UgTree *tree, unsigned int newsize);
-int ug_tree_add(UgTree *tree, UgId elem, int parent);
-int ug_tree_prune(UgTree *tree, int ref);
-int ug_tree_subtree_size(UgTree *tree, int ref);
-int ug_tree_children_it(UgTree *tree, int parent, int *cursor);
-int ug_tree_level_order_it(UgTree *tree, int ref, int *cursor);
-int ug_tree_parentof(UgTree *tree, int node);
-int ug_tree_destroy(UgTree *tree);
+int  ug_tree_init(UgTree *tree, unsigned int size);
+int  ug_tree_pack(UgTree *tree);
+int  ug_tree_resize(UgTree *tree, unsigned int newsize);
+int  ug_tree_add(UgTree *tree, UgId elem, int parent);
+int  ug_tree_prune(UgTree *tree, int ref);
+int  ug_tree_subtree_size(UgTree *tree, int ref);
+int  ug_tree_children_it(UgTree *tree, int parent, int *cursor);
+int  ug_tree_level_order_it(UgTree *tree, int ref, int *cursor);
+int  ug_tree_parentof(UgTree *tree, int node);
+int  ug_tree_destroy(UgTree *tree);
+UgId ug_tree_get(UgTree *tree, int node);
 
 // cache implementation
 UgElemCache ug_cache_init(void);
 void        ug_cache_free(UgElemCache *cache);
 UgElem     *ug_cache_search(UgElemCache *cache, UgId id);
-UgElem     *ug_cache_insert(UgElemCache *cache, const UgElem *g, uint32_t *index);
+UgElem *ug_cache_insert_new(UgElemCache *cache, const UgElem *g, uint32_t *index);
 
 int ug_init(UgCtx *ctx);
 int ug_destroy(UgCtx *ctx);

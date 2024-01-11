@@ -128,7 +128,7 @@ int ug_tree_resize(UgTree *tree, unsigned int newsize)
 		return -1;
 	}
 
-	int *neworrefs = realloc(tree->ordered_refs, (newsize + 1)* sizeof(int));
+	int *neworrefs = realloc(tree->ordered_refs, (newsize + 1) * sizeof(int));
 	if (neworrefs == NULL) {
 		return -1;
 	}
@@ -319,7 +319,7 @@ int ug_tree_level_order_it(UgTree *tree, int ref, int *cursor)
 
 		} while (IS_VALID_REF(tree, ref));
 		// This line is why tree->ordered_refs has to be size+1
-		queue[off+1] = -1;
+		queue[off + 1] = -1;
 	}
 
 	// PRINT_ARR(queue, tree->size);
@@ -344,4 +344,12 @@ int ug_tree_parentof(UgTree *tree, int node)
 		return -1;
 	}
 	return tree->refs[node];
+}
+
+UgId ug_tree_get(UgTree *tree, int node)
+{
+	if (tree == NULL || !IS_VALID_REF(tree, node)) {
+		return 0;
+	}
+	return tree->vector[node];
 }
