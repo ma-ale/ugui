@@ -150,8 +150,13 @@ struct _UgCtx {
 		int width, height;
 	} size;
 
-	struct {
-		UgPoint margin;
+	struct { // css box model
+		UgRect  padding;
+		UgRect  border;
+		UgRect  margin;
+		UgColor bgcolor; // background color
+		UgColor fgcolor; // foreground color
+		UgColor bcolor;  // border color
 	} style;
 
 	// input structure, it describes the events received between frames
@@ -316,7 +321,13 @@ int ug_init(UgCtx *ctx)
 	ctx->div_using = 0;
 
 	// TODO: add style config
-	ctx->style.margin = (UgPoint) {2, 2};
+	ctx->style.margin  = (UgRect) {1, 1, 1, 1};
+	ctx->style.padding = (UgRect) {0};
+	ctx->style.border  = (UgRect) {0};
+
+	ctx->style.bgcolor = (UgColor) {0};
+	ctx->style.fgcolor = (UgColor) {0};
+	ctx->style.bcolor  = (UgColor) {0};
 
 	return 0;
 }
@@ -585,15 +596,28 @@ UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style)
 	};
 
 	// if using the style then apply margins
+	// FIXME: this does not work
 	if (style && parent->div.layout != DIV_LAYOUT_FLOATING) {
 		elem_rect.x += ctx->style.margin.x;
 		elem_rect.y += ctx->style.margin.y;
 
-		parent->div.origin_r.x += ctx->style.margin.x;
-		// parent->div.origin_r.y += ctx->style.margin.y;
+		// total keep-out borders
+		UgRect margin_tot = {
+		    .x = ctx->style.padding.x + ctx->style.border.x +
+		         ctx->style.margin.x,
+		    .y = ctx->style.padding.y + ctx->style.border.y +
+		         ctx->style.margin.y,
+		    .w = ctx->style.padding.w + ctx->style.border.x +
+		         ctx->style.margin.w,
+		    .h = ctx->style.padding.h + ctx->style.border.x +
+		         ctx->style.margin.h,
+		};
 
-		// parent->div.origin_c.x += ctx->style.margin.x;
-		parent->div.origin_c.y += ctx->style.margin.y;
+		parent->div.origin_r.x += margin_tot.x + margin_tot.w;
+		// parent->div.origin_r.y += margin_tot.h;
+
+		// parent->div.origin_c.x += margin_tot.w;
+		parent->div.origin_c.y += margin_tot.y + margin_tot.h;
 	}
 
 	/*
