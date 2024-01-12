@@ -150,6 +150,10 @@ struct _UgCtx {
 		int width, height;
 	} size;
 
+	struct {
+		UgPoint margin;
+	} style;
+
 	// input structure, it describes the events received between frames
 	struct {
 		uint32_t flags;
@@ -159,21 +163,22 @@ struct _UgCtx {
 };
 
 // layouting
-int ug_layout_row(void);
-int ug_layout_column(void);
-int ug_layout_floating(void);
-int ug_layout_next_row(void);
-int ug_layout_next_column(void);
+int ug_layout_set_row(UgCtx *ctx);
+int ug_layout_set_column(UgCtx *ctx);
+int ug_layout_set_floating(UgCtx *ctx);
+// these reset the offsets introduced by the previous elements
+int ug_layout_next_row(UgCtx *ctx);
+int ug_layout_next_column(UgCtx *ctx);
 
-int  ug_div_begin(UgCtx *ctx, const char *label, UgRect div);
-int  ug_div_end(UgCtx *ctx);
-int  ug_input_window_size(UgCtx *ctx, int width, int height);
-UgId djb2(const char *str);
-UgId FNV_1a(const char *str);
+int         ug_div_begin(UgCtx *ctx, const char *label, UgRect div);
+int         ug_div_end(UgCtx *ctx);
+int         ug_input_window_size(UgCtx *ctx, int width, int height);
+static UgId djb2(const char *str);
+static UgId FNV_1a(const char *str);
 
 int ug_button(UgCtx *ctx, const char *label, UgRect size);
 
-UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect);
+UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style);
 
 int main(void)
 {
@@ -201,21 +206,16 @@ int main(void)
 		// main div, fill the whole window
 		ug_div_begin(&ctx, "main", DIV_FILL);
 		{
+			ug_layout_set_column(&ctx);
 			ug_button(
 			    &ctx,
-			    "batt342353453452wrwea",
-			    (UgRect) {.y = 100, .x = 130, .w = 100, .h = 16}
+			    "button0",
+			    (UgRect) {.y = 100, .x = 100, .w = 30, .h = 30}
 			);
-			ug_button(
-			    &ctx,
-			    "arieasd3ree2234tast",
-			    (UgRect) {.x = 10, .w = 30, .h = 30}
-			);
-			ug_button(
-			    &ctx,
-			    "bughsdfsfdstton2",
-			    (UgRect) {.x = 10, .w = 30, .h = 30}
-			);
+			ug_layout_next_column(&ctx);
+			ug_button(&ctx, "button1", (UgRect) {.w = 30, .h = 30});
+			ug_layout_next_column(&ctx);
+			ug_button(&ctx, "button2", (UgRect) {.w = 30, .h = 30});
 		}
 		ug_div_end(&ctx);
 
@@ -271,7 +271,7 @@ int main(void)
 
 // search the element of the corresponding id in the cache, if no element is found
 // insert a new one of that id. Return the pointer to the element
-int search_or_insert(UgCtx *ctx, UgElem **elem, UgId id)
+static int search_or_insert(UgCtx *ctx, UgElem **elem, UgId id)
 {
 	int      is_new = 0;
 	uint32_t cache_idx;
@@ -287,6 +287,21 @@ int search_or_insert(UgCtx *ctx, UgElem **elem, UgId id)
 	return is_new;
 }
 
+static int get_parent(UgCtx *ctx, UgElem **parent)
+{
+	// take a reference to the parent
+	// FIXME: if the tree held pointers to the elements then no more
+	//        redundant cache search
+	UgId parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
+	*parent        = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	return 0;
+}
+
 int ug_init(UgCtx *ctx)
 {
 	if (ctx == NULL) {
@@ -299,6 +314,9 @@ int ug_init(UgCtx *ctx)
 	ctx->cache     = ug_cache_init();
 	ctx->layout    = row;
 	ctx->div_using = 0;
+
+	// TODO: add style config
+	ctx->style.margin = (UgPoint) {2, 2};
 
 	return 0;
 }
@@ -316,7 +334,7 @@ int ug_destroy(UgCtx *ctx)
 	return 0;
 }
 
-void print_tree(UgCtx *ctx)
+static void print_tree(UgCtx *ctx)
 {
 	printf("ctx->tree: [");
 	for (int c = -1, x; (x = ug_tree_level_order_it(&ctx->tree, 0, &c)) != -1;) {
@@ -423,7 +441,7 @@ int ug_input_window_size(UgCtx *ctx, int width, int height)
 	return 0;
 }
 
-UgId FNV_1a(const char *str)
+static UgId FNV_1a(const char *str)
 {
 	const uint64_t fnv_off   = 0xcbf29ce484222325;
 	const uint64_t fnv_prime = 0x100000001b3;
@@ -437,7 +455,7 @@ UgId FNV_1a(const char *str)
 	return hash;
 }
 
-UgId djb2(const char *str)
+static UgId djb2(const char *str)
 {
 	uint64_t hash = 5381;
 	uint32_t c;
@@ -468,13 +486,8 @@ int ug_div_begin(UgCtx *ctx, const char *label, UgRect div)
 		printf("Error adding to tree\n");
 	}
 
-	// take a reference to the parent
-	// FIXME: if the tree held pointers to the elements then no more
-	//        redundant cache search
-	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
-	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
-	if (parent == NULL) {
-		// Error, did you forget to do frame_begin()?
+	UgElem *parent;
+	if (get_parent(ctx, &parent)) {
 		return -1;
 	}
 
@@ -491,7 +504,7 @@ int ug_div_begin(UgCtx *ctx, const char *label, UgRect div)
 	// do layout and update flags only if the element was updated
 	if (is_new || FTEST(parent, ELEM_UPDATED)) {
 		// 2. layout the element
-		c_elem->rect = position_element(ctx, parent, div);
+		c_elem->rect = position_element(ctx, parent, div, 0);
 
 		// 3. Mark the element as updated
 		c_elem->flags |= ELEM_UPDATED;
@@ -532,7 +545,7 @@ int ug_div_end(UgCtx *ctx)
 }
 
 // position the rectangle inside the parent according to the layout
-UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect)
+UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style)
 {
 	UgRect  elem_rect = {0};
 	UgPoint origin    = {0};
@@ -571,6 +584,18 @@ UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect)
 	    .y = elem_rect.y + elem_rect.h,
 	};
 
+	// if using the style then apply margins
+	if (style && parent->div.layout != DIV_LAYOUT_FLOATING) {
+		elem_rect.x += ctx->style.margin.x;
+		elem_rect.y += ctx->style.margin.y;
+
+		parent->div.origin_r.x += ctx->style.margin.x;
+		// parent->div.origin_r.y += ctx->style.margin.y;
+
+		// parent->div.origin_c.x += ctx->style.margin.x;
+		parent->div.origin_c.y += ctx->style.margin.y;
+	}
+
 	/*
 	        printf(
 	            "positioning rect: %lx {%d %d %d %d}(%d %d %d %d) -> {%d %d %d
@@ -603,13 +628,8 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 	ug_tree_add(&ctx->tree, id, ctx->div_using);
 	print_tree(ctx);
 
-	// take a reference to the parent
-	// FIXME: if the tree held pointers to the elements then no more
-	//        redundant cache search
-	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
-	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
-	if (parent == NULL) {
-		// Error, did you forget to do frame_begin()?
+	UgElem *parent;
+	if (get_parent(ctx, &parent)) {
 		return -1;
 	}
 
@@ -621,7 +641,7 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 	// if the element is new or the parent was updated then redo layout
 	if (is_new || parent->flags & ELEM_UPDATED) {
 		// 2. Layout
-		c_elem->rect = position_element(ctx, parent, size);
+		c_elem->rect = position_element(ctx, parent, size, 1);
 
 		// 3. TODO: Fill the button specific fields
 	} else {
@@ -638,6 +658,131 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 		},
 	};
 	ug_fifo_enqueue(&ctx->fifo, &cmd);
+
+	return 0;
+}
+
+int ug_layout_set_row(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	if (parent->type != ETYPE_DIV) {
+		// what?
+		return -1;
+	}
+
+	parent->div.layout = DIV_LAYOUT_ROW;
+
+	return 0;
+}
+
+int ug_layout_set_column(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	if (parent->type != ETYPE_DIV) {
+		// what?
+		return -1;
+	}
+
+	parent->div.layout = DIV_LAYOUT_COLUMN;
+
+	return 0;
+}
+
+int ug_layout_set_floating(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	if (parent->type != ETYPE_DIV) {
+		// what?
+		return -1;
+	}
+
+	parent->div.layout = DIV_LAYOUT_FLOATING;
+
+	return 0;
+}
+
+int ug_layout_next_row(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	if (parent->type != ETYPE_DIV) {
+		// what?
+		return -1;
+	}
+
+	parent->div.origin_r = (UgPoint) {
+	    .x = parent->rect.x,
+	    .y = parent->div.origin_c.y,
+	};
+
+	parent->div.origin_c = parent->div.origin_r;
+
+	return 0;
+}
+
+int ug_layout_next_column(UgCtx *ctx)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	UgId    parent_id = ug_tree_get(&ctx->tree, ctx->div_using);
+	UgElem *parent    = ug_cache_search(&ctx->cache, parent_id);
+	if (parent == NULL) {
+		// Error, did you forget to do frame_begin()?
+		return -1;
+	}
+
+	if (parent->type != ETYPE_DIV) {
+		// what?
+		return -1;
+	}
+
+	parent->div.origin_c = (UgPoint) {
+	    .x = parent->div.origin_r.x,
+	    .y = parent->rect.y,
+	};
+
+	parent->div.origin_r = parent->div.origin_c;
 
 	return 0;
 }
