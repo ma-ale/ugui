@@ -24,7 +24,8 @@ typedef enum {
 } UgElemType;
 
 enum UgElemFlags {
-	ELEM_UPDATED = 1 << 0,
+	ELEM_UPDATED  = 1 << 0,
+	ELEM_HASFOCUS = 1 << 1,
 };
 
 typedef struct {

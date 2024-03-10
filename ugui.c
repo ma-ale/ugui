@@ -7,6 +7,7 @@
 
 #include "raylib.h"
 #include "ugui.h"
+#include "timer.h"
 
 #define RGBA(u)                                                                     \
 	(UgColor)                                                                   \
@@ -22,7 +23,11 @@
 		printf("lmao\n");                                                   \
 	} while (0)
 
-#define FTEST(e, f) ((e)->flags & (f))
+#define FTEST(e, f)        ((e)->flags & (f))
+#define MAX(a, b)          ((a) > (b) ? (a) : (b))
+#define MIN(a, b)          ((a) < (b) ? (a) : (b))
+#define ABS(a)             ((a) < 0 ? -(a) : (a))
+#define CLAMP(x, min, max) ((x) < (min) ? (min) : ((x) > (max) ? (max) : (x)))
 
 #define STACK_STEP 10
 #define MAX_ELEMS  128
@@ -132,7 +137,10 @@ int ug_fifo_dequeue(UgFifo *fifo, UgCmd *cmd)
 }
 
 enum InputEventFlags {
-	INPUT_CTX_SIZE = 1 << 0, // window size was changed
+	INPUT_CTX_SIZE      = 1 << 0, // window size was changed
+	INPUT_CTX_FOCUS     = 1 << 1, // window focus changed
+	INPUT_CTX_MOUSEMOVE = 1 << 2, // mouse was moved
+	INPUT_CTX_MOUSEBTN  = 1 << 3, // mouse button pressed or released
 };
 
 struct _UgCtx {
@@ -161,7 +169,16 @@ struct _UgCtx {
 
 	// input structure, it describes the events received between frames
 	struct {
+		// flags: lists which input events have been received
 		uint32_t flags;
+		int      has_focus;
+		int      mouse_x, mouse_y, mdelta_x, mdelta_y;
+		// mouse_down:      bitmap of mouse buttons that are held
+		// mouse_updated:   bitmap of mouse buttons that have been updated
+		// mouse_released = mouse_updated & ~mouse_down
+		// mouse_pressed  = mouse_updated & mouse_down
+		uint32_t mouse_down;
+		uint32_t mouse_updated;
 	} input;
 
 	int div_using; // tree node indicating the current active div
@@ -175,104 +192,16 @@ int ug_layout_set_floating(UgCtx *ctx);
 int ug_layout_next_row(UgCtx *ctx);
 int ug_layout_next_column(UgCtx *ctx);
 
-int         ug_div_begin(UgCtx *ctx, const char *label, UgRect div);
-int         ug_div_end(UgCtx *ctx);
-int         ug_input_window_size(UgCtx *ctx, int width, int height);
-static UgId djb2(const char *str);
+int ug_div_begin(UgCtx *ctx, const char *label, UgRect div);
+int ug_div_end(UgCtx *ctx);
+int ug_input_window_size(UgCtx *ctx, int width, int height);
+
+// static UgId djb2(const char *str);
 static UgId FNV_1a(const char *str);
 
 int ug_button(UgCtx *ctx, const char *label, UgRect size);
 
-UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style);
-
-int main(void)
-{
-	UgCtx ctx;
-	ug_init(&ctx);
-
-	int width = 800, height = 450;
-	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-	InitWindow(width, height, "Ugui Test");
-	ug_input_window_size(&ctx, width, height);
-
-	// Main loop
-	while (!WindowShouldClose()) {
-
-		// Input handling
-		if (IsWindowResized()) {
-			width  = GetScreenWidth();
-			height = GetScreenHeight();
-			ug_input_window_size(&ctx, width, height);
-		}
-
-		// UI handling
-		ug_frame_begin(&ctx);
-
-		// main div, fill the whole window
-		ug_div_begin(&ctx, "main", DIV_FILL);
-		{
-			ug_layout_set_column(&ctx);
-			ug_button(
-			    &ctx,
-			    "button0",
-			    (UgRect) {.y = 100, .x = 100, .w = 30, .h = 30}
-			);
-			ug_layout_next_column(&ctx);
-			ug_button(&ctx, "button1", (UgRect) {.w = 30, .h = 30});
-			ug_layout_next_column(&ctx);
-			ug_button(&ctx, "button2", (UgRect) {.w = 30, .h = 30});
-		}
-		ug_div_end(&ctx);
-
-		ug_frame_end(&ctx);
-
-		// drawing
-		BeginDrawing();
-		// ClearBackground(BLACK);
-
-		printf("----- Draw Begin -----\n");
-		Color c;
-		for (UgCmd cmd; ug_fifo_dequeue(&ctx.fifo, &cmd) >= 0;) {
-			switch (cmd.type) {
-			case CMD_RECT:
-				printf(
-				    "draw rect x=%d y=%d w=%d h=%d\n",
-				    cmd.rect.rect.x,
-				    cmd.rect.rect.y,
-				    cmd.rect.rect.w,
-				    cmd.rect.rect.h
-				);
-				c = (Color) {
-				    .r = cmd.rect.color.r,
-				    .g = cmd.rect.color.g,
-				    .b = cmd.rect.color.b,
-				    .a = cmd.rect.color.a,
-				};
-				DrawRectangle(
-				    cmd.rect.rect.x,
-				    cmd.rect.rect.y,
-				    cmd.rect.rect.w,
-				    cmd.rect.rect.h,
-				    c
-				);
-				break;
-			default:
-				printf("Unknown cmd type: %d\n", cmd.type);
-				break;
-			}
-		}
-		printf("----- Draw End -----\n\n");
-
-		EndDrawing();
-
-		WaitTime(0.2);
-	}
-
-	CloseWindow();
-
-	ug_destroy(&ctx);
-	return 0;
-}
+static UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style);
 
 // search the element of the corresponding id in the cache, if no element is found
 // insert a new one of that id. Return the pointer to the element
@@ -385,6 +314,7 @@ int ug_frame_begin(UgCtx *ctx)
 		    .color_bg = {0},
 		},
 	};
+
 	// The root should have the updated flag only if the size of the window
 	// was changed between frames, this propagates an element size recalculation
 	// down the element tree
@@ -392,13 +322,22 @@ int ug_frame_begin(UgCtx *ctx)
 		root.flags |= ELEM_UPDATED;
 	}
 
+	// if the window has focus then the root element also has focus, no other
+	// computation needed, child elements need to check the mouse positon and
+	// other stuff
+	if (ctx->input.has_focus) {
+		root.flags |= ELEM_HASFOCUS;
+	}
+
 	// FIXME: check errors
+	// 2. Get the root element from the cache and update it
 	UgElem *c_elem;
 	int     is_new = search_or_insert(ctx, &c_elem, root.id);
 	if (is_new || FTEST(&root, ELEM_UPDATED)) {
 		*c_elem = root;
 	}
 
+	// 3. Push the root element into the element tree
 	ctx->div_using = ug_tree_add(&ctx->tree, root.id, 0);
 
 	if (ctx->div_using < 0) {
@@ -432,6 +371,7 @@ int ug_frame_end(UgCtx *ctx)
 	return 0;
 }
 
+// Window size was changed
 int ug_input_window_size(UgCtx *ctx, int width, int height)
 {
 	if (ctx == NULL) {
@@ -452,6 +392,48 @@ int ug_input_window_size(UgCtx *ctx, int width, int height)
 	return 0;
 }
 
+// Window gained/lost focus
+int ug_input_changefoucs(UgCtx *ctx, int has_focus)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	// FIXME: raylib only has an API to query the focus status so we have to
+	//        update the input flag only if the focus changed
+	if (ctx->input.has_focus != (!!has_focus)) {
+		ctx->input.flags |= INPUT_CTX_FOCUS;
+	}
+	ctx->input.has_focus = !!has_focus;
+
+	return 0;
+}
+
+// Mouse was moved, report absolute position
+int ug_input_mouse_abs(UgCtx *ctx, int x, int y) { return 1; }
+
+// Mouse was moved, report relative motion
+int ug_input_mouse_delta(UgCtx *ctx, int dx, int dy)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	ctx->input.mdelta_x = dx;
+	ctx->input.mdelta_y = dy;
+
+	int mx, my;
+	mx = ctx->input.mouse_x + dx;
+	my = ctx->input.mouse_y + dy;
+
+	ctx->input.mouse_x = CLAMP(mx, 0, ctx->size.width);
+	ctx->input.mouse_y = CLAMP(my, 0, ctx->size.height);
+
+	ctx->input.flags |= INPUT_CTX_MOUSEMOVE;
+
+	return 0;
+}
+
 static UgId FNV_1a(const char *str)
 {
 	const uint64_t fnv_off   = 0xcbf29ce484222325;
@@ -466,6 +448,7 @@ static UgId FNV_1a(const char *str)
 	return hash;
 }
 
+#if 0
 static UgId djb2(const char *str)
 {
 	uint64_t hash = 5381;
@@ -477,6 +460,7 @@ static UgId djb2(const char *str)
 
 	return hash;
 }
+#endif
 
 int ug_div_begin(UgCtx *ctx, const char *label, UgRect div)
 {
@@ -556,7 +540,7 @@ int ug_div_end(UgCtx *ctx)
 }
 
 // position the rectangle inside the parent according to the layout
-UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style)
+static UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int style)
 {
 	UgRect  elem_rect = {0};
 	UgPoint origin    = {0};
@@ -663,7 +647,7 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 	c_elem->flags = 0;
 
 	// if the element is new or the parent was updated then redo layout
-	if (is_new || parent->flags & ELEM_UPDATED) {
+	if (is_new || FTEST(parent, ELEM_UPDATED)) {
 		// 2. Layout
 		c_elem->rect = position_element(ctx, parent, size, 1);
 
@@ -810,3 +794,124 @@ int ug_layout_next_column(UgCtx *ctx)
 
 	return 0;
 }
+
+#if 1
+int main(void)
+{
+	UgCtx ctx;
+	ug_init(&ctx);
+
+	int width = 800, height = 450;
+	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+	InitWindow(width, height, "Ugui Test");
+	ug_input_window_size(&ctx, width, height);
+
+	// Main loop
+	while (!WindowShouldClose()) {
+		const int PARTIAL_INPUT  = 0;
+		const int PARTIAL_LAYOUT = 1;
+		const int PARTIAL_DRAW   = 2;
+		timer_start();
+
+		/*** Start Input Handling ***/
+		if (IsWindowResized()) {
+			width  = GetScreenWidth();
+			height = GetScreenHeight();
+			ug_input_window_size(&ctx, width, height);
+		}
+
+		ug_input_changefoucs(&ctx, IsWindowFocused());
+
+		// FIXME: In raylib it doesn't seem to be a quick way to check if
+		//        a mouse input event was received, so for now just use
+		//        the delta information
+		Vector2 mousedelta = GetMouseDelta();
+		if (mousedelta.x || mousedelta.y) {
+			ug_input_mouse_delta(&ctx, mousedelta.x, mousedelta.y);
+		}
+		timer_partial(PARTIAL_INPUT);
+		/*** End Input Handling ***/
+
+		/*** Start UI Handling ***/
+		ug_frame_begin(&ctx);
+
+		// main div, fill the whole window
+		ug_div_begin(&ctx, "main", DIV_FILL);
+		{
+			ug_layout_set_column(&ctx);
+			ug_button(
+			    &ctx,
+			    "button0",
+			    (UgRect) {.y = 100, .x = 100, .w = 30, .h = 30}
+			);
+			ug_layout_next_column(&ctx);
+			ug_button(&ctx, "button1", (UgRect) {.w = 30, .h = 30});
+			ug_layout_next_column(&ctx);
+			ug_button(&ctx, "button2", (UgRect) {.w = 30, .h = 30});
+		}
+		ug_div_end(&ctx);
+
+		ug_frame_end(&ctx);
+		timer_partial(PARTIAL_LAYOUT);
+		/*** End UI Handling ***/
+
+		/*** Start UI Drawing ***/
+		BeginDrawing();
+		// ClearBackground(BLACK);
+
+		printf("----- Draw Begin -----\n");
+		Color c;
+		for (UgCmd cmd; ug_fifo_dequeue(&ctx.fifo, &cmd) >= 0;) {
+			switch (cmd.type) {
+			case CMD_RECT:
+				printf(
+				    "draw rect x=%d y=%d w=%d h=%d\n",
+				    cmd.rect.rect.x,
+				    cmd.rect.rect.y,
+				    cmd.rect.rect.w,
+				    cmd.rect.rect.h
+				);
+				c = (Color) {
+				    .r = cmd.rect.color.r,
+				    .g = cmd.rect.color.g,
+				    .b = cmd.rect.color.b,
+				    .a = cmd.rect.color.a,
+				};
+				DrawRectangle(
+				    cmd.rect.rect.x,
+				    cmd.rect.rect.y,
+				    cmd.rect.rect.w,
+				    cmd.rect.rect.h,
+				    c
+				);
+				break;
+			default:
+				printf("Unknown cmd type: %d\n", cmd.type);
+				break;
+			}
+		}
+		printf("----- Draw End -----\n\n");
+
+		EndDrawing();
+		timer_partial(PARTIAL_DRAW);
+		timer_stop();
+		/*** End UI Drawing ***/
+
+		printf("input time: %lfms\n", 1e3 * timer_get_sec(PARTIAL_INPUT));
+		printf("layout time: %lfms\n", 1e3 * timer_get_sec(PARTIAL_LAYOUT));
+		printf("draw time: %lfms\n", 1e3 * timer_get_sec(PARTIAL_DRAW));
+		printf("total time: %lfms\n", 1e3 * timer_get_sec(-1));
+
+		// Throttle Frames
+		// TODO: add an fps limit, time frame generation and log it
+		const float TARGET_FPS = 10;
+		float wait_time = MAX((1.0 / TARGET_FPS) - timer_get_sec(-1), 0);
+		WaitTime(wait_time);
+	}
+
+	CloseWindow();
+
+	ug_destroy(&ctx);
+	return 0;
+}
+#endif
