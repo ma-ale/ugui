@@ -172,7 +172,7 @@ struct _UgCtx {
 		// flags: lists which input events have been received
 		uint32_t flags;
 		int      has_focus;
-		int      mouse_x, mouse_y, mdelta_x, mdelta_y;
+		UgPoint  mouse_pos, mouse_delta;
 		// mouse_down:      bitmap of mouse buttons that are held
 		// mouse_updated:   bitmap of mouse buttons that have been updated
 		// mouse_released = mouse_updated & ~mouse_down
@@ -221,6 +221,14 @@ static int search_or_insert(UgCtx *ctx, UgElem **elem, UgId id)
 	return is_new;
 }
 
+static int is_point_in_rect(UgPoint p, UgRect r)
+{
+	if ((p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h)) {
+		return 1;
+	}
+	return 0;
+}
+
 static int get_parent(UgCtx *ctx, UgElem **parent)
 {
 	// take a reference to the parent
@@ -241,6 +249,8 @@ int ug_init(UgCtx *ctx)
 	if (ctx == NULL) {
 		return -1;
 	}
+
+	*ctx = (UgCtx) {0};
 
 	ug_tree_init(&ctx->tree, MAX_ELEMS);
 	ug_fifo_init(&ctx->fifo, MAX_CMDS);
@@ -389,6 +399,8 @@ int ug_input_window_size(UgCtx *ctx, int width, int height)
 		ctx->size.height = height;
 	}
 
+	ctx->input.flags |= INPUT_CTX_SIZE;
+
 	return 0;
 }
 
@@ -419,15 +431,15 @@ int ug_input_mouse_delta(UgCtx *ctx, int dx, int dy)
 		return -1;
 	}
 
-	ctx->input.mdelta_x = dx;
-	ctx->input.mdelta_y = dy;
+	ctx->input.mouse_delta.x = dx;
+	ctx->input.mouse_delta.y = dy;
 
 	int mx, my;
-	mx = ctx->input.mouse_x + dx;
-	my = ctx->input.mouse_y + dy;
+	mx = ctx->input.mouse_pos.x + dx;
+	my = ctx->input.mouse_pos.y + dy;
 
-	ctx->input.mouse_x = CLAMP(mx, 0, ctx->size.width);
-	ctx->input.mouse_y = CLAMP(my, 0, ctx->size.height);
+	ctx->input.mouse_pos.x = CLAMP(mx, 0, ctx->size.width);
+	ctx->input.mouse_pos.y = CLAMP(my, 0, ctx->size.height);
 
 	ctx->input.flags |= INPUT_CTX_MOUSEMOVE;
 
@@ -512,10 +524,14 @@ int ug_div_begin(UgCtx *ctx, const char *label, UgRect div)
 		};
 		c_elem->div.color_bg = RGBA(0xff0000ff);
 		c_elem->div.origin_r = c_elem->div.origin_c;
+	} else if (FTEST(parent, ELEM_HASFOCUS)) {
+		if (is_point_in_rect(ctx->input.mouse_pos, c_elem->rect)) {
+			c_elem->flags |= ELEM_HASFOCUS;
+		}
 	} else {
 		// TODO: check active
-		// TODO: check resizeable
 		// TODO: check scrollbars
+		// TODO: check resizeable
 	}
 
 	// Add the background to the draw stack
@@ -643,15 +659,21 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 
 	// 1. Fill the element fields
 	// this resets the flags
-	c_elem->type  = ETYPE_BUTTON;
-	c_elem->flags = 0;
+	c_elem->type     = ETYPE_BUTTON;
+	c_elem->flags    = 0;
+	UgColor bg_color = RGBA(0x0000ffff);
 
 	// if the element is new or the parent was updated then redo layout
 	if (is_new || FTEST(parent, ELEM_UPDATED)) {
 		// 2. Layout
 		c_elem->rect = position_element(ctx, parent, size, 1);
 
-		// 3. TODO: Fill the button specific fields
+		// TODO: 3. Fill the button specific fields
+	} else if (FTEST(parent, ELEM_HASFOCUS)) {
+		if (is_point_in_rect(ctx->input.mouse_pos, c_elem->rect)) {
+			c_elem->flags |= ELEM_HASFOCUS;
+			bg_color = RGBA(0x00ff00ff);
+		}
 	} else {
 		// TODO: Check for interactions
 	}
@@ -662,7 +684,7 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 	    .rect =
 		{
 		    .rect  = c_elem->rect,
-		    .color = RGBA(0x0000ffff),
+		    .color = bg_color,
 		},
 	};
 	ug_fifo_enqueue(&ctx->fifo, &cmd);
@@ -806,6 +828,10 @@ int main(void)
 	InitWindow(width, height, "Ugui Test");
 	ug_input_window_size(&ctx, width, height);
 
+	double median_times[10][4] = {0};
+	size_t frame               = 0;
+	double median_input, median_layout, median_draw, median_tot;
+
 	// Main loop
 	while (!WindowShouldClose()) {
 		const int PARTIAL_INPUT  = 0;
@@ -897,14 +923,42 @@ int main(void)
 		timer_stop();
 		/*** End UI Drawing ***/
 
-		printf("input time: %lfms\n", 1e3 * timer_get_sec(PARTIAL_INPUT));
-		printf("layout time: %lfms\n", 1e3 * timer_get_sec(PARTIAL_LAYOUT));
-		printf("draw time: %lfms\n", 1e3 * timer_get_sec(PARTIAL_DRAW));
-		printf("total time: %lfms\n", 1e3 * timer_get_sec(-1));
+		median_times[frame][PARTIAL_INPUT] =
+		    1e3 * timer_get_sec(PARTIAL_INPUT);
+		median_times[frame][PARTIAL_LAYOUT] =
+		    1e3 * timer_get_sec(PARTIAL_LAYOUT);
+		median_times[frame][PARTIAL_DRAW] =
+		    1e3 * timer_get_sec(PARTIAL_DRAW);
+		median_times[frame][3] = 1e3 * timer_get_sec(-1);
+
+		frame += 1;
+		frame %= 10;
+
+		if (frame == 0) {
+			median_input  = 0;
+			median_layout = 0;
+			median_draw   = 0;
+			median_tot    = 0;
+			for (size_t i = 0; i < 10; i++) {
+				median_input += median_times[i][PARTIAL_INPUT];
+				median_layout += median_times[i][PARTIAL_LAYOUT];
+				median_draw += median_times[i][PARTIAL_DRAW];
+				median_tot += median_times[i][3];
+			}
+			median_input /= 10;
+			median_layout /= 10;
+			median_draw /= 10;
+			median_tot /= 10;
+		}
+
+		printf("input time: %lfms\n", median_input);
+		printf("layout time: %lfms\n", median_layout);
+		printf("draw time: %lfms\n", median_draw);
+		printf("total time: %lfms\n", median_tot);
 
 		// Throttle Frames
 		// TODO: add an fps limit, time frame generation and log it
-		const float TARGET_FPS = 10;
+		const float TARGET_FPS = 100;
 		float wait_time = MAX((1.0 / TARGET_FPS) - timer_get_sec(-1), 0);
 		WaitTime(wait_time);
 	}
