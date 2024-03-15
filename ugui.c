@@ -20,9 +20,10 @@
 
 #define MARK()                                                                      \
 	do {                                                                        \
-		printf("lmao\n");                                                   \
+		printf("================== lmao ==================\n");             \
 	} while (0)
 
+#define BIT(x)             (1 << (x))
 #define FTEST(e, f)        ((e)->flags & (f))
 #define MAX(a, b)          ((a) > (b) ? (a) : (b))
 #define MIN(a, b)          ((a) < (b) ? (a) : (b))
@@ -343,6 +344,10 @@ int ug_frame_begin(UgCtx *ctx)
 	// 2. Get the root element from the cache and update it
 	UgElem *c_elem;
 	int     is_new = search_or_insert(ctx, &c_elem, root.id);
+
+	// flags always need to be set to the new flags
+	c_elem->flags = root.flags;
+
 	if (is_new || FTEST(&root, ELEM_UPDATED)) {
 		*c_elem = root;
 	}
@@ -376,6 +381,25 @@ int ug_frame_end(UgCtx *ctx)
 
 	// 2. clear input fields
 	ctx->input.flags = 0;
+
+// draw mouse position
+#if 1
+	UgCmd cmd = {
+	    .type = CMD_RECT,
+	    .rect =
+		{
+		    .rect =
+			{
+			    .x = ctx->input.mouse_pos.x - 2,
+			    .y = ctx->input.mouse_pos.y - 2,
+			    .w = 4,
+			    .h = 4,
+			},
+		    .color = RGBA(0xff00ffff),
+		},
+	};
+	ug_fifo_enqueue(&(ctx->fifo), &cmd);
+#endif
 
 	printf("##### Frame End #####\n\n");
 	return 0;
@@ -418,6 +442,43 @@ int ug_input_changefoucs(UgCtx *ctx, int has_focus)
 	}
 	ctx->input.has_focus = !!has_focus;
 
+	return 0;
+}
+
+enum ug_mouse_buttons {
+	UG_BTN_LEFT   = BIT(0),
+	UG_BTN_MIDDLE = BIT(1),
+	UG_BTN_RIGHT  = BIT(2),
+	UG_BTN_4      = BIT(3),
+	UG_BTN_5      = BIT(4),
+};
+
+const uint32_t mouse_supported_mask =
+    UG_BTN_LEFT | UG_BTN_MIDDLE | UG_BTN_RIGHT | UG_BTN_4 | UG_BTN_5;
+
+// Mouse Button moved
+int ug_input_mouse_button(UgCtx *ctx, uint32_t button_mask)
+{
+	if (ctx == NULL) {
+		return -1;
+	}
+
+	if (button_mask & ~mouse_supported_mask) {
+		return -1;
+	}
+
+	ctx->input.mouse_updated = ctx->input.mouse_down ^ button_mask;
+	ctx->input.mouse_down    = button_mask;
+	ctx->input.flags |= INPUT_CTX_MOUSEBTN;
+
+	printf(
+	    "Mouse Down: %s%s%s%s%s\n",
+	    button_mask & UG_BTN_LEFT ? "BTN_LEFT " : "",
+	    button_mask & UG_BTN_RIGHT ? "BTN_RIGHT " : "",
+	    button_mask & UG_BTN_MIDDLE ? "BTN_MIDDLE " : "",
+	    button_mask & UG_BTN_4 ? "BTN_4 " : "",
+	    button_mask & UG_BTN_5 ? "BTN_5 " : ""
+	);
 	return 0;
 }
 
@@ -855,6 +916,13 @@ int main(void)
 		if (mousedelta.x || mousedelta.y) {
 			ug_input_mouse_delta(&ctx, mousedelta.x, mousedelta.y);
 		}
+
+		uint32_t mask = 0;
+		mask |= IsMouseButtonDown(MOUSE_BUTTON_LEFT) ? UG_BTN_LEFT : 0;
+		mask |= IsMouseButtonDown(MOUSE_BUTTON_RIGHT) ? UG_BTN_RIGHT : 0;
+		mask |= IsMouseButtonDown(MOUSE_BUTTON_MIDDLE) ? UG_BTN_MIDDLE : 0;
+		ug_input_mouse_button(&ctx, mask);
+
 		timer_partial(PARTIAL_INPUT);
 		/*** End Input Handling ***/
 
