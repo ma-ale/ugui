@@ -316,6 +316,7 @@ int ug_frame_begin(UgCtx *ctx)
 	    .id    = ROOT_ID,
 	    .type  = ETYPE_DIV,
 	    .flags = 0,
+	    .event = 0,
 	    .rect  = space,
 	    .div =
 		{
@@ -697,6 +698,14 @@ static UgRect position_element(UgCtx *ctx, UgElem *parent, UgRect rect, int styl
 	return elem_rect;
 }
 
+int is_hovered(UgCtx *ctx, UgElem *elem)
+{
+	if (ctx == NULL || elem == NULL) {
+		return 0;
+	}
+	return is_point_in_rect(ctx->input.mouse_pos, elem->rect);
+}
+
 int ug_button(UgCtx *ctx, const char *label, UgRect size)
 {
 	if (ctx == NULL || label == NULL) {
@@ -730,13 +739,23 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 		c_elem->rect = position_element(ctx, parent, size, 1);
 
 		// TODO: 3. Fill the button specific fields
-	} else if (FTEST(parent, ELEM_HASFOCUS)) {
-		if (is_point_in_rect(ctx->input.mouse_pos, c_elem->rect)) {
+	}
+
+	// TODO: Check for interactions
+	if (FTEST(parent, ELEM_HASFOCUS)) {
+		if (is_hovered(ctx, c_elem)) {
 			c_elem->flags |= ELEM_HASFOCUS;
+			c_elem->event |= EVENT_MOUSE_HOVER;
 			bg_color = RGBA(0x00ff00ff);
+
+			if (ctx->input.mouse_down & UG_BTN_LEFT) {
+				c_elem->event |= EVENT_MOUSE_HOLD;
+			} else {
+				c_elem->event &= ~EVENT_MOUSE_HOLD;
+			}
+		} else {
+			c_elem->event &= ~EVENT_MOUSE_HOVER;
 		}
-	} else {
-		// TODO: Check for interactions
 	}
 
 	// Draw the button
@@ -750,7 +769,7 @@ int ug_button(UgCtx *ctx, const char *label, UgRect size)
 	};
 	ug_fifo_enqueue(&ctx->fifo, &cmd);
 
-	return 0;
+	return c_elem->event;
 }
 
 int ug_layout_set_row(UgCtx *ctx)
@@ -933,11 +952,14 @@ int main(void)
 		ug_div_begin(&ctx, "main", DIV_FILL);
 		{
 			ug_layout_set_column(&ctx);
-			ug_button(
-			    &ctx,
-			    "button0",
-			    (UgRect) {.y = 100, .x = 100, .w = 30, .h = 30}
-			);
+			if (ug_button(
+				&ctx,
+				"button0",
+				(UgRect) {.y = 100, .x = 100, .w = 30, .h = 30}
+			    ) &
+			    EVENT_MOUSE_HOLD) {
+				printf("HOLDING button0\n");
+			}
 			ug_layout_next_column(&ctx);
 			ug_button(&ctx, "button1", (UgRect) {.w = 30, .h = 30});
 			ug_layout_next_column(&ctx);

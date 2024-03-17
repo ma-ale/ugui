@@ -28,9 +28,20 @@ enum UgElemFlags {
 	ELEM_HASFOCUS = 1 << 1,
 };
 
+enum UgElemEvent {
+	EVENT_KEY_PRESS     = 1 << 0,
+	EVENT_KEY_RELEASE   = 1 << 1,
+	EVENT_KEY_HOLD      = 1 << 2,
+	EVENT_MOUSE_HOVER   = 1 << 3,
+	EVENT_MOUSE_PRESS   = 1 << 4,
+	EVENT_MOUSE_RELEASE = 1 << 5,
+	EVENT_MOUSE_HOLD    = 1 << 6,
+};
+
 typedef struct {
 	UgId       id;
 	uint32_t   flags;
+	uint32_t   event;
 	UgRect     rect;
 	UgElemType type;
 
