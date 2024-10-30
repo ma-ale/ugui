@@ -40,21 +40,64 @@ bitstruct MouseButtons : uint {
 	bool btn_5 : 4;
 }
 
+macro Ctx.mouse_pressed(&ctx)
+{
+    return ctx.input.mouse.updated & ctx.input.mouse.down;
+}
+
+macro Ctx.mouse_released(&ctx)
+{
+    return ctx.input.mouse.updated & ~ctx.input.mouse.down;
+}
+
+macro Ctx.mouse_down(&ctx)
+{
+    return ctx.input.mouse.down;
+}
+
+const MouseButtons BTN_NONE = (MouseButtons)0u;
+const MouseButtons BTN_ANY = (MouseButtons)(uint.max);
+const MouseButtons BTN_LEFT = {.btn_left = true};
+const MouseButtons BTN_MIDDLE = {.btn_middle = true};
+const MouseButtons BTN_RIGHT = {.btn_right = true};
+const MouseButtons BTN_4 = {.btn_4 = true};
+const MouseButtons BTN_5 = {.btn_5 = true};
+
+// FIXME: hthis compairson could be done with a cast using MouseButtons.inner
+// property but I could not figure out how
+macro Ctx.is_mouse_pressed(&ctx, MouseButtons btn)
+{
+    return (ctx.mouse_pressed() & btn) != BTN_NONE;
+}
+
+macro Ctx.is_mouse_released(&ctx, MouseButtons btn)
+{
+    return (ctx.mouse_released() & btn) != BTN_NONE;
+}
+
+macro Ctx.is_mouse_down(&ctx, MouseButtons btn)
+{
+    return (ctx.mouse_down() & btn) != BTN_NONE;
+}
+
+macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
+{
+    // TODO: add the other events
+    ElemEvents ev = {
+        .mouse_hover = ctx.is_hovered(elem),
+        .mouse_press = ctx.is_mouse_pressed(BTN_ANY),
+		.mouse_release = ctx.is_mouse_released(BTN_ANY),
+		.mouse_hold = ctx.is_mouse_down(BTN_ANY),
+    };
+    return ev;
+}
+
 // Mouse Button moved
 fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 {
 	ctx.input.mouse.updated = ctx.input.mouse.down ^ buttons;
 	ctx.input.mouse.down = buttons;
 	ctx.input.events.mouse_btn = true;
-
-	io::printfn(
-	    "Mouse Down: %s%s%s%s%s",
-	    buttons.btn_left ? "BTN_LEFT " : "",
-	    buttons.btn_right ? "BTN_RIGHT " : "",
-	    buttons.btn_middle ? "BTN_MIDDLE " : "",
-	    buttons.btn_4 ? "BTN_4 " : "",
-	    buttons.btn_5 ? "BTN_5 " : ""
-	);
 }
 
 // Mouse was moved, report absolute position

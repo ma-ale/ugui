@@ -11,6 +11,19 @@ fn Elem*! Ctx.get_parent(&ctx)
 	return ctx.cache.search(parent_id);
 }
 
+// get or push an element from the cache, return a pointer to it
+// resets all flags except is_new which is set accordingly
+macro Ctx.get_elem(&ctx, Id id)
+{
+	Elem empty_elem;
+	bool is_new;
+	Elem* c_elem;
+	c_elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
+	c_elem.flags = (ElemFlags)0;
+	c_elem.flags.is_new = is_new;
+	return c_elem;
+}
+
 fn void! Ctx.init(&ctx)
 {
 	ctx.tree.init(MAX_ELEMENTS)!;
@@ -39,56 +52,40 @@ fn void Ctx.free(&ctx)
 
 fn void! Ctx.frame_begin(&ctx)
 {
-	// 1. Create the root div element
-	// NOTE: in c3 everythong is zero initialized by default
-	Rect space = {
-	    .w = ctx.width,
-	    .h = ctx.height,
-	};
 
-	Elem root = {
-	    .id    = ROOT_ID,
-	    .type  = ETYPE_DIV,
-	    .rect  = space,
-	    .div = {
-		    .layout   = LAYOUT_ROW,
-		},
-	};
-
+	// 2. Get the root element from the cache and update it
+	Elem* c_elem = ctx.get_elem(ROOT_ID)!;
 	// The root should have the updated flag only if the size of the window
 	// was changed between frames, this propagates an element size recalculation
 	// down the element tree
-	if (ctx.input.events.resize) {
-		root.flags.updated = true;
-	}
-
+	c_elem.flags.updated = ctx.input.events.resize;
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
-	if (ctx.has_focus) {
-		root.flags.has_focus = true;
-	}
+	c_elem.flags.has_focus = ctx.has_focus;
 
-	// FIXME: check errors
-	// 2. Get the root element from the cache and update it
-	bool is_new;
-	Elem empty_elem;
-	Elem* c_elem = ctx.cache.get_or_insert(&empty_elem, root.id, &is_new)!;
-	// flags always need to be set to the new flags
-	c_elem.flags = root.flags;
-	if (is_new || root.flags.updated) {
-		*c_elem = root;
+	if (c_elem.flags.is_new || c_elem.flags.updated) {
+        Elem def_root = {
+            .id    = ROOT_ID,
+            .type  = ETYPE_DIV,
+            .rect  = {
+                .w = ctx.width,
+                .h = ctx.height,
+            },
+            .div = {
+                .layout   = LAYOUT_ROW,
+            },
+            .flags = c_elem.flags,
+        };
+
+        *c_elem = def_root;
 	}
 
 	// 3. Push the root element into the element tree
-	ctx.active_div = ctx.tree.add(root.id, 0)!;
-
-	// print_tree(ctx);
+	ctx.active_div = ctx.tree.add(ROOT_ID, 0)!;
 
 	// The root element does not push anything to the stack
 	// TODO: add a background color taken from a theme or config
-
-	io::printn("##### Frame Begin #####");
 }
 
 fn void! Ctx.frame_end(&ctx)
@@ -113,36 +110,22 @@ $if 1:
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
 $endif
-
-	io::printn("##### Frame End #####");
 }
 
 fn void! Ctx.div_begin(&ctx, String label, Rect size)
 {
 	Id id = hash(label);
 
-	bool is_new;
-	Elem empty_elem;
-	Elem* c_elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
-
-	// FIXME: why save the id in the tree and not something more direct like
-	//        the element pointer or the index into the cache vector?
-	isz div_node = ctx.tree.add(id, ctx.active_div)!;
-
 	Elem *parent = ctx.get_parent()!;
-
-	ctx.tree.print();
-
-	// Use the current div
+	Elem* c_elem = ctx.get_elem(id)!;
+	isz div_node = ctx.tree.add(id, ctx.active_div)!;
 	ctx.active_div = div_node;
 
 	// 1. Fill the element fields
-	// this resets the flags
 	c_elem.type  = ETYPE_DIV;
-	c_elem.flags = (ElemFlags)0;
 
 	// do layout and update flags only if the element was updated
-	if (is_new || parent.flags.updated) {
+	if (c_elem.flags.is_new || parent.flags.updated) {
 		// 2. layout the element
 		c_elem.rect = ctx.position_element(parent, size);
 
@@ -183,62 +166,10 @@ fn void! Ctx.div_end(&ctx)
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
 }
 
-// @ensure elem != null
+/**
+ * @ensure elem != null
+**/
 fn bool Ctx.is_hovered(&ctx, Elem *elem)
 {
 	return point_in_rect(ctx.input.mouse.pos, elem.rect);
-}
-
-fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
-{
-	Id id = hash(label);
-
-	// TODO: do layouting if the element is new or the parent has updated
-	bool is_new;
-	Elem empty_elem;
-	Elem *c_elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
-
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-	ctx.tree.print();
-
-	Elem *parent = ctx.get_parent()!;
-
-	// 1. Fill the element fields
-	// this resets the flags
-	c_elem.type     = ETYPE_BUTTON;
-	c_elem.flags    = (ElemFlags)0;
-	Color bg_color = uint_to_rgba(0x0000ffff);
-
-	// if the element is new or the parent was updated then redo layout
-	if (is_new || parent.flags.updated) {
-		// 2. Layout
-		c_elem.rect = ctx.position_element(parent, size, true);
-
-		// TODO: 3. Fill the button specific fields
-	}
-
-	// TODO: Check for interactions
-	if (parent.flags.has_focus) {
-		if (ctx.is_hovered(c_elem)) {
-			c_elem.flags.has_focus = true;
-			c_elem.events.mouse_hover = true;
-			bg_color = uint_to_rgba(0x00ff00ff);
-			c_elem.events.mouse_hold = ctx.input.mouse.down.btn_left;
-		} else {
-			c_elem.events.mouse_hover = false;
-		}
-	}
-
-	// Draw the button
-	Cmd cmd = {
-	    .type = CMD_RECT,
-	    .rect =	{
-		    .rect  = c_elem.rect,
-		    .color = bg_color,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
-
-	return c_elem.events;
 }

@@ -28,6 +28,7 @@ enum ElemType {
 bitstruct ElemFlags : uint {
 	bool updated : 0;
 	bool has_focus : 1;
+	bool is_new : 2;
 }
 
 bitstruct ElemEvents : uint {
