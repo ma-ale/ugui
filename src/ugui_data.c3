@@ -23,6 +23,7 @@ enum ElemType {
 	ETYPE_NONE,
 	ETYPE_DIV,
 	ETYPE_BUTTON,
+	ETYPE_SLIDER,
 }
 
 bitstruct ElemFlags : uint {
@@ -39,6 +40,7 @@ bitstruct ElemEvents : uint {
 	bool mouse_press   : 4;
 	bool mouse_release : 5;
 	bool mouse_hold    : 6;
+	bool update        : 7;
 }
 
 enum DivLayout {
@@ -54,6 +56,12 @@ struct Div {
 	Color color_bg;
 }
 
+// slider element
+struct Slider {
+    float value;
+    Rect handle;
+}
+
 // element structure
 struct Elem {
 	Id id;
@@ -63,6 +71,7 @@ struct Elem {
 	ElemType type;
 	union {
 		Div div;
+		Slider slider;
 	}
 }
 

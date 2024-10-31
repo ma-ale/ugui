@@ -24,6 +24,14 @@ macro Ctx.get_elem(&ctx, Id id)
 	return c_elem;
 }
 
+// this searches an element in the cache by label, it does not create a new element
+// if it does't find one
+macro Ctx.get_elem_by_label(&ctx, String label)
+{
+    Id id = hash(label);
+    return ctx.cache.search(id);
+}
+
 fn void! Ctx.init(&ctx)
 {
 	ctx.tree.init(MAX_ELEMENTS)!;

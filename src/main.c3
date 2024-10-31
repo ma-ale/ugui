@@ -65,6 +65,10 @@ fn int main(String[] args)
 			if (ctx.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
+			if (ctx.slider_hor("slider", ugui::Rect{0,0,100,30})!!.update) {
+				ugui::Elem* e = ctx.get_elem_by_label("slider")!!;
+				io::printfn("slider: %f", e.slider.value);
+			}
 		|};
 		ctx.div_end()!!;
 

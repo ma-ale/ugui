@@ -23,9 +23,6 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 		// TODO: 3. Fill the button specific fields
 	}
 
-	// TODO: Check for interactions
-	// FIXME: this is not how normal buttons work, usually focus follows both
-	//        mouse hover and mouse down
 	c_elem.events = ctx.get_elem_events(c_elem);
 	if (parent.flags.has_focus) {
 		if (c_elem.events.mouse_hover) {

@@ -83,11 +83,13 @@ macro Ctx.is_mouse_down(&ctx, MouseButtons btn)
 macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
     // TODO: add the other events
+    // FIXME: active should be elsewhere
+    bool active = elem.events.mouse_hold || ctx.is_hovered(elem);
     ElemEvents ev = {
         .mouse_hover = ctx.is_hovered(elem),
-        .mouse_press = ctx.is_mouse_pressed(BTN_ANY),
-		.mouse_release = ctx.is_mouse_released(BTN_ANY),
-		.mouse_hold = ctx.is_mouse_down(BTN_ANY),
+        .mouse_press = active & ctx.is_mouse_pressed(BTN_ANY),
+		.mouse_release = active & ctx.is_mouse_released(BTN_ANY),
+		.mouse_hold = active & ctx.is_mouse_down(BTN_ANY),
     };
     return ev;
 }
@@ -101,8 +103,20 @@ fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 }
 
 // Mouse was moved, report absolute position
-// TODO: implement this
-fn void Ctx.input_mouse_abs(&ctx, short x, short y) { return; }
+fn void Ctx.input_mouse_abs(&ctx, short x, short y)
+{
+	ctx.input.mouse.pos.x = clamp(x, 0u16, ctx.width);
+	ctx.input.mouse.pos.y = clamp(y, 0u16, ctx.height);
+
+	short dx, dy;
+	dx = x - ctx.input.mouse.pos.x;
+	dy = y - ctx.input.mouse.pos.y;
+
+	ctx.input.mouse.delta.x = dx;
+	ctx.input.mouse.delta.y = dy;
+
+	ctx.input.events.mouse_move = true;
+}
 
 // Mouse was moved, report relative motion
 fn void Ctx.input_mouse_delta(&ctx, short dx, short dy)
