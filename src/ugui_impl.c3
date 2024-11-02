@@ -74,9 +74,9 @@ fn void! Ctx.frame_begin(&ctx)
 
 	if (c_elem.flags.is_new || c_elem.flags.updated) {
         Elem def_root = {
-            .id    = ROOT_ID,
-            .type  = ETYPE_DIV,
-            .rect  = {
+            .id = ROOT_ID,
+            .type = ETYPE_DIV,
+            .bounds = {
                 .w = ctx.width,
                 .h = ctx.height,
             },
@@ -135,20 +135,20 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	// do layout and update flags only if the element was updated
 	if (c_elem.flags.is_new || parent.flags.updated) {
 		// 2. layout the element
-		c_elem.rect = ctx.position_element(parent, size);
+		c_elem.bounds = ctx.position_element(parent, size);
 
 		// 3. Mark the element as updated
 		c_elem.flags.updated = true;
 		// 4. Fill the div fields
 		c_elem.div.layout   = parent.div.layout;
 		c_elem.div.origin_c = Point{
-		    .x = c_elem.rect.x,
-		    .y = c_elem.rect.y,
+		    .x = c_elem.bounds.x,
+		    .y = c_elem.bounds.y,
 		};
 		c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
 		c_elem.div.origin_r = c_elem.div.origin_c;
 	} else if (parent.flags.has_focus) {
-		if (point_in_rect(ctx.input.mouse.pos, c_elem.rect)) {
+		if (point_in_rect(ctx.input.mouse.pos, c_elem.bounds)) {
 			c_elem.flags.has_focus = true;
 		}
 	} else {
@@ -161,7 +161,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	Cmd cmd = {
 	    .type = CMD_RECT,
 	    .rect = {
-		    .rect  = c_elem.rect,
+		    .rect  = c_elem.bounds,
 		    .color = c_elem.div.color_bg,
 		},
 	};
@@ -179,5 +179,5 @@ fn void! Ctx.div_end(&ctx)
 **/
 fn bool Ctx.is_hovered(&ctx, Elem *elem)
 {
-	return point_in_rect(ctx.input.mouse.pos, elem.rect);
+	return point_in_rect(ctx.input.mouse.pos, elem.bounds);
 }

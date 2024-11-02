@@ -51,7 +51,7 @@ fn void! Ctx.layout_next_row(&ctx)
 	}
 
 	parent.div.origin_r = Point{
-	    .x = parent.rect.x,
+	    .x = parent.bounds.x,
 	    .y = parent.div.origin_c.y,
 	};
 	parent.div.origin_c = parent.div.origin_r;
@@ -69,7 +69,7 @@ fn void! Ctx.layout_next_column(&ctx)
 
 	parent.div.origin_c = Point{
 	    .x = parent.div.origin_r.x,
-	    .y = parent.rect.y,
+	    .y = parent.bounds.y,
 	};
 	parent.div.origin_r = parent.div.origin_c;
 }
@@ -98,8 +98,8 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	// 3. Calculate width & height
 	// TODO: what about negative values?
 	// FIXME: account for origin offset!!
-	elem_rect.w = rect.w > 0 ? rect.w : parent.rect.w;
-	elem_rect.h = rect.h > 0 ? rect.h : parent.rect.h;
+	elem_rect.w = rect.w > 0 ? rect.w : parent.bounds.w;
+	elem_rect.h = rect.h > 0 ? rect.h : parent.bounds.h;
 
 	// 4. Update the origins of the parent
 	parent.div.origin_r = Point{
@@ -139,10 +139,10 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	/*
 	        printf(
 	            "positioning rect: %lx {%d %d %d %d}(%d %d %d %d) . {%d %d %d
-	   %d}\n", parent.id, rect.x, rect.y, rect.w, rect.h, parent.rect.x,
-	            parent.rect.y,
-	            parent.rect.w,
-	            parent.rect.h,
+	   %d}\n", parent.id, rect.x, rect.y, rect.w, rect.h, parent.bounds.x,
+	            parent.bounds.y,
+	            parent.bounds.w,
+	            parent.bounds.h,
 	            elem_rect.x,
 	            elem_rect.y,
 	            elem_rect.w,

@@ -67,7 +67,7 @@ struct Elem {
 	Id id;
 	ElemFlags flags;
 	ElemEvents events;
-	Rect rect;
+	Rect bounds;
 	ElemType type;
 	union {
 		Div div;

@@ -18,7 +18,7 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 	// if the element is new or the parent was updated then redo layout
 	if (c_elem.flags.is_new || parent.flags.updated) {
 		// 2. Layout
-		c_elem.rect = ctx.position_element(parent, size, true);
+		c_elem.bounds = ctx.position_element(parent, size, true);
 
 		// TODO: 3. Fill the button specific fields
 	}
@@ -35,7 +35,7 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 	Cmd cmd = {
 	    .type = CMD_RECT,
 	    .rect =	{
-		    .rect  = c_elem.rect,
+		    .rect  = c_elem.bounds,
 		    .color = bg_color,
 		},
 	};
