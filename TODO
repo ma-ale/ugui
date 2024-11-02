@@ -1,0 +1,6 @@
+# TODOs, semi-random sorting
+[ ] Implement glyph draw command
+[ ] Implement div.view and scrollbars
+[ ] Port font system from C to C3 (rewrite1)
+[ ] Update ARCHITECTURE.md
+[ ] Write a README.md
