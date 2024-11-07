@@ -192,3 +192,19 @@ macro point_in_rect(Point p, Rect r)
 {
 	return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
 }
+
+// return true if rect a contains b
+macro rect_contains(Rect a, Rect b)
+{
+    return (a.x <= b.x && a.y <= b.y && a.x+a.w >= b.x+b.w && a.y+a.h >= b.y+b.h);
+}
+
+macro rect_intersection(Rect a, Rect b)
+{
+    return Rect{
+        .x = (short)max(a.x, b.x),
+        .y = (short)max(a.y, b.y),
+        .w = (short)min(a.x+a.w, b.x+b.w) - (short)max(a.x, b.x),
+        .h = (short)min(a.y+a.h, b.y+b.h) - (short)max(a.y, b.y),
+    };
+}

@@ -51,10 +51,10 @@ fn int main(String[] args)
 		ctx.frame_begin()!!;
 
 		// main div, fill the whole window
-		ctx.div_begin("main", ugui::DIV_FILL)!!;
+		ctx.div_begin("main", ugui::Rect{.w=ctx.width/2})!!;
 		{|
 			ctx.layout_set_column()!!;
-			if (ctx.button("button0", ugui::Rect{100,100,30,30})!!.mouse_press) {
+			if (ctx.button("button0", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button0");
 			}
 			ctx.layout_next_column()!!;
@@ -68,6 +68,15 @@ fn int main(String[] args)
 			if (ctx.slider_ver("slider", ugui::Rect{0,0,30,100})!!.update) {
 				ugui::Elem* e = ctx.get_elem_by_label("slider")!!;
 				io::printfn("slider: %f", e.slider.value);
+			}
+		|};
+		ctx.div_end()!!;
+
+		ctx.div_begin("second", ugui::DIV_FILL)!!;
+		{|
+			if (ctx.slider_ver("slider_other", ugui::Rect{0,0,30,100})!!.update) {
+				ugui::Elem* e = ctx.get_elem_by_label("slider_other")!!;
+				io::printfn("other slider: %f", e.slider.value);
 			}
 		|};
 		ctx.div_end()!!;

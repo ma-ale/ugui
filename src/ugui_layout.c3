@@ -77,7 +77,7 @@ fn void! Ctx.layout_next_column(&ctx)
 // position the rectangle inside the parent according to the layout
 fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 {
-	Rect  elem_rect;
+	Rect  bounds;
 	Point origin;
 
 	// 1. Select the right origin
@@ -92,30 +92,29 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	}
 
 	// 2. Position the rect
-	elem_rect.x = origin.x + rect.x;
-	elem_rect.y = origin.y + rect.y;
+	bounds.x = (short)max(origin.x + rect.x, 0);
+	bounds.y = (short)max(origin.y + rect.y, 0);
 
 	// 3. Calculate width & height
-	// TODO: what about negative values?
 	// FIXME: account for origin offset!!
-	elem_rect.w = rect.w > 0 ? rect.w : parent.bounds.w;
-	elem_rect.h = rect.h > 0 ? rect.h : parent.bounds.h;
+	bounds.w = rect.w > 0 ? rect.w : parent.bounds.w;
+	bounds.h = rect.h > 0 ? rect.h : parent.bounds.h;
 
 	// 4. Update the origins of the parent
 	parent.div.origin_r = Point{
-	    .x = elem_rect.x + elem_rect.w,
-	    .y = elem_rect.y,
+	    .x = bounds.x + bounds.w,
+	    .y = bounds.y,
 	};
 	parent.div.origin_c = Point{
-	    .x = elem_rect.x,
-	    .y = elem_rect.y + elem_rect.h,
+	    .x = bounds.x,
+	    .y = bounds.y + bounds.h,
 	};
 
 	// if using the style then apply margins
 	// FIXME: this does not work
 	if (style && parent.div.layout != LAYOUT_FLOATING) {
-		elem_rect.x += ctx.style.margin.x;
-		elem_rect.y += ctx.style.margin.y;
+		bounds.x += ctx.style.margin.x;
+		bounds.y += ctx.style.margin.y;
 
 		// total keep-out borders
 		Rect margin_tot = {
@@ -136,18 +135,5 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		parent.div.origin_c.y += margin_tot.y + margin_tot.h;
 	}
 
-	/*
-	        printf(
-	            "positioning rect: %lx {%d %d %d %d}(%d %d %d %d) . {%d %d %d
-	   %d}\n", parent.id, rect.x, rect.y, rect.w, rect.h, parent.bounds.x,
-	            parent.bounds.y,
-	            parent.bounds.w,
-	            parent.bounds.h,
-	            elem_rect.x,
-	            elem_rect.y,
-	            elem_rect.w,
-	            elem_rect.h
-	        );
-	*/
-	return elem_rect;
+	return bounds;
 }
