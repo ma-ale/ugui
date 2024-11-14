@@ -17,6 +17,9 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	if (c_elem.flags.is_new || parent.flags.updated) {
 		// 2. layout the element
 		c_elem.bounds = ctx.position_element(parent, size);
+		if (c_elem.flags.is_new) {
+			c_elem.div.children_bounds = c_elem.bounds;
+		}
 
 		// 3. Mark the element as updated
 		c_elem.flags.updated = true;
@@ -28,6 +31,10 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 		};
 		c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
 		c_elem.div.origin_r = c_elem.div.origin_c;
+		c_elem.div.can_scroll_x = false;
+		c_elem.div.can_scroll_y = false;
+		c_elem.div.vertical_scroll_bar = -1;
+		c_elem.div.horizontal_scroll_bar = -1;
 	}
 
 	// Add the background to the draw stack

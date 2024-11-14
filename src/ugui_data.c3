@@ -52,6 +52,11 @@ enum DivLayout {
 // div element
 struct Div {
 	DivLayout layout;
+	bool can_scroll_x;
+	bool can_scroll_y;
+	isz vertical_scroll_bar;
+	isz horizontal_scroll_bar;
+	Rect children_bounds;
 	Point origin_r, origin_c;
 	Color color_bg;
 }
@@ -207,4 +212,10 @@ macro rect_intersection(Rect a, Rect b)
         .w = (short)min(a.x+a.w, b.x+b.w) - (short)max(a.x, b.x),
         .h = (short)min(a.y+a.h, b.y+b.h) - (short)max(a.y, b.y),
     };
+}
+
+// rect intersection not null
+macro rect_collision(Rect a, Rect b)
+{
+    return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
 }

@@ -75,9 +75,12 @@ fn void! Ctx.layout_next_column(&ctx)
 }
 
 // position the rectangle inside the parent according to the layout
+// parent: parent div
+// rect: the requested size
+// style: apply style
 fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 {
-	Rect  bounds;
+	Rect  placement;
 	Point origin;
 
 	// 1. Select the right origin
@@ -91,49 +94,65 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		// Error
 	}
 
-	// 2. Position the rect
-	bounds.x = (short)max(origin.x + rect.x, 0);
-	bounds.y = (short)max(origin.y + rect.y, 0);
+	// the bottom-right border of the element box
+	Point pl_corner;
 
-	// 3. Calculate width & height
-	// FIXME: account for origin offset!!
-	bounds.w = rect.w > 0 ? rect.w : parent.bounds.w;
-	bounds.h = rect.h > 0 ? rect.h : parent.bounds.h;
+	// 2. Calculate the placement
+	placement.x = (short)max(origin.x + rect.x, 0);
+	placement.y = (short)max(origin.y + rect.y, 0);
+	placement.w = rect.w > 0 ? rect.w : parent.bounds.w - (placement.x - parent.bounds.x);
+	placement.h = rect.h > 0 ? rect.h : parent.bounds.h - (placement.y - parent.bounds.y);
 
-	// 4. Update the origins of the parent
-	parent.div.origin_r = Point{
-	    .x = bounds.x + bounds.w,
-	    .y = bounds.y,
-	};
-	parent.div.origin_c = Point{
-	    .x = bounds.x,
-	    .y = bounds.y + bounds.h,
-	};
+	pl_corner.x = placement.x + placement.w;
+	pl_corner.y = placement.y + placement.h;
 
-	// if using the style then apply margins
-	// FIXME: this does not work
-	if (style && parent.div.layout != LAYOUT_FLOATING) {
-		bounds.x += ctx.style.margin.x;
-		bounds.y += ctx.style.margin.y;
+	// 2.1 apply style, css box model
+	if (style) {
+	    Rect margin = ctx.style.margin;
+	    Rect border = ctx.style.border;
+		Rect padding = ctx.style.padding;
 
-		// total keep-out borders
-		Rect margin_tot = {
-		    .x = ctx.style.padding.x + ctx.style.border.x +
-		         ctx.style.margin.x,
-		    .y = ctx.style.padding.y + ctx.style.border.y +
-		         ctx.style.margin.y,
-		    .w = ctx.style.padding.w + ctx.style.border.x +
-		         ctx.style.margin.w,
-		    .h = ctx.style.padding.h + ctx.style.border.x +
-		         ctx.style.margin.h,
-		};
+		placement.x += margin.x;
+		placement.y += margin.y;
+		if (rect.w != 0) { placement.w += margin.x+margin.w + padding.x+padding.w; }
+		if (rect.h != 0) { placement.h += margin.y+margin.h + padding.y+padding.h; }
 
-		parent.div.origin_r.x += margin_tot.x + margin_tot.w;
-		// parent.div.origin_r.y += margin_tot.h;
-
-		// parent.div.origin_c.x += margin_tot.w;
-		parent.div.origin_c.y += margin_tot.y + margin_tot.h;
+		pl_corner.x = placement.x + placement.w + margin.w;
+		pl_corner.y = placement.y + placement.h + margin.h;
 	}
 
-	return bounds;
+	// 3. Update the origins of the parent
+	parent.div.origin_r = Point{
+	    .x = pl_corner.x,
+	    .y = origin.y,
+	};
+	parent.div.origin_c = Point{
+	    .x = origin.x,
+	    .y = pl_corner.y,
+	};
+
+	// 4. Calculate the "scrolled" view
+	Point off;
+	if (parent.div.can_scroll_x && parent.div.horizontal_scroll_bar != -1) {
+		Elem*! sx = ctx.get_elem_by_tree_idx(parent.div.horizontal_scroll_bar);
+		if (catch sx) { return Rect{}; }
+		// TODO: assert that the element is a slider
+		off.x = (short)(parent.div.children_bounds.w * sx.slider.value);
+	}
+	if (parent.div.can_scroll_y && parent.div.vertical_scroll_bar != -1) {
+		Elem*! sy = ctx.get_elem_by_tree_idx(parent.div.vertical_scroll_bar);
+		if (catch sy) { return Rect{}; }
+		// TODO: assert that the element is a slider
+		off.y = (short)(parent.div.children_bounds.h * sy.slider.value);
+	}
+	Rect view = {
+		.x = parent.bounds.x + off.x,
+		.y = parent.bounds.y + off.y,
+		.w = parent.bounds.w,
+		.h = parent.bounds.h,
+	};
+
+	// TODO: 5. check if the placement is inside the view
+
+	return placement;
 }

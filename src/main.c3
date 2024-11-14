@@ -53,15 +53,15 @@ fn int main(String[] args)
 		// main div, fill the whole window
 		ctx.div_begin("main", ugui::Rect{.w=ctx.width/2})!!;
 		{|
-			ctx.layout_set_column()!!;
+			ctx.layout_set_row()!!;
 			if (ctx.button("button0", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button0");
 			}
-			ctx.layout_next_column()!!;
+			//ctx.layout_next_column()!!;
 			if (ctx.button("button1", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button1");
 			}
-			ctx.layout_next_column()!!;
+			//ctx.layout_next_column()!!;
 			if (ctx.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}

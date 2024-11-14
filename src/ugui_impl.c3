@@ -32,6 +32,12 @@ macro Ctx.get_elem_by_label(&ctx, String label)
     return ctx.cache.search(id);
 }
 
+macro Ctx.get_elem_by_tree_idx(&ctx, isz idx) @private
+{
+    Id id = ctx.tree.get(ctx.active_div)!;
+	return ctx.cache.search(id);
+}
+
 fn void! Ctx.init(&ctx)
 {
 	ctx.tree.init(MAX_ELEMENTS)!;
