@@ -6,14 +6,15 @@ import rl;
 
 fn int main(String[] args)
 {
-	ugui::Ctx ctx;
-	ctx.init()!!;
+	ugui::Ctx ui;
+	ui.init()!!;
 
 	short width = 800;
 	short height = 450;
 	rl::set_config_flags(rl::FLAG_WINDOW_RESIZABLE);
 	rl::init_window(width, height, "Ugui Test");
-	ctx.input_window_size(width, height)!!;
+	ui.input_window_size(width, height)!!;
+	rl::set_target_fps(30);
 
 	isz frame;
 
@@ -27,61 +28,68 @@ fn int main(String[] args)
 		if (rl::is_window_resized()) {
 			width  = (short)rl::get_screen_width();
 			height = (short)rl::get_screen_height();
-			ctx.input_window_size(width, height)!!;
+			ui.input_window_size(width, height)!!;
 		}
 
-		ctx.input_changefocus(rl::is_window_focused());
+		ui.input_changefocus(rl::is_window_focused());
 
-		// FIXME: In raylib it doesn't seem to be a quick way to check if
-		//        a mouse input event was received, so for now just use
-		//        the delta information
-		rl::Vector2 mousedelta = rl::get_mouse_delta();
-		if (mousedelta.x || mousedelta.y) {
-			ctx.input_mouse_delta((short)mousedelta.x, (short)mousedelta.y);
-		}
+		rl::Vector2 mpos = rl::get_mouse_position();
+		ui.input_mouse_abs((short)mpos.x, (short)mpos.y);
 
 		ugui::MouseButtons buttons;
 		buttons.btn_left = rl::is_mouse_button_down(rl::MOUSE_BUTTON_LEFT);
 		buttons.btn_right = rl::is_mouse_button_down(rl::MOUSE_BUTTON_RIGHT);
 		buttons.btn_middle = rl::is_mouse_button_down(rl::MOUSE_BUTTON_MIDDLE);
-		ctx.input_mouse_button(buttons);
+		ui.input_mouse_button(buttons);
 		/* End Input Handling */
 
 		/* Start UI Handling */
-		ctx.frame_begin()!!;
+		ui.frame_begin()!!;
 
+/*
 		// main div, fill the whole window
-		ctx.div_begin("main", ugui::Rect{.w=ctx.width/2})!!;
+		ui.div_begin("main", ugui::Rect{.w=ui.width/2})!!;
 		{|
-			ctx.layout_set_row()!!;
-			if (ctx.button("button0", ugui::Rect{0,0,30,30})!!.mouse_press) {
+			ui.layout_set_row()!!;
+			if (ui.button("button0", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button0");
 			}
-			//ctx.layout_next_column()!!;
-			if (ctx.button("button1", ugui::Rect{0,0,30,30})!!.mouse_press) {
+			//ui.layout_next_column()!!;
+			if (ui.button("button1", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button1");
 			}
-			//ctx.layout_next_column()!!;
-			if (ctx.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
+			//ui.layout_next_column()!!;
+			if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
-			if (ctx.slider_ver("slider", ugui::Rect{0,0,30,100})!!.update) {
-				ugui::Elem* e = ctx.get_elem_by_label("slider")!!;
+			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100})!!.update) {
+				ugui::Elem* e = ui.get_elem_by_label("slider")!!;
 				io::printfn("slider: %f", e.slider.value);
 			}
 		|};
-		ctx.div_end()!!;
-
-		ctx.div_begin("second", ugui::DIV_FILL)!!;
+		ui.div_end()!!;
+*/
+		ui.div_begin("second", ugui::DIV_FILL)!!;
+		ugui::Elem* de = ui.get_elem_by_label("second")!!;
+		de.div.scroll.can_y = true;
 		{|
-			if (ctx.slider_ver("slider_other", ugui::Rect{0,0,30,100})!!.update) {
-				ugui::Elem* e = ctx.get_elem_by_label("slider_other")!!;
+			ui.layout_set_column()!!;
+			if (ui.slider_ver("slider_other", ugui::Rect{0,0,30,100})!!.update) {
+				ugui::Elem* e = ui.get_elem_by_label("slider_other")!!;
 				io::printfn("other slider: %f", e.slider.value);
 			}
+			ui.button("button10", ugui::Rect{0,0,50,50})!!;
+			ui.button("button11", ugui::Rect{0,0,50,50})!!;
+			ui.button("button12", ugui::Rect{0,0,50,50})!!;
+			ui.button("button13", ugui::Rect{0,0,50,50})!!;
+			ui.button("button14", ugui::Rect{0,0,50,50})!!;
+			ui.button("button15", ugui::Rect{0,0,50,50})!!;
+			ui.button("button16", ugui::Rect{0,0,50,50})!!;
+			ui.button("button17", ugui::Rect{0,0,50,50})!!;
 		|};
-		ctx.div_end()!!;
+		ui.div_end()!!;
 
-		ctx.frame_end()!!;
+		ui.frame_end()!!;
 		/* End UI Handling */
 
 		/* Start UI Drawing */
@@ -89,7 +97,7 @@ fn int main(String[] args)
 		// ClearBackground(BLACK);
 
 		rl::Color c;
-		for (Cmd* cmd; (cmd = ctx.cmd_queue.dequeue() ?? null) != null;) {
+		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
 			switch (cmd.type) {
 			case ugui::CmdType.CMD_RECT:
 				c = rl::Color{
@@ -111,13 +119,11 @@ fn int main(String[] args)
 		}
 
 		rl::end_drawing();
-
-		// TODO: throttle FPS
 	}
 
 	rl::close_window();
 
-	ctx.free();
+	ui.free();
 	return 0;
 }
 

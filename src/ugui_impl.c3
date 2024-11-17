@@ -79,20 +79,24 @@ fn void! Ctx.frame_begin(&ctx)
 	c_elem.flags.has_focus = ctx.has_focus;
 
 	if (c_elem.flags.is_new || c_elem.flags.updated) {
-        Elem def_root = {
-            .id = ROOT_ID,
-            .type = ETYPE_DIV,
-            .bounds = {
-                .w = ctx.width,
-                .h = ctx.height,
-            },
-            .div = {
-                .layout = LAYOUT_ROW,
-            },
-            .flags = c_elem.flags,
-        };
+	Elem def_root = {
+		.id = ROOT_ID,
+		.type = ETYPE_DIV,
+		.bounds = {
+			.w = ctx.width,
+			.h = ctx.height,
+		},
+		.div = {
+			.layout = LAYOUT_ROW,
+			.children_bounds = {
+				.w = ctx.width,
+				.h = ctx.height,
+			}
+		},
+		.flags = c_elem.flags,
+	};
 
-        *c_elem = def_root;
+	*c_elem = def_root;
 	}
 
 	// 3. Push the root element into the element tree

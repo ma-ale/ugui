@@ -78,17 +78,22 @@ fn void! Ctx.layout_next_column(&ctx)
 // parent: parent div
 // rect: the requested size
 // style: apply style
+<*
+@require ctx != null
+@require parent.type == ETYPE_DIV
+*>
 fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 {
 	Rect  placement;
 	Point origin;
+	Div* div = &parent.div;
 
 	// 1. Select the right origin
-	switch (parent.div.layout) {
+	switch (div.layout) {
 	case LAYOUT_ROW:
-		origin = parent.div.origin_r;
+		origin = div.origin_r;
 	case LAYOUT_COLUMN:
-		origin = parent.div.origin_c;
+		origin = div.origin_c;
 	case LAYOUT_FLOATING: // none
 	default:
 		// Error
@@ -100,8 +105,8 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	// 2. Calculate the placement
 	placement.x = (short)max(origin.x + rect.x, 0);
 	placement.y = (short)max(origin.y + rect.y, 0);
-	placement.w = rect.w > 0 ? rect.w : parent.bounds.w - (placement.x - parent.bounds.x);
-	placement.h = rect.h > 0 ? rect.h : parent.bounds.h - (placement.y - parent.bounds.y);
+	placement.w = rect.w > 0 ? rect.w : (short)max(parent.bounds.w - (placement.x - parent.bounds.x), 0);
+	placement.h = rect.h > 0 ? rect.h : (short)max(parent.bounds.h - (placement.y - parent.bounds.y), 0);
 
 	pl_corner.x = placement.x + placement.w;
 	pl_corner.y = placement.y + placement.h;
@@ -122,28 +127,23 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	}
 
 	// 3. Update the origins of the parent
-	parent.div.origin_r = Point{
+	div.origin_r = Point{
 	    .x = pl_corner.x,
 	    .y = origin.y,
 	};
-	parent.div.origin_c = Point{
+	div.origin_c = Point{
 	    .x = origin.x,
 	    .y = pl_corner.y,
 	};
 
 	// 4. Calculate the "scrolled" view
 	Point off;
-	if (parent.div.can_scroll_x && parent.div.horizontal_scroll_bar != -1) {
-		Elem*! sx = ctx.get_elem_by_tree_idx(parent.div.horizontal_scroll_bar);
-		if (catch sx) { return Rect{}; }
-		// TODO: assert that the element is a slider
-		off.x = (short)(parent.div.children_bounds.w * sx.slider.value);
+	Rect* cb = &div.children_bounds;
+	if (div.scroll.can_x && div.scroll.on_x) {
+		off.x = (short)(cb.w * div.scroll.value_x);
 	}
-	if (parent.div.can_scroll_y && parent.div.vertical_scroll_bar != -1) {
-		Elem*! sy = ctx.get_elem_by_tree_idx(parent.div.vertical_scroll_bar);
-		if (catch sy) { return Rect{}; }
-		// TODO: assert that the element is a slider
-		off.y = (short)(parent.div.children_bounds.h * sy.slider.value);
+	if (div.scroll.can_y && div.scroll.on_y) {
+		off.y = (short)((float)(cb.h - parent.bounds.h) * div.scroll.value_y);
 	}
 	Rect view = {
 		.x = parent.bounds.x + off.x,
@@ -152,7 +152,26 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		.h = parent.bounds.h,
 	};
 
-	// TODO: 5. check if the placement is inside the view
+	// 5. check if the placement overflows the children ounds, if so update them
+	if (!point_in_rect(pl_corner, *cb)) {
+		if (pl_corner.y > cb.y+cb.h) {
+			cb.h = pl_corner.y - cb.y;
+		}
+		if (pl_corner.x > cb.x+cb.w) {
+			cb.w += pl_corner.x - (cb.x + cb.w);
+		}
+	}
 
-	return placement;
+	// 6. check if the placement is inside the view
+	if (rect_collision(placement, view)) {
+		return Rect{
+			.x = placement.x - off.x,
+			.y = placement.y - off.y,
+			.w = placement.w,
+			.h = placement.h,
+		};
+	} else {
+		return Rect{};
+	}
 }
+

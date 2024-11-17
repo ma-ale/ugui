@@ -1,5 +1,6 @@
 module ugui;
 
+import std::io;
 
 fn void! Ctx.div_begin(&ctx, String label, Rect size)
 {
@@ -29,18 +30,18 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 		    .x = c_elem.bounds.x,
 		    .y = c_elem.bounds.y,
 		};
-		c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
 		c_elem.div.origin_r = c_elem.div.origin_c;
-		c_elem.div.can_scroll_x = false;
-		c_elem.div.can_scroll_y = false;
-		c_elem.div.vertical_scroll_bar = -1;
-		c_elem.div.horizontal_scroll_bar = -1;
+		c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
+		c_elem.div.scroll.can_x = false;
+		c_elem.div.scroll.can_y = false;
+		c_elem.div.scroll.value_x = 0;
+		c_elem.div.scroll.value_y = 0;
 	}
 
 	// Add the background to the draw stack
 	Cmd cmd = {
-	    .type = CMD_RECT,
-	    .rect = {
+		.type = CMD_RECT,
+		.rect = {
 		    .rect  = c_elem.bounds,
 		    .color = c_elem.div.color_bg,
 		},
@@ -50,7 +51,66 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	// TODO: check active
 	// TODO: check resizeable
 
-	// TODO: check scrollbars
+	// check and draw scroll bars
+	if (!rect_contains(c_elem.bounds, c_elem.div.children_bounds)) {
+		Point cbc = {
+			.x = c_elem.div.children_bounds.x + c_elem.div.children_bounds.w,
+			.y = c_elem.div.children_bounds.y + c_elem.div.children_bounds.h,
+		};
+		Point bc = {
+			.x = c_elem.bounds.x + c_elem.bounds.w,
+			.y = c_elem.bounds.y + c_elem.bounds.h,
+		};
+		// vertical overflow, check and draw scroll bar
+		if (cbc.y > bc.y && c_elem.div.scroll.can_y) {
+			// set the scrollbar flag, is used in layout
+			c_elem.div.scroll.on_y = true;
+
+			Rect vslider = {
+				.x = c_elem.bounds.x + c_elem.bounds.w - 10,
+				.y = c_elem.bounds.y,
+				.w = 10,
+				.h = c_elem.bounds.h,
+			};
+
+			float vh = max((float)bc.y / cbc.y, (float)0.15);
+			Rect vhandle = {
+				.x = c_elem.bounds.x + c_elem.bounds.w - 10,
+				.y = (short)(c_elem.bounds.y + (int)(c_elem.bounds.h*(1-vh) * c_elem.div.scroll.value_y)),
+				.w = 10,
+				.h = (short)(c_elem.bounds.h * vh),
+			};
+
+			c_elem.events = ctx.get_elem_events(c_elem);
+			if (parent.flags.has_focus && c_elem.events.mouse_hover && c_elem.events.mouse_hold && point_in_rect(ctx.input.mouse.pos, vhandle)) {
+				short y = (short)clamp(ctx.input.mouse.pos.y - vhandle.h/2, vslider.y, vslider.y + vslider.h - vhandle.h);
+				vhandle.y = y;
+				float v = (float)(vhandle.y-vslider.y) / (float)(vslider.h-vhandle.h);
+				c_elem.div.scroll.value_y = v;
+				c_elem.flags.updated = true;
+				c_elem.div.origin_c = Point{
+					.x = c_elem.bounds.x,
+					.y = c_elem.bounds.y,
+				};
+				c_elem.div.origin_r = c_elem.div.origin_c;
+			}
+
+			Cmd scrl = {
+				.type = CMD_RECT,
+				.rect.rect = vslider,
+				.rect.color = uint_to_rgba(0x999999ff),
+			};
+			ctx.cmd_queue.enqueue(&scrl)!;
+
+			scrl.rect.rect = vhandle;
+			scrl.rect.color = uint_to_rgba(0x9999ffff);
+			ctx.cmd_queue.enqueue(&scrl)!;
+
+		} else {
+			c_elem.div.scroll.on_y = false;
+		}
+	}
+
 	// if the bounds are outside of the view then allocate space for scrollbars
 	DivLayout old_layout = c_elem.div.layout;
 	c_elem.div.layout = LAYOUT_FLOATING;

@@ -1,5 +1,7 @@
 module ugui;
 
+import std::io;
+
 // draw a button, return the events on that button
 fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 {

@@ -1,8 +1,12 @@
 module ugui;
 
+import std::io;
+import std::core::string;
+
 import vtree;
 import cache;
 import fifo;
+
 
 struct Rect {
 	short x, y, w, h;
@@ -52,10 +56,14 @@ enum DivLayout {
 // div element
 struct Div {
 	DivLayout layout;
-	bool can_scroll_x;
-	bool can_scroll_y;
-	isz vertical_scroll_bar;
-	isz horizontal_scroll_bar;
+	struct scroll {
+		bool can_x;
+		bool can_y;
+		bool on_x;
+		bool on_y;
+		float value_x;
+		float value_y;
+	}
 	Rect children_bounds;
 	Point origin_r, origin_c;
 	Color color_bg;
@@ -201,21 +209,21 @@ macro point_in_rect(Point p, Rect r)
 // return true if rect a contains b
 macro rect_contains(Rect a, Rect b)
 {
-    return (a.x <= b.x && a.y <= b.y && a.x+a.w >= b.x+b.w && a.y+a.h >= b.y+b.h);
+	return (a.x <= b.x && a.y <= b.y && a.x+a.w >= b.x+b.w && a.y+a.h >= b.y+b.h);
 }
 
 macro rect_intersection(Rect a, Rect b)
 {
-    return Rect{
-        .x = (short)max(a.x, b.x),
-        .y = (short)max(a.y, b.y),
-        .w = (short)min(a.x+a.w, b.x+b.w) - (short)max(a.x, b.x),
-        .h = (short)min(a.y+a.h, b.y+b.h) - (short)max(a.y, b.y),
-    };
+	return Rect{
+		.x = (short)max(a.x, b.x),
+		.y = (short)max(a.y, b.y),
+		.w = (short)min(a.x+a.w, b.x+b.w) - (short)max(a.x, b.x),
+		.h = (short)min(a.y+a.h, b.y+b.h) - (short)max(a.y, b.y),
+	};
 }
 
 // rect intersection not null
 macro rect_collision(Rect a, Rect b)
 {
-    return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
+	return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
 }
