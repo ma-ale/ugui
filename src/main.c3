@@ -14,7 +14,8 @@ fn int main(String[] args)
 	rl::set_config_flags(rl::FLAG_WINDOW_RESIZABLE);
 	rl::init_window(width, height, "Ugui Test");
 	ui.input_window_size(width, height)!!;
-	rl::set_target_fps(30);
+	rl::set_target_fps(60);
+	rl::enable_event_waiting();
 
 	isz frame;
 
