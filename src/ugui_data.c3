@@ -93,7 +93,7 @@ struct Elem {
 def IdTree = vtree::VTree(<Id>) @private;
 
 // elements themselves are kept in a cache
-const uint MAX_ELEMENTS = 2048;
+const uint MAX_ELEMENTS = 1024;
 def ElemCache = cache::Cache(<Id, Elem, MAX_ELEMENTS>) @private;
 
 def CmdQueue = fifo::Fifo(<Cmd>);
