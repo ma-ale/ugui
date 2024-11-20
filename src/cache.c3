@@ -18,7 +18,7 @@ import std::collections::bitset;
 import std::collections::map;
 
 def BitArr = bitset::BitSet(<SIZE>) @private;
-def IdTable = map::Map(<Key, usz>) @private;
+def IdTable = map::HashMap(<Key, usz>) @private;
 def IdTableEntry = map::Entry(<Key, usz>) @private;
 
 const usz CACHE_NCYCLES = (usz)(SIZE * 2.0/3.0);
@@ -44,7 +44,7 @@ macro Cache.cycle(&cache) @private {
 
 fn void! Cache.init(&cache)
 {
-    cache.table = map::new(<Key, usz>)(SIZE);
+    cache.table.new_init(capacity: SIZE);
     // FIXME: this shit is SLOW
     foreach (idx, bit : cache.used) { cache.used[idx] = false; }
     foreach (idx, bit : cache.present) { cache.present[idx] = false; }
@@ -83,10 +83,10 @@ fn Value*! Cache.search(&cache, Key id)
 /* If there is no free space left then just return the first position */
 fn usz Cache.get_free_spot(&cache) @private
 {
-    // FIXME: This shit is SLOW, especially when clz() exists
-	foreach (idx, bit: cache.present) {
-		if (bit == false) {
-			return idx;
+    const BITS = $typeof(cache.present.data[0]).sizeof*8;
+    foreach (idx, d: cache.present.data) {
+		if (d.clz() != BITS) {
+			return idx*BITS + BITS-d.clz();
 		}
 	}
 	return 0;
