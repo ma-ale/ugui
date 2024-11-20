@@ -4,7 +4,7 @@ import std::io;
 
 fn void! Ctx.div_begin(&ctx, String label, Rect size)
 {
-	Id id = hash(label);
+	Id id = label.hash();
 
 	Elem *parent = ctx.get_parent()!;
 	Elem* c_elem = ctx.get_elem(id)!;

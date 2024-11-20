@@ -9,7 +9,7 @@ import std::io;
  */
 fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size)
 {
-    Id id = hash(label);
+    Id id = label.hash();
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;
@@ -81,7 +81,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size)
  */
 fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size)
 {
-	Id id = hash(label);
+	Id id = label.hash();
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;

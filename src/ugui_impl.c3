@@ -28,7 +28,7 @@ macro Ctx.get_elem(&ctx, Id id)
 // if it does't find one
 macro Ctx.get_elem_by_label(&ctx, String label)
 {
-    Id id = hash(label);
+    Id id = label.hash();
     return ctx.cache.search(id);
 }
 

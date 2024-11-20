@@ -104,22 +104,6 @@ fault UgError {
 	UNEXPECTED_ELEMENT,
 }
 
-fn Id fnv1a(String str)
-{
-	const ulong FNV_OFF   = 0xcbf29ce484222325;
-	const ulong FNV_PRIME = 0x100000001b3;
-
-	ulong hash = FNV_OFF;
-	foreach (c : str) {
-		hash ^= c;
-		hash *= FNV_PRIME;
-	}
-
-	return hash;
-}
-
-macro hash(String str) { return fnv1a(str); }
-
 macro uint_to_rgba(uint u) {
 	return Color{
 		.r = (char)((u >> 24) & 0xff),

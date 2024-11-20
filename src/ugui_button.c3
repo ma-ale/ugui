@@ -5,7 +5,7 @@ import std::io;
 // draw a button, return the events on that button
 fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 {
-	Id id = hash(label);
+	Id id = label.hash();
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;
