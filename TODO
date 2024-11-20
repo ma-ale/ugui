@@ -4,3 +4,4 @@
 [ ] Port font system from C to C3 (rewrite1)
 [ ] Update ARCHITECTURE.md
 [ ] Write a README.md
+[ ] Use an arena allocator for cache
