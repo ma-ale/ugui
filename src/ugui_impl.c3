@@ -28,13 +28,13 @@ macro Ctx.get_elem(&ctx, Id id)
 // if it does't find one
 macro Ctx.get_elem_by_label(&ctx, String label)
 {
-    Id id = label.hash();
-    return ctx.cache.search(id);
+	Id id = label.hash();
+	return ctx.cache.search(id);
 }
 
 macro Ctx.get_elem_by_tree_idx(&ctx, isz idx) @private
 {
-    Id id = ctx.tree.get(ctx.active_div)!;
+	Id id = ctx.tree.get(ctx.active_div)!;
 	return ctx.cache.search(id);
 }
 
@@ -42,7 +42,6 @@ fn void! Ctx.init(&ctx)
 {
 	ctx.tree.init(MAX_ELEMENTS)!;
 	defer catch { (void)ctx.tree.free(); }
-	//ug_fifo_init(&ctx.fifo, MAX_CMDS);
 
 	ctx.cache.init()!;
 	defer catch { (void)ctx.cache.free(); }
@@ -72,31 +71,32 @@ fn void! Ctx.frame_begin(&ctx)
 	// The root should have the updated flag only if the size of the window
 	// was changed between frames, this propagates an element size recalculation
 	// down the element tree
-	c_elem.flags.updated = ctx.input.events.resize;
+	c_elem.flags.updated = ctx.input.events.resize | ctx.input.events.force_update;
+	ctx.input.events.force_update = false;
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
 	c_elem.flags.has_focus = ctx.has_focus;
 
 	if (c_elem.flags.is_new || c_elem.flags.updated) {
-	Elem def_root = {
-		.id = ROOT_ID,
-		.type = ETYPE_DIV,
-		.bounds = {
-			.w = ctx.width,
-			.h = ctx.height,
-		},
-		.div = {
-			.layout = LAYOUT_ROW,
-			.children_bounds = {
+		Elem def_root = {
+			.id = ROOT_ID,
+			.type = ETYPE_DIV,
+			.bounds = {
 				.w = ctx.width,
 				.h = ctx.height,
-			}
-		},
-		.flags = c_elem.flags,
-	};
+			},
+			.div = {
+				.layout = LAYOUT_ROW,
+				.children_bounds = {
+					.w = ctx.width,
+					.h = ctx.height,
+				}
+			},
+			.flags = c_elem.flags,
+		};
 
-	*c_elem = def_root;
+		*c_elem = def_root;
 	}
 
 	// 3. Push the root element into the element tree
@@ -106,13 +106,20 @@ fn void! Ctx.frame_begin(&ctx)
 	// TODO: add a background color taken from a theme or config
 }
 
+fn void! Ctx.force_update(&ctx)
+{
+	ctx.input.events.force_update = true;
+}
+
 fn void! Ctx.frame_end(&ctx)
 {
 	// 1. clear the tree
 	ctx.tree.prune(0)!;
 
 	// 2. clear input fields
+	bool f = ctx.input.events.force_update;
 	ctx.input.events = (InputEvents)0;
+	ctx.input.events.force_update = f;
 
 	// draw mouse position
 $if 1:
@@ -130,9 +137,9 @@ $if 1:
 $endif
 }
 
-/**
+<*
  * @ensure elem != null
-**/
+ *>
 fn bool Ctx.is_hovered(&ctx, Elem *elem)
 {
 	return point_in_rect(ctx.input.mouse.pos, elem.bounds);

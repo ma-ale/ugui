@@ -8,6 +8,7 @@ bitstruct InputEvents : uint {
 	bool change_focus : 1; // window focus changed
 	bool mouse_move : 2; // mouse was moved
 	bool mouse_btn : 3; // mouse button pressed or released
+	bool force_update : 4;
 }
 
 // Window size was changed
@@ -82,16 +83,16 @@ macro Ctx.is_mouse_down(&ctx, MouseButtons btn)
 
 macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
-    // TODO: add the other events
-    // FIXME: active should be elsewhere
-    bool active = elem.events.mouse_hold || ctx.is_hovered(elem);
-    ElemEvents ev = {
-        .mouse_hover = ctx.is_hovered(elem),
-        .mouse_press = active & ctx.is_mouse_pressed(BTN_ANY),
+	// TODO: add the other events
+	// FIXME: active should be elsewhere
+	bool active = elem.events.mouse_hold || ctx.is_hovered(elem);
+	ElemEvents ev = {
+		.mouse_hover = ctx.is_hovered(elem),
+		.mouse_press = active & ctx.is_mouse_pressed(BTN_ANY),
 		.mouse_release = active & ctx.is_mouse_released(BTN_ANY),
 		.mouse_hold = active & ctx.is_mouse_down(BTN_ANY),
-    };
-    return ev;
+	};
+	return ev;
 }
 
 // Mouse Button moved
