@@ -3,6 +3,25 @@ import vtree;
 import cache;
 import ugui;
 import rl;
+import std::time;
+import std::collections::ringbuffer;
+
+def Times = ringbuffer::RingBuffer(<time::NanoDuration, 128>);
+
+fn void Times.print_stats(&times)
+{
+	time::NanoDuration min, max, avg, x;
+	min = times.get(0);
+	for (usz i = 0; i < times.written; i++) {
+		x = times.get(i);
+		if (x < min) { min = x; }
+		if (x > max) { max = x; }
+		avg += x;
+	}
+	avg = (NanoDuration)((ulong)avg/128.0);
+
+	io::printfn("min=%s, max=%s, avg=%s", min, max, avg);
+}
 
 fn int main(String[] args)
 {
@@ -18,13 +37,15 @@ fn int main(String[] args)
 	rl::enable_event_waiting();
 
 	isz frame;
+	bool toggle = true;
+	time::Clock clock;
+	Times ui_times;
+	Times draw_times;
 
 	// Main loop
 	while (!rl::window_should_close()) {
-		const int PARTIAL_INPUT  = 0;
-		const int PARTIAL_LAYOUT = 1;
-		const int PARTIAL_DRAW   = 2;
-
+		clock.mark();
+		
 		/* Start Input Handling */
 		if (rl::is_window_resized()) {
 			width  = (short)rl::get_screen_width();
@@ -47,21 +68,25 @@ fn int main(String[] args)
 		/* Start UI Handling */
 		ui.frame_begin()!!;
 
-/*
 		// main div, fill the whole window
 		ui.div_begin("main", ugui::Rect{.w=ui.width/2})!!;
 		{|
+
 			ui.layout_set_row()!!;
 			if (ui.button("button0", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button0");
+				toggle = !toggle;
+				ui.force_update()!!;
 			}
 			//ui.layout_next_column()!!;
 			if (ui.button("button1", ugui::Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button1");
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
-				io::printn("release button2");
+			if (toggle) {
+				if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
+					io::printn("release button2");
+				}
 			}
 			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100})!!.update) {
 				ugui::Elem* e = ui.get_elem_by_label("slider")!!;
@@ -69,7 +94,7 @@ fn int main(String[] args)
 			}
 		|};
 		ui.div_end()!!;
-*/
+
 		ui.div_begin("second", ugui::DIV_FILL)!!;
 		ugui::Elem* de = ui.get_elem_by_label("second")!!;
 		de.div.scroll.can_y = true;
@@ -92,6 +117,8 @@ fn int main(String[] args)
 
 		ui.frame_end()!!;
 		/* End UI Handling */
+		ui_times.push(clock.mark());
+		ui_times.print_stats();
 
 		/* Start UI Drawing */
 		rl::begin_drawing();
@@ -118,8 +145,11 @@ fn int main(String[] args)
 				io::printfn("Unknown cmd type: %d", cmd.type);
 			}
 		}
-
+		draw_times.push(clock.mark());
+		draw_times.print_stats();
 		rl::end_drawing();
+		/* End Drawing */
+
 	}
 
 	rl::close_window();
