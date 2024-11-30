@@ -20,22 +20,22 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 		c_elem.bounds = ctx.position_element(parent, size);
 		if (c_elem.flags.is_new) {
 			c_elem.div.children_bounds = c_elem.bounds;
+			c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
+			c_elem.div.scroll.can_x = false;
+			c_elem.div.scroll.can_y = false;
+			c_elem.div.scroll.value_x = 0;
+			c_elem.div.scroll.value_y = 0;
 		}
 
 		// 3. Mark the element as updated
 		c_elem.flags.updated = true;
 		// 4. Fill the div fields
-		c_elem.div.layout   = parent.div.layout;
 		c_elem.div.origin_c = Point{
 		    .x = c_elem.bounds.x,
 		    .y = c_elem.bounds.y,
 		};
 		c_elem.div.origin_r = c_elem.div.origin_c;
-		c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
-		c_elem.div.scroll.can_x = false;
-		c_elem.div.scroll.can_y = false;
-		c_elem.div.scroll.value_x = 0;
-		c_elem.div.scroll.value_y = 0;
+		c_elem.div.layout   = parent.div.layout;
 	}
 
 	// Add the background to the draw stack
