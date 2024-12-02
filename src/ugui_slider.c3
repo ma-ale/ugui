@@ -24,7 +24,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size)
 		// 2. Layout
 		c_elem.bounds = ctx.position_element(parent, size, true);
 		c_elem.slider.handle = Rect{
-			.x = (short)(c_elem.bounds.x + (int)(c_elem.bounds.w * c_elem.slider.value)),
+			.x = (short)(c_elem.bounds.x + (int)(c_elem.bounds.w*(1.0-0.25) * c_elem.slider.value)),
 			.y = c_elem.bounds.y,
 			.w = (short)(c_elem.bounds.w * 0.25),
 			.h = c_elem.bounds.h,
@@ -97,7 +97,7 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size)
 		c_elem.bounds = ctx.position_element(parent, size, true);
 		c_elem.slider.handle = Rect{
 			.x = c_elem.bounds.x,
-			.y = (short)(c_elem.bounds.y + (int)(c_elem.bounds.h * c_elem.slider.value)),
+			.y = (short)(c_elem.bounds.y + (int)(c_elem.bounds.h*(1.0-0.25) * c_elem.slider.value)),
 			.w = c_elem.bounds.w,
 			.h = (short)(c_elem.bounds.h * 0.25),
 		};
