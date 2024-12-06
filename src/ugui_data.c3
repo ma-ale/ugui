@@ -167,6 +167,7 @@ struct Ctx {
 	// total size in pixels of the context
 	ushort width, height;
 	Style style;
+	Font font;
 
 	bool has_focus;
 	struct input {

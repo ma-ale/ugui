@@ -1,0 +1,9 @@
+{
+  "provides" : "schrift",
+  "targets" : {
+    "linux-x64" : {
+      "dependencies" : [],
+      "linked-libraries" : ["schrift", "c"]
+    }
+  }
+}
