@@ -2,6 +2,35 @@ module ugui;
 
 import std::io;
 
+fn Rect! Ctx.get_text_bounds(&ctx, String text, bool* update_atlas)
+{
+	Rect text_bounds;
+	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
+	short line_gap = (short)ctx.font.linegap;
+	text_bounds.h = line_height;
+	Glyph* gp;
+
+	// TODO: account for unicode codepoints
+	short line_len;
+	foreach (c: text) {
+		Codepoint cp = (Codepoint)c;
+		bool n;
+		if (cp != '\n') {
+			gp = ctx.font.get_glyph(cp, &n)!;
+			line_len += gp.adv;
+			if (n) { *update_atlas = true; }
+		} else {
+			text_bounds.h += line_height + line_gap;
+			if (line_len > text_bounds.w) {
+				text_bounds.w = line_len;
+			}
+			line_len = 0;
+		}
+	}
+
+	return text_bounds;
+}
+
 fn void! Ctx.text_unbounded(&ctx, String label, String text)
 {
 	Id id = label.hash();
@@ -15,24 +44,14 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 	// this resets the flags
 	c_elem.type     = ETYPE_TEXT;
 
-	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	short baseline = (short)ctx.font.ascender;
+	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
+	short line_gap = (short)ctx.font.linegap;
 	bool update_atlas;
 	// if the element is new or the parent was updated then redo layout
 	if (c_elem.flags.is_new || parent.flags.updated) {
-		Rect text_size;
-		Glyph* gp;
+		Rect text_size = ctx.get_text_bounds(text, &update_atlas)!;
 
-		// FIXME: newlines are not counted
-		foreach (c: text) {
-			Codepoint cp = (Codepoint)c;
-			bool n;
-			gp = ctx.font.get_glyph(cp, &n)!;
-			text_size.w += gp.adv;
-			text_size.h += line_height;
-			if (n) { update_atlas = true; }
-		}
-		
 		// 2. Layout
 		c_elem.bounds = ctx.position_element(parent, text_size, true);
 
@@ -53,31 +72,43 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 		ctx.cmd_queue.enqueue(&up)!;
 	}
 
+	Cmd bounds = {
+		.type = CMD_RECT,
+		.rect.rect = c_elem.bounds,
+		.rect.color = uint_to_rgba(0x000000ff),
+	};
+	ctx.cmd_queue.enqueue(&bounds)!;
+	
 	Point orig = {
 		.x = c_elem.bounds.x,
 		.y = c_elem.bounds.y,
 	};
+	short line_len;
 	foreach (c: text) {
 		Glyph* gp;
 		Codepoint cp = (Codepoint)c;
-		gp = ctx.font.get_glyph(cp)!;
-		
-		Cmd cmd = {
-			.type = CMD_SPRITE,
-			.sprite.rect = {
-				.x = orig.x + gp.ox,
-				.y = orig.y + gp.oy + baseline,
-				.w = gp.w,
-				.h = gp.h,
-			},
-			.sprite.texture_rect = {
-				.x = gp.u,
-				.y = gp.v,
-				.w = gp.w,
-				.h = gp.h,
-			},
-		};
-		orig.x += gp.adv;
-		ctx.cmd_queue.enqueue(&cmd)!;
+		if (cp != '\n') {
+			gp = ctx.font.get_glyph(cp)!;
+			Cmd cmd = {
+				.type = CMD_SPRITE,
+				.sprite.rect = {
+					.x = orig.x + line_len + gp.ox,
+					.y = orig.y + gp.oy + baseline,
+					.w = gp.w,
+					.h = gp.h,
+				},
+				.sprite.texture_rect = {
+					.x = gp.u,
+					.y = gp.v,
+					.w = gp.w,
+					.h = gp.h,
+				},
+			};
+			line_len += gp.adv;
+			ctx.cmd_queue.enqueue(&cmd)!;
+		} else {
+			orig.y += line_height + line_gap;
+			line_len = 0;
+		}
 	}
 }

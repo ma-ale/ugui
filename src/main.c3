@@ -94,7 +94,7 @@ fn int main(String[] args)
 				io::printfn("slider: %f", e.slider.value);
 			}
 
-			ui.text_unbounded("text1", "Ciao Mamma")!!;
+			ui.text_unbounded("text1", "Ciao Mamma\n Sono a Casa")!!;
 		|};
 		ui.div_end()!!;
 
