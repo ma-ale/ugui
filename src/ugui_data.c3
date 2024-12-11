@@ -28,6 +28,7 @@ enum ElemType {
 	ETYPE_DIV,
 	ETYPE_BUTTON,
 	ETYPE_SLIDER,
+	ETYPE_TEXT,
 }
 
 bitstruct ElemFlags : uint {
@@ -75,6 +76,10 @@ struct Slider {
     Rect handle;
 }
 
+struct Text {
+	char* str;
+}
+
 // element structure
 struct Elem {
 	Id id;
@@ -85,6 +90,7 @@ struct Elem {
 	union {
 		Div div;
 		Slider slider;
+		Text text;
 	}
 }
 
@@ -126,6 +132,8 @@ const uint ROOT_ID    = 1;
 // command type
 enum CmdType {
 	CMD_RECT,
+	CMD_UPDATE_ATLAS,
+	CMD_SPRITE,
 }
 
 // command to draw a rect
@@ -134,11 +142,27 @@ struct CmdRect {
 	Color color;
 }
 
+// FIXME: For now only support black and white atlas, so PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
+struct CmdUpdateAtlas {
+	char* raw_buffer;
+	short width, height;
+}
+
+// TODO:
+//    1. Add atlases as a data type
+//    2. Each atlas has an id
+struct CmdSprite {
+	Rect rect;
+	Rect texture_rect;
+}
+
 // command structure
 struct Cmd {
 	CmdType type;
 	union {
 		CmdRect rect;
+		CmdUpdateAtlas update_atlas;
+		CmdSprite sprite;
 	}
 }
 

@@ -1,7 +1,21 @@
 # TODOs, semi-random sorting
-[ ] Implement glyph draw command
-[ ] Implement div.view and scrollbars
+[x] Implement glyph draw command
+[x] Implement div.view and scrollbars
 [ ] Port font system from C to C3 (rewrite1)
 [ ] Update ARCHITECTURE.md
 [ ] Write a README.md
 [ ] Use an arena allocator for cache
+
+## Commands
+[ ] rect commads should have:
+	* border width
+	* border radius
+[x] add a command to update an atlas
+
+## Atlases
+[ ] Add an interface to create, destroy, update and get atlases based on their ids
+[ ] Implement multiple font atlases
+
+## Fonts
+[ ] Fix the missing alpha channel
+[ ] Fix the allignment

@@ -4,6 +4,8 @@ def SftFont = void*;
 def SftUChar = uint;
 def SftGlyph = uint;
 
+const int SFT_DOWNWARD_Y = 0x01;
+
 struct Sft
 {
 	SftFont   font;
@@ -45,12 +47,12 @@ struct SftImage
 
 extern fn char* sft_version() @extern("sft_version");
 
-extern fn SftFont sft_loadmem(void* mem, usz size) @extern("sft_loadmem");
-extern fn SftFont sft_loadfile(char* filename) @extern("sft_loadfile");
-extern fn void sft_freefont(SftFont font) @extern("sft_freefont");
+extern fn SftFont loadmem(void* mem, usz size) @extern("sft_loadmem");
+extern fn SftFont loadfile(char* filename) @extern("sft_loadfile");
+extern fn void freefont(SftFont font) @extern("sft_freefont");
 
-extern fn int sft_lmetrics(Sft* sft, SftLMetrics* metrics) @extern("sft_lmetrics");
-extern fn int sft_lookup(Sft* sft, SftUChar codepoint, SftGlyph* glyph) @extern("sft_lookup");
-extern fn int sft_gmetrics(Sft* sft, SftGlyph glyph, SftGMetrics* metrics) @extern("sft_gmetrics");
-extern fn int sft_kerning(Sft* sft, SftGlyph leftGlyph, SftGlyph rightGlyph, SftKerning* kerning) @extern("sft_kerning");
-extern fn int sft_render(Sft* sft, SftGlyph glyph, SftImage image) @extern("sft_render");
+extern fn int lmetrics(Sft* sft, SftLMetrics* metrics) @extern("sft_lmetrics");
+extern fn int lookup(Sft* sft, SftUChar codepoint, SftGlyph* glyph) @extern("sft_lookup");
+extern fn int gmetrics(Sft* sft, SftGlyph glyph, SftGMetrics* metrics) @extern("sft_gmetrics");
+extern fn int kerning(Sft* sft, SftGlyph leftGlyph, SftGlyph rightGlyph, SftKerning* kerning) @extern("sft_kerning");
+extern fn int render(Sft* sft, SftGlyph glyph, SftImage image) @extern("sft_render");
