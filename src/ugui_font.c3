@@ -3,6 +3,7 @@ module ugui;
 import schrift;
 import std::collections::map;
 import std::core::mem;
+import std::io;
 
 // unicode code point, different type for a different hash
 def Codepoint = uint;
@@ -15,9 +16,9 @@ def Codepoint = uint;
  *   |       |oy   |   | |
  *   |       v     |   | |
  *   |      .ii.   |   | |
- *   |     @@@@@@. |<->| |
- *   |    V@Mio@@o |adv| |h
- *   |    :i.  V@V |   | |
+ *   |     @@@@@@. |   | |
+ *   |    V@Mio@@o |   | |
+ *   |    :i.  V@V |   | h
  *   |      :oM@@M |   | |
  *   |    :@@@MM@M |   | |
  *   |    @@o  o@M |   | |
@@ -25,8 +26,8 @@ def Codepoint = uint;
  *   |ox  @@@o@@@@ |   | |
  *   |    :M@@V:@@.|   | v
  *   +-------------*---+ -
- *   |<------------->|
- *           w
+ *   |<---- w ---->|
+ *   |<------ adv ---->|
  */
 struct Glyph {
 	Codepoint code;
@@ -137,11 +138,12 @@ fn void! Font.load(&font, String path, uint height, float scale = 1)
 	font.ascender  = (float)lmetrics.ascender;
 	font.descender = (float)lmetrics.descender;
 	font.linegap   = (float)lmetrics.lineGap;
+	//io::printfn("ascender:%d, descender:%d, linegap:%d", font.ascender, font.descender, font.linegap);
 
 	// TODO: allocate buffer based on FONT_CACHED and the size of a sample letter
 	//       like the letter 'A'
 	font.atlas = mem::new_array(AtlasBW, 1);
-	ushort size = (ushort)font.size*512;
+	ushort size = (ushort)font.size*256;
 	font.atlas[0].new(size, size)!;
 	
 	// preallocate the ASCII range
@@ -191,9 +193,11 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 	glyph.code = code;
 	glyph.w = (ushort)img.width;
 	glyph.h = (ushort)img.height;
-	glyph.ox = (short)-gmtx.leftSideBearing;
-	glyph.oy = (short)-gmtx.yOffset;
+	glyph.ox = (short)gmtx.leftSideBearing;
+	glyph.oy = (short)gmtx.yOffset;
 	glyph.adv = (short)gmtx.advanceWidth;
+	//io::printfn("code=%c, w=%d, h=%d, ox=%d, oy=%d, adv=%d",
+	//    glyph.code, glyph.w, glyph.h, glyph.ox, glyph.oy, glyph.adv);
 
 	Point uv = font.atlas[0].place(pixels, glyph.w, glyph.h)!;
 	glyph.idx = 0;

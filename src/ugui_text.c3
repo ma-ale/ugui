@@ -15,6 +15,8 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 	// this resets the flags
 	c_elem.type     = ETYPE_TEXT;
 
+	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
+	short baseline = (short)ctx.font.ascender;
 	bool update_atlas;
 	// if the element is new or the parent was updated then redo layout
 	if (c_elem.flags.is_new || parent.flags.updated) {
@@ -26,8 +28,8 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 			Codepoint cp = (Codepoint)c;
 			bool n;
 			gp = ctx.font.get_glyph(cp, &n)!;
-			text_size.w += gp.w + gp.ox + gp.adv;
-			text_size.h += gp.h + gp.oy;
+			text_size.w += gp.adv;
+			text_size.h += line_height;
 			if (n) { update_atlas = true; }
 		}
 		
@@ -64,7 +66,7 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 			.type = CMD_SPRITE,
 			.sprite.rect = {
 				.x = orig.x + gp.ox,
-				.y = orig.y + gp.oy,
+				.y = orig.y + gp.oy + baseline,
 				.w = gp.w,
 				.h = gp.h,
 			},
@@ -75,7 +77,7 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 				.h = gp.h,
 			},
 		};
-		orig.x += gp.w + gp.ox;
+		orig.x += gp.adv;
 		ctx.cmd_queue.enqueue(&cmd)!;
 	}
 }

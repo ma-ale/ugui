@@ -27,7 +27,7 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
-	ui.font.load("/usr/share/fonts/TTF/FreeSans.ttf", 16)!!;
+	ui.font.load("/usr/share/fonts/TTF/FreeSans.ttf", 16, scale: 1.5)!!;
 
 	short width = 800;
 	short height = 450;
@@ -168,10 +168,16 @@ fn int main(String[] args)
 				};
 				rl::Vector2 position = {
 					.x = cmd.sprite.rect.x,
-					.y = (float)cmd.sprite.rect.y - cmd.sprite.rect.h,
+					.y = cmd.sprite.rect.y,
 				};
 				
 				rl::draw_texture_rec(font_texture, source, position, rl::WHITE);
+				//rl::draw_rectangle(cmd.sprite.rect.x,
+				//    cmd.sprite.rect.y,
+				//    cmd.sprite.rect.w,
+				//    cmd.sprite.rect.h,
+				//    rl::WHITE
+				//);
 			default:
 				io::printfn("Unknown cmd type: %s", cmd.type);
 			}
