@@ -20,7 +20,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 		c_elem.bounds = ctx.position_element(parent, size);
 		if (c_elem.flags.is_new) {
 			c_elem.div.children_bounds = c_elem.bounds;
-			c_elem.div.color_bg = uint_to_rgba(0xff0000ff);
+			c_elem.div.color_bg = ctx.style.bgcolor;
 			c_elem.div.scroll.can_x = false;
 			c_elem.div.scroll.can_y = false;
 			c_elem.div.scroll.value_x = 0;

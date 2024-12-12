@@ -128,6 +128,7 @@ fn int main(String[] args)
 		// ClearBackground(BLACK);
 
 		rl::Color c;
+		rl::Rectangle r;
 		static rl::Image font_atlas;
 		static rl::Texture2D font_texture;
 		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
@@ -139,13 +140,15 @@ fn int main(String[] args)
 				    .b = cmd.rect.color.b,
 				    .a = cmd.rect.color.a,
 				};
-				rl::draw_rectangle(
-				    cmd.rect.rect.x,
-				    cmd.rect.rect.y,
-				    cmd.rect.rect.w,
-				    cmd.rect.rect.h,
-				    c
-				);
+				r = rl::Rectangle{
+					.x = cmd.rect.rect.x,
+					.y = cmd.rect.rect.y,
+					.height = cmd.rect.rect.h,
+					.width = cmd.rect.rect.w,
+				};
+				// TODO: find a way to do real pixel-perfec rounding
+				float round = cmd.rect.radius ? 0.2 : 0;
+				rl::draw_rectangle_rounded(r, round, 2, c);
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
 				rl::unload_image(font_atlas);
 				font_atlas.data = cmd.update_atlas.raw_buffer;

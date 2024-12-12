@@ -53,7 +53,13 @@ fn void! Ctx.init(&ctx)
 	ctx.active_div = 0;
 
 	// TODO: add style config
-	ctx.style.margin  = Rect{1, 1, 1, 1};
+	ctx.style.margin  = Rect{2, 2, 2, 2};
+	ctx.style.border  = Rect{2, 2, 2, 2};
+	ctx.style.padding = Rect{1, 1, 1, 1};
+	ctx.style.radius  = 4;
+	ctx.style.bgcolor = uint_to_rgba(0x282828ff);
+	ctx.style.fgcolor = uint_to_rgba(0xfbf1c7ff);
+	ctx.style.brcolor = uint_to_rgba(0xd79921ff);
 }
 
 fn void Ctx.free(&ctx)

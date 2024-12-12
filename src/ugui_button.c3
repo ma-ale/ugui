@@ -34,14 +34,7 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 	}
 
 	// Draw the button
-	Cmd cmd = {
-	    .type = CMD_RECT,
-	    .rect =	{
-		    .rect  = c_elem.bounds,
-		    .color = bg_color,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	ctx.push_rect(c_elem.bounds, bg_color, do_border: true, do_radius: true)!;
 
 	return c_elem.events;
 }

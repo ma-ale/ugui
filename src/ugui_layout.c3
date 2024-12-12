@@ -113,14 +113,14 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 
 	// 2.1 apply style, css box model
 	if (style) {
-	    Rect margin = ctx.style.margin;
-	    Rect border = ctx.style.border;
+		Rect margin = ctx.style.margin;
+		Rect border = ctx.style.border;
 		Rect padding = ctx.style.padding;
 
 		placement.x += margin.x;
 		placement.y += margin.y;
-		if (rect.w != 0) { placement.w += margin.x+margin.w + padding.x+padding.w; }
-		if (rect.h != 0) { placement.h += margin.y+margin.h + padding.y+padding.h; }
+		if (rect.w != 0) { placement.w += border.x+border.w + padding.x+padding.w; }
+		if (rect.h != 0) { placement.h += border.y+border.h + padding.y+padding.h; }
 
 		pl_corner.x = placement.x + placement.w + margin.w;
 		pl_corner.y = placement.y + placement.h + margin.h;

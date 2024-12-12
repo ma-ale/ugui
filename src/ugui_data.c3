@@ -137,8 +137,10 @@ enum CmdType {
 }
 
 // command to draw a rect
+// TODO: implement radius
 struct CmdRect {
 	Rect rect;
+	ushort radius;
 	Color color;
 }
 
@@ -179,7 +181,8 @@ struct Style { // css box model
 	Rect  margin;
 	Color bgcolor; // background color
 	Color fgcolor; // foreground color
-	Color bcolor;  // border color
+	Color brcolor; // border color
+	ushort radius;
 }
 
 
