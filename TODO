@@ -5,9 +5,10 @@
 [ ] Update ARCHITECTURE.md
 [ ] Write a README.md
 [ ] Use an arena allocator for cache
+[ ] Do not redraw if there was no update (no layout and no draw)
 
 ## Commands
-[ ] rect commads should have:
+[x] rect commads should have:
 	* border width
 	* border radius
 [x] add a command to update an atlas
@@ -19,3 +20,11 @@
 ## Fonts
 [ ] Fix the missing alpha channel
 [ ] Fix the allignment
+
+## Raylib
+[ ] Implement type (Rect, Color, Point) conversion functions between rl:: and ugui::
+[ ] Implement pixel radius rounding for border radius
+
+## Widgets
+[ ] Dynamic text box to implement an fps counter
+[ ] Button with label
