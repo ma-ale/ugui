@@ -27,7 +27,7 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
-	ui.font.load("/usr/share/fonts/TTF/FreeSans.ttf", 16, scale: 1.5)!!;
+	ui.font.load("/usr/share/fonts/TTF/Hack-Regular.ttf", 16, scale: 1.5)!!;
 
 	short width = 800;
 	short height = 450;
@@ -46,7 +46,7 @@ fn int main(String[] args)
 	// Main loop
 	while (!rl::window_should_close()) {
 		clock.mark();
-		
+
 		/* Start Input Handling */
 		if (rl::is_window_resized()) {
 			width  = (short)rl::get_screen_width();
@@ -94,7 +94,7 @@ fn int main(String[] args)
 				io::printfn("slider: %f", e.slider.value);
 			}
 
-			ui.text_unbounded("text1", "Ciao Mamma\n Sono a Casa")!!;
+			ui.text_unbounded("text1", "Ciao Mamma\nSono a Casa")!!;
 		|};
 		ui.div_end()!!;
 
@@ -146,9 +146,10 @@ fn int main(String[] args)
 					.height = cmd.rect.rect.h,
 					.width = cmd.rect.rect.w,
 				};
-				// TODO: find a way to do real pixel-perfec rounding
-				float round = cmd.rect.radius ? 0.2 : 0;
-				rl::draw_rectangle_rounded(r, round, 2, c);
+			    float rad = cmd.rect.radius;
+				// for some weird-ass reason the straight forward inverse formula does not work
+			    float roundness = r.width > r.height ? (2.1*rad)/r.height : (2.1*rad)/r.width;
+				rl::draw_rectangle_rounded(r, roundness, 0, c);
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
 				rl::unload_image(font_atlas);
 				font_atlas.data = cmd.update_atlas.raw_buffer;
@@ -173,7 +174,7 @@ fn int main(String[] args)
 					.x = cmd.sprite.rect.x,
 					.y = cmd.sprite.rect.y,
 				};
-				
+
 				rl::draw_texture_rec(font_texture, source, position, rl::WHITE);
 				//rl::draw_rectangle(cmd.sprite.rect.x,
 				//    cmd.sprite.rect.y,

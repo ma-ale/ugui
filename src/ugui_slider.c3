@@ -98,7 +98,7 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size)
 		}
 	}
 
-	// Draw the button
+	// Draw the slider background and handle
 	Color bg_color = uint_to_rgba(0x0000ffff);
 	Color handle_color = uint_to_rgba(0x0ff000ff);
 	ctx.push_rect(c_elem.bounds, bg_color)!;
