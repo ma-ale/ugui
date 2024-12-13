@@ -42,27 +42,11 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size)
 		}
 	}
 
-	// Draw the button
+	// Draw the slider background and handle
 	Color bg_color = uint_to_rgba(0x0000ffff);
 	Color handle_color = uint_to_rgba(0x0ff000ff);
-
-	Cmd cmd = {
-	    .type = CMD_RECT,
-	    .rect =	{
-		    .rect  = c_elem.bounds,
-		    .color = bg_color,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
-
-	cmd = Cmd{
-	    .type = CMD_RECT,
-	    .rect =	{
-		    .rect  = c_elem.slider.handle,
-		    .color = handle_color,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	ctx.push_rect(c_elem.bounds, bg_color)!;
+	ctx.push_rect(c_elem.slider.handle, handle_color)!;
 
 	return c_elem.events;
 }
@@ -117,24 +101,8 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size)
 	// Draw the button
 	Color bg_color = uint_to_rgba(0x0000ffff);
 	Color handle_color = uint_to_rgba(0x0ff000ff);
-
-	Cmd cmd = {
-	    .type = CMD_RECT,
-	    .rect =	{
-		    .rect  = c_elem.bounds,
-		    .color = bg_color,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
-
-	cmd = Cmd{
-	    .type = CMD_RECT,
-	    .rect =	{
-		    .rect  = c_elem.slider.handle,
-		    .color = handle_color,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	ctx.push_rect(c_elem.bounds, bg_color)!;
+	ctx.push_rect(c_elem.slider.handle, handle_color)!;
 
 	return c_elem.events;
 }

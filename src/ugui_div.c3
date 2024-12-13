@@ -39,14 +39,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	}
 
 	// Add the background to the draw stack
-	Cmd cmd = {
-		.type = CMD_RECT,
-		.rect = {
-		    .rect  = c_elem.bounds,
-		    .color = c_elem.div.color_bg,
-		},
-	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	ctx.push_rect(c_elem.bounds, c_elem.div.color_bg)!;
 
 	// TODO: check active
 	// TODO: check resizeable
@@ -95,17 +88,8 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 				c_elem.div.origin_r = c_elem.div.origin_c;
 			}
 
-			Cmd scrl = {
-				.type = CMD_RECT,
-				.rect.rect = vslider,
-				.rect.color = uint_to_rgba(0x999999ff),
-			};
-			ctx.cmd_queue.enqueue(&scrl)!;
-
-			scrl.rect.rect = vhandle;
-			scrl.rect.color = uint_to_rgba(0x9999ffff);
-			ctx.cmd_queue.enqueue(&scrl)!;
-
+			ctx.push_rect(vslider, uint_to_rgba(0x999999ff))!;
+			ctx.push_rect(vhandle, uint_to_rgba(0x9999ffff))!;
 		} else {
 			c_elem.div.scroll.on_y = false;
 		}
