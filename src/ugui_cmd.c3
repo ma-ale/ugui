@@ -4,6 +4,11 @@ module ugui;
 // "rect" is the bounding box of the element, which includes the border and the padding (so not just the content)
 fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, bool do_padding = false, bool do_radius = false)
 {
+    // FIXME: this should be culled higher up, maybe
+    if (rect.w <= 0 || rect.h <= 0) {
+        return;
+    }
+
 	Rect border = ctx.style.border;
 	Rect padding = ctx.style.padding;
 	ushort radius = ctx.style.radius;
