@@ -21,10 +21,10 @@ fn Rect! Ctx.get_text_bounds(&ctx, String text, bool* update_atlas)
 			if (n) { *update_atlas = true; }
 		} else {
 			text_bounds.h += line_height + line_gap;
-			if (line_len > text_bounds.w) {
-				text_bounds.w = line_len;
-			}
 			line_len = 0;
+		}
+		if (line_len > text_bounds.w) {
+			text_bounds.w = line_len;
 		}
 	}
 
@@ -78,7 +78,7 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 		.rect.color = uint_to_rgba(0x000000ff),
 	};
 	ctx.cmd_queue.enqueue(&bounds)!;
-	
+
 	Point orig = {
 		.x = c_elem.bounds.x,
 		.y = c_elem.bounds.y,
