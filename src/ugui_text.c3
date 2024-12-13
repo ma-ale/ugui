@@ -89,23 +89,20 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 		Codepoint cp = (Codepoint)c;
 		if (cp != '\n') {
 			gp = ctx.font.get_glyph(cp)!;
-			Cmd cmd = {
-				.type = CMD_SPRITE,
-				.sprite.rect = {
-					.x = orig.x + line_len + gp.ox,
-					.y = orig.y + gp.oy + baseline,
-					.w = gp.w,
-					.h = gp.h,
-				},
-				.sprite.texture_rect = {
-					.x = gp.u,
-					.y = gp.v,
-					.w = gp.w,
-					.h = gp.h,
-				},
+			Rect gb = {
+    			.x = orig.x + line_len + gp.ox,
+    			.y = orig.y + gp.oy + baseline,
+    			.w = gp.w,
+    			.h = gp.h,
 			};
+			Rect gt = {
+    			.x = gp.u,
+    			.y = gp.v,
+    			.w = gp.w,
+    			.h = gp.h,
+			};
+			ctx.push_sprite(gb, gt)!;
 			line_len += gp.adv;
-			ctx.cmd_queue.enqueue(&cmd)!;
 		} else {
 			orig.y += line_height + line_gap;
 			line_len = 0;

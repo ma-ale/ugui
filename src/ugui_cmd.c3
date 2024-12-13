@@ -18,7 +18,7 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 		};
 		ctx.cmd_queue.enqueue(&cmd)!;
 	}
-	
+
 	Cmd cmd = {
 		.type = CMD_RECT,
 		.rect.rect = {
@@ -29,6 +29,17 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 		},
 		.rect.color = color,
 		.rect.radius = do_radius ? radius : 0,
+	};
+	ctx.cmd_queue.enqueue(&cmd)!;
+}
+
+// TODO: add texture id
+fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture)
+{
+    Cmd cmd = {
+		.type = CMD_SPRITE,
+		.sprite.rect = bounds,
+		.sprite.texture_rect = texture,
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
 }
