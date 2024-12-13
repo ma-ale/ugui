@@ -1,0 +1,9 @@
+{
+  "provides": "grapheme",
+  "targets": {
+    "linux-x64": {
+      "dependencies": [],
+      "linked-libraries": ["grapheme", "c"]
+    }
+  }
+}
