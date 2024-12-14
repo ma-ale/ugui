@@ -1,6 +1,6 @@
 module grapheme;
 
-const uint GRAPHEME_INVALID_CODEPOINT UINT32_C = 0xFFFD;
+const uint GRAPHEME_INVALID_CODEPOINT = 0xFFFD;
 
 enum BidirectionalDirection {
 	GRAPHEME_BIDIRECTIONAL_DIRECTION_NEUTRAL,

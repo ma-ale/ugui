@@ -6,7 +6,7 @@
   // Directories where C3 library files may be found.
   "dependency-search-paths": [ "lib" ],
   // Libraries to use for all targets.
-  "dependencies": [ "raylib", "schrift" ],
+  "dependencies": [ "raylib", "schrift", "grapheme" ],
   "features": [
     // See rcore.c3
     //"SUPPORT_INTERNAL_MEMORY_MANAGEMENT",
@@ -17,13 +17,12 @@
     //"SUPPORT_TEXT_CODEPOINTS_MANAGEMENT",
     //"SUPPORT_TEXT_C_STRING_MANAGEMENT",
     //"SUPPORT_RANDOM_GENERATION",
-  
-    "SUPPORT_RAYGUI",
+    //"SUPPORT_RAYGUI",
     //"RAYGUI_NO_ICONS",
     //"RAYGUI_CUSTOM_ICONS",
   ],
   // Authors, optionally with email.
-  "authors": [ "John Doe <john.doe@example.com>" ],
+  "authors": [ "John Doe <ale@shitposting.expert>" ],
   // Version using semantic versioning.
   "version": "0.1.0",
   // Sources compiled for all targets.

@@ -1,6 +1,5 @@
 module ugui;
 
-import std::io;
 import std::core::string;
 
 import vtree;

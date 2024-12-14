@@ -27,7 +27,7 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
-	ui.font.load("/usr/share/fonts/TTF/Hack-Regular.ttf", 16, scale: 1.5)!!;
+	ui.font.load("/usr/share/fonts/NerdFonts/ttf/HackNerdFont-Regular.ttf", 16, scale: 1.5)!!;
 
 	short width = 800;
 	short height = 450;
@@ -94,7 +94,7 @@ fn int main(String[] args)
 				io::printfn("slider: %f", e.slider.value);
 			}
 
-			ui.text_unbounded("text1", "Ciao Mamma\nSono a Casa")!!;
+			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡")!!;
 		|};
 		ui.div_end()!!;
 
