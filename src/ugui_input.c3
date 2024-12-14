@@ -41,20 +41,9 @@ bitstruct MouseButtons : uint {
 	bool btn_5 : 4;
 }
 
-macro Ctx.mouse_pressed(&ctx)
-{
-    return ctx.input.mouse.updated & ctx.input.mouse.down;
-}
-
-macro Ctx.mouse_released(&ctx)
-{
-    return ctx.input.mouse.updated & ~ctx.input.mouse.down;
-}
-
-macro Ctx.mouse_down(&ctx)
-{
-    return ctx.input.mouse.down;
-}
+macro Ctx.mouse_pressed(&ctx) => ctx.input.mouse.updated & ctx.input.mouse.down;
+macro Ctx.mouse_released(&ctx) => ctx.input.mouse.updated & ~ctx.input.mouse.down;
+macro Ctx.mouse_down(&ctx) => ctx.input.mouse.down;
 
 const MouseButtons BTN_NONE = (MouseButtons)0u;
 const MouseButtons BTN_ANY = (MouseButtons)(uint.max);
@@ -66,20 +55,9 @@ const MouseButtons BTN_5 = {.btn_5 = true};
 
 // FIXME: hthis compairson could be done with a cast using MouseButtons.inner
 // property but I could not figure out how
-macro Ctx.is_mouse_pressed(&ctx, MouseButtons btn)
-{
-    return (ctx.mouse_pressed() & btn) != BTN_NONE;
-}
-
-macro Ctx.is_mouse_released(&ctx, MouseButtons btn)
-{
-    return (ctx.mouse_released() & btn) != BTN_NONE;
-}
-
-macro Ctx.is_mouse_down(&ctx, MouseButtons btn)
-{
-    return (ctx.mouse_down() & btn) != BTN_NONE;
-}
+macro Ctx.is_mouse_pressed(&ctx, MouseButtons btn) => (ctx.mouse_pressed() & btn) != BTN_NONE;
+macro Ctx.is_mouse_released(&ctx, MouseButtons btn) => (ctx.mouse_released() & btn) != BTN_NONE;
+macro Ctx.is_mouse_down(&ctx, MouseButtons btn) => (ctx.mouse_down() & btn) != BTN_NONE;
 
 macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {

@@ -62,7 +62,7 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 
 	// 1. Fill the element fields
 	// this resets the flags
-	c_elem.type     = ETYPE_TEXT;
+	c_elem.type = ETYPE_TEXT;
 
 	short baseline = (short)ctx.font.ascender;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;

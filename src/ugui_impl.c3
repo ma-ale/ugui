@@ -130,12 +130,12 @@ fn void! Ctx.frame_end(&ctx)
 	// draw mouse position
 $if 1:
 	Cmd cmd = {
-	    .type = CMD_RECT,
-	    .rect.rect = {
-		    .x = ctx.input.mouse.pos.x - 2,
-		    .y = ctx.input.mouse.pos.y - 2,
-		    .w = 4,
-		    .h = 4,
+		.type = CMD_RECT,
+		.rect.rect = {
+			.x = ctx.input.mouse.pos.x - 2,
+			.y = ctx.input.mouse.pos.y - 2,
+			.w = 4,
+			.h = 4,
 		},
 		.rect.color = uint_to_rgba(0xff00ffff)
 	};

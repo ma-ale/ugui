@@ -71,8 +71,8 @@ struct Div {
 
 // slider element
 struct Slider {
-    float value;
-    Rect handle;
+	float value;
+	Rect handle;
 }
 
 struct Text {

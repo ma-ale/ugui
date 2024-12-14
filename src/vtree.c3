@@ -10,11 +10,11 @@ struct VTree {
 }
 
 fault VTreeError {
-    CANNOT_SHRINK,
-    INVALID_REFERENCE,
-    TREE_FULL,
-    REFERENCE_NOT_PRESENT,
-    INVALID_ARGUMENT,
+	CANNOT_SHRINK,
+	INVALID_REFERENCE,
+	TREE_FULL,
+	REFERENCE_NOT_PRESENT,
+	INVALID_ARGUMENT,
 }
 
 macro VTree.ref_is_valid(&tree, isz ref) { return (ref >= 0 && ref < tree.refs.len); }
@@ -116,8 +116,8 @@ fn void! VTree.resize(&tree, usz newsize)
 	defer catch { (void)mem::free(tree.ordered_refs); }
 
 	if (newsize > tree.size()) {
-	   tree.vector[old_size..newsize-1] = @zero();
-	   tree.refs[old_size..newsize-1] = -1;
+		tree.vector[old_size..newsize-1] = @zero();
+		tree.refs[old_size..newsize-1] = -1;
 	}
 }
 
@@ -131,13 +131,13 @@ fn isz! VTree.add(&tree, ElemType elem, isz parent)
 
 	// no space left
 	if (tree.elements >= tree.size()) {
-	   return VTreeError.TREE_FULL?;
+		return VTreeError.TREE_FULL?;
 	}
 
 	// check if the parent exists
 	// if there are no elements in the tree the first add will set the root
 	if (!tree.ref_is_present(parent) && tree.elements != 0) {
-	   return VTreeError.REFERENCE_NOT_PRESENT?;
+		return VTreeError.REFERENCE_NOT_PRESENT?;
 	}
 
 	// get the first free spot
@@ -164,7 +164,7 @@ fn isz! VTree.add(&tree, ElemType elem, isz parent)
 // returns the number of pruned elements
 fn usz! VTree.prune(&tree, isz ref)
 {
-    if (!tree.ref_is_valid(ref)) {
+	if (!tree.ref_is_valid(ref)) {
 		return VTreeError.INVALID_REFERENCE?;
 	}
 
@@ -189,7 +189,7 @@ fn usz! VTree.prune(&tree, isz ref)
 // find the size of the subtree starting from ref
 fn usz! VTree.subtree_size(&tree, isz ref)
 {
-    if (!tree.ref_is_valid(ref)) {
+	if (!tree.ref_is_valid(ref)) {
 		return VTreeError.INVALID_REFERENCE?;
 	}
 
@@ -250,7 +250,7 @@ fn isz! VTree.children_it(&tree, isz parent, isz *cursor)
 fn isz! VTree.level_order_it(&tree, isz ref, isz *cursor)
 {
 	if (cursor == null) {
-	   return VTreeError.INVALID_ARGUMENT?;
+		return VTreeError.INVALID_ARGUMENT?;
 	}
 
 	isz[] queue = tree.ordered_refs;
@@ -301,7 +301,7 @@ fn isz! VTree.parentof(&tree, isz ref)
 	}
 
 	if (!tree.ref_is_present(ref)) {
-	   return VTreeError.REFERENCE_NOT_PRESENT?;
+		return VTreeError.REFERENCE_NOT_PRESENT?;
 	}
 
 	return tree.refs[ref];
@@ -309,12 +309,12 @@ fn isz! VTree.parentof(&tree, isz ref)
 
 fn ElemType! VTree.get(&tree, isz ref)
 {
-    if (!tree.ref_is_valid(ref)) {
+	if (!tree.ref_is_valid(ref)) {
 		return VTreeError.INVALID_REFERENCE?;
 	}
 
 	if (!tree.ref_is_present(ref)) {
-	   return VTreeError.REFERENCE_NOT_PRESENT?;
+		return VTreeError.REFERENCE_NOT_PRESENT?;
 	}
 
 	return tree.vector[ref];

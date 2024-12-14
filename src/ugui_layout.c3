@@ -51,8 +51,8 @@ fn void! Ctx.layout_next_row(&ctx)
 	}
 
 	parent.div.origin_r = Point{
-	    .x = parent.bounds.x,
-	    .y = parent.div.origin_c.y,
+		.x = parent.bounds.x,
+		.y = parent.div.origin_c.y,
 	};
 	parent.div.origin_c = parent.div.origin_r;
 }
@@ -68,8 +68,8 @@ fn void! Ctx.layout_next_column(&ctx)
 	}
 
 	parent.div.origin_c = Point{
-	    .x = parent.div.origin_r.x,
-	    .y = parent.bounds.y,
+		.x = parent.div.origin_r.x,
+		.y = parent.bounds.y,
 	};
 	parent.div.origin_r = parent.div.origin_c;
 }
@@ -84,7 +84,7 @@ fn void! Ctx.layout_next_column(&ctx)
 *>
 fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 {
-	Rect  placement;
+	Rect placement;
 	Point origin;
 	Div* div = &parent.div;
 
@@ -128,12 +128,12 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 
 	// 3. Update the origins of the parent
 	div.origin_r = Point{
-	    .x = pl_corner.x,
-	    .y = origin.y,
+		.x = pl_corner.x,
+		.y = origin.y,
 	};
 	div.origin_c = Point{
-	    .x = origin.x,
-	    .y = pl_corner.y,
+		.x = origin.x,
+		.y = pl_corner.y,
 	};
 
 	// 4. Calculate the "scrolled" view

@@ -27,7 +27,7 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
-	ui.font.load("/usr/share/fonts/NerdFonts/ttf/HackNerdFont-Regular.ttf", 16, scale: 1.5)!!;
+	ui.font.load("/usr/share/fonts/TTF/HackNerdFontMono-Regular.ttf", 16)!!;
 
 	short width = 800;
 	short height = 450;
@@ -203,19 +203,19 @@ fn int main(String[] args)
 /*
 fn void! test_vtree() @test
 {
-    vtree::VTree(<String>) vt;
-    vt.init(10)!!;
-    defer vt.free();
+	vtree::VTree(<String>) vt;
+	vt.init(10)!!;
+	defer vt.free();
 
-    assert(vt.size() == 10, "Size is incorrect");
+	assert(vt.size() == 10, "Size is incorrect");
 
-    isz ref = vt.add("Ciao Mamma", 0)!!;
-    String s = vt.get(ref)!!;
-    assert(s == "Ciao Mamma", "String is incorrect");
-    isz par = vt.parentof(0)!!;
-    assert(ref == par, "Not Root");
+	isz ref = vt.add("Ciao Mamma", 0)!!;
+	String s = vt.get(ref)!!;
+	assert(s == "Ciao Mamma", "String is incorrect");
+	isz par = vt.parentof(0)!!;
+	assert(ref == par, "Not Root");
 
-    vt.print();
+	vt.print();
 }
 
 def StrCache = cache::Cache(<int, String, 256>);

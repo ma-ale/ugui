@@ -12,7 +12,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	ctx.active_div = div_node;
 
 	// 1. Fill the element fields
-	c_elem.type  = ETYPE_DIV;
+	c_elem.type = ETYPE_DIV;
 
 	// do layout and update flags only if the element was updated
 	if (c_elem.flags.is_new || parent.flags.updated) {
@@ -31,8 +31,8 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 		c_elem.flags.updated = true;
 		// 4. Fill the div fields
 		c_elem.div.origin_c = Point{
-		    .x = c_elem.bounds.x,
-		    .y = c_elem.bounds.y,
+			.x = c_elem.bounds.x,
+			.y = c_elem.bounds.y,
 		};
 		c_elem.div.origin_r = c_elem.div.origin_c;
 		c_elem.div.layout   = parent.div.layout;

@@ -24,10 +24,10 @@ def IdTableEntry = map::Entry(<Key, usz>) @private;
 const usz CACHE_NCYCLES = (usz)(SIZE * 2.0/3.0);
 
 struct Cache {
-    BitArr present, used;
-    IdTable table;
-    Value[] pool;
-    usz cycle_count;
+	BitArr present, used;
+	IdTable table;
+	Value[] pool;
+	usz cycle_count;
 }
 
 // Every CACHE_CYCLES operations mark as not-present the unused elements
@@ -44,32 +44,32 @@ macro Cache.cycle(&cache) @private {
 
 fn void! Cache.init(&cache)
 {
-    cache.table.new_init(capacity: SIZE);
-    // FIXME: this shit is SLOW
-    foreach (idx, bit : cache.used) { cache.used[idx] = false; }
-    foreach (idx, bit : cache.present) { cache.present[idx] = false; }
-    cache.pool = mem::new_array(Value, SIZE);
+	cache.table.new_init(capacity: SIZE);
+	// FIXME: this shit is SLOW
+	foreach (idx, bit : cache.used) { cache.used[idx] = false; }
+	foreach (idx, bit : cache.present) { cache.present[idx] = false; }
+	cache.pool = mem::new_array(Value, SIZE);
 }
 
 fn void Cache.free(&cache)
 {
-    (void)cache.table.free();
-    (void)mem::free(cache.pool);
+	(void)cache.table.free();
+	(void)mem::free(cache.pool);
 }
 
 fn Value*! Cache.search(&cache, Key id)
 {
-    // get_entry() faults on miss
+	// get_entry() faults on miss
 	IdTableEntry* entry = cache.table.get_entry(id)!;
 
 	/* MISS */
 	if (entry.key != id) {
-	   return SearchResult.MISSING?;
+		return SearchResult.MISSING?;
 	}
 
 	/* MISS, the data is not valid (not present) */
 	if (!cache.present[entry.value]) {
-	    // if the data is not present but it is still in the table, remove it
+		// if the data is not present but it is still in the table, remove it
 		cache.table.remove(id)!;
 		return SearchResult.MISSING?;
 	}
@@ -83,8 +83,8 @@ fn Value*! Cache.search(&cache, Key id)
 /* If there is no free space left then just return the first position */
 fn usz Cache.get_free_spot(&cache) @private
 {
-    const BITS = $typeof(cache.present.data[0]).sizeof*8;
-    foreach (idx, d: cache.present.data) {
+	const BITS = $typeof(cache.present.data[0]).sizeof*8;
+	foreach (idx, d: cache.present.data) {
 		if (d.clz() != BITS) {
 			return idx*BITS + BITS-d.clz();
 		}
@@ -94,7 +94,7 @@ fn usz Cache.get_free_spot(&cache) @private
 
 fn Value*! Cache.insert_at(&cache, Value *g, Key id, usz index) @private
 {
-    // TODO: verify index, g and id
+	// TODO: verify index, g and id
 	Value* spot;
 
 	/* Set used and present */
@@ -117,17 +117,17 @@ fn Value*! Cache.insert_new(&cache, Value* g, Key id)
 
 fn Value*! Cache.get_or_insert(&cache, Value* g, Key id, bool *is_new = null)
 {
-    Value*! c = cache.search(id);
-    if (catch e = c) {
-        if (e != SearchResult.MISSING) {
-            return e?;
-        } else {
-        	// if the element is new (inserted) set the is_new flag
-         	if (is_new) *is_new = true;
-        	return cache.insert_new(g, id);
-        }
-    } else {
-    	if (is_new) *is_new = false;
-        return c;
-    }
+	Value*! c = cache.search(id);
+	if (catch e = c) {
+		if (e != SearchResult.MISSING) {
+			return e?;
+		} else {
+			// if the element is new (inserted) set the is_new flag
+			if (is_new) *is_new = true;
+			return cache.insert_new(g, id);
+		}
+	} else {
+		if (is_new) *is_new = false;
+		return c;
+	}
 }

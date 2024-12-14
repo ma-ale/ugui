@@ -33,7 +33,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size)
 
 	c_elem.events = ctx.get_elem_events(c_elem);
 	if (parent.flags.has_focus && c_elem.events.mouse_hover) {
-	    if (point_in_rect(ctx.input.mouse.pos, c_elem.slider.handle) && c_elem.events.mouse_hold) {
+		if (point_in_rect(ctx.input.mouse.pos, c_elem.slider.handle) && c_elem.events.mouse_hold) {
 			short x = (short)clamp(ctx.input.mouse.pos.x - c_elem.slider.handle.w/2, c_elem.bounds.x, c_elem.bounds.x + c_elem.bounds.w - c_elem.slider.handle.w);
 			float v = (float)(c_elem.slider.handle.x-c_elem.bounds.x) / (float)(c_elem.bounds.w-c_elem.slider.handle.w);
 			c_elem.slider.handle.x = x;
@@ -89,7 +89,7 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size)
 
 	c_elem.events = ctx.get_elem_events(c_elem);
 	if (parent.flags.has_focus && c_elem.events.mouse_hover) {
-	    if (point_in_rect(ctx.input.mouse.pos, c_elem.slider.handle) && c_elem.events.mouse_hold) {
+		if (point_in_rect(ctx.input.mouse.pos, c_elem.slider.handle) && c_elem.events.mouse_hold) {
 			short y = (short)clamp(ctx.input.mouse.pos.y - c_elem.slider.handle.h/2, c_elem.bounds.y, c_elem.bounds.y + c_elem.bounds.h - c_elem.slider.handle.h);
 			float v = (float)(c_elem.slider.handle.y-c_elem.bounds.y) / (float)(c_elem.bounds.h-c_elem.slider.handle.h);
 			c_elem.slider.handle.y = y;
