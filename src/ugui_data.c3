@@ -127,6 +127,7 @@ const uint STACK_STEP = 10;
 const uint MAX_ELEMS  = 128;
 const uint MAX_CMDS   = 256;
 const uint ROOT_ID    = 1;
+const uint MAX_ATLAS  = 2;
 
 // command type
 enum CmdType {
@@ -193,6 +194,8 @@ struct Ctx {
 	// total size in pixels of the context
 	ushort width, height;
 	Style style;
+
+	Atlas[] atlas;
 	Font font;
 
 	bool has_focus;

@@ -34,7 +34,7 @@ struct Glyph {
 	ushort u, v;
 	ushort w, h;
 	short adv, ox, oy;
-	short idx; // atlas index
+	Id atlas_id;
 }
 
 const uint FONT_CACHED = 512;
@@ -47,19 +47,6 @@ fault UgFontError {
 	RENDER_ERROR,
 }
 
-fault UgAtlasError {
-	CANNOT_PLACE,
-}
-
-// black and white atlas
-struct AtlasBW {
-	ushort width, height;
-	char[] buffer;
-
-	Point row;
-	ushort row_h;
-}
-
 struct Font {
 	schrift::Sft sft;
 	String path;
@@ -67,59 +54,14 @@ struct Font {
 
 	float size;
 	float ascender, descender, linegap; // Line Metrics
-	AtlasBW[] atlas;
 }
 
-fn void! AtlasBW.new(&atlas, ushort width, ushort height)
+
+fn void! Ctx.font_load(&cxt, String path, uint height, float scale = 1)
 {
-	atlas.width = width;
-	atlas.height = height;
-	atlas.buffer = mem::new_array(char, (usz)atlas.width*atlas.height);
-}
-
-fn void AtlasBW.free(&atlas)
-{
-	free(atlas.buffer);
-}
-
-// place a rect inside the atlas
-// uses a row first algorithm
-// TODO: use a skyline algorithm https://jvernay.fr/en/blog/skyline-2d-packer/implementation/
-fn Point! AtlasBW.place(&atlas, char[] pixels, ushort w, ushort h)
-{
-	Point p;
-
-	if (atlas.row.x + w <= atlas.width && atlas.row.y + h <= atlas.height) {
-		p = atlas.row;
-	} else {
-		atlas.row.x = 0;
-		atlas.row.y = atlas.row.y + atlas.row_h;
-		atlas.row_h = 0;
-		if (atlas.row.x + w <= atlas.width && atlas.row.y + h <= atlas.height) {
-			p = atlas.row;
-		} else {
-			return UgAtlasError.CANNOT_PLACE?;
-		}
-	}
-
-	for (usz y = 0; y < h; y++) {
-		for (usz x = 0; x < w; x++) {
-			atlas.buffer[(usz)(p.y+y)*atlas.width + (p.x+x)] = pixels[y*w + x];
-		}
-	}
-
-	atlas.row.x += w;
-	if (h > atlas.row_h) {
-		atlas.row_h = h;
-	}
-
-	return p;
-}
-
-fn void! Font.load(&font, String path, uint height, float scale = 1)
-{
+	Font* font = ctx.font;
 	font.table.new_init(capacity: FONT_CACHED);
-	
+
 	font.size = height*scale;
 
 	font.sft = schrift::Sft{
@@ -139,24 +81,14 @@ fn void! Font.load(&font, String path, uint height, float scale = 1)
 	font.descender = (float)lmetrics.descender;
 	font.linegap   = (float)lmetrics.lineGap;
 	//io::printfn("ascender:%d, descender:%d, linegap:%d", font.ascender, font.descender, font.linegap);
-
-	// TODO: allocate buffer based on FONT_CACHED and the size of a sample letter
-	//       like the letter 'A'
-	font.atlas = mem::new_array(AtlasBW, 1);
-	ushort size = (ushort)font.size*256;
-	font.atlas[0].new(size, size)!;
-	
-	// preallocate the ASCII range
-//	for (char c = ' '; c < '~'; c++) {
-//		font.get_glyph((Codepoint)c)!;
-//	}
 }
 
-fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
+fn Glyph*! Ctx.get_glyph(&ctx, Codepoint code, bool* is_new = null)
 {
+	Font* font = &ctx.font;
 	Glyph*! gp;
 	gp = font.table.get_ref(code);
-	
+
 	if (catch excuse = gp) {
 		if (excuse != SearchResult.MISSING) {
 			return excuse?;
@@ -171,7 +103,7 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 
 	schrift::SftGlyph gid;
 	schrift::SftGMetrics gmtx;
-	
+
 	if (schrift::lookup(&font.sft, code, &gid) < 0) {
 		return UgFontError.MISSING_GLYPH?;
 	}
@@ -199,8 +131,12 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 	//io::printfn("code=%c, w=%d, h=%d, ox=%d, oy=%d, adv=%d",
 	//    glyph.code, glyph.w, glyph.h, glyph.ox, glyph.oy, glyph.adv);
 
-	Point uv = font.atlas[0].place(pixels, glyph.w, glyph.h)!;
-	glyph.idx = 0;
+	// TODO: allocate buffer based on FONT_CACHED and the size of a sample letter
+	//       like the letter 'A'
+	ushort size = (ushort)font.size*256;
+	Point uv;
+	Id id = ctx.place_sprite(&uv, ATLAS_ALPHA, pixels, glyph.w, glyph.h, size, size)!;
+	glyph.atlas_id = id;
 	glyph.u = uv.x;
 	glyph.v = uv.y;
 
@@ -212,10 +148,8 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 	return font.table.get_ref(code);
 }
 
+// FIXME: maybe some atlases should be exclusive to fonts
 fn void Font.free(&font)
 {
-	foreach (atlas: font.atlas) {
-		atlas.free();
-	}
 	schrift::freefont(font.sft.font);
 }

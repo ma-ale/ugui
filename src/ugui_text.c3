@@ -34,7 +34,7 @@ fn Rect! Ctx.get_text_bounds(&ctx, String text, bool* update_atlas)
 		off += x;
 		bool n;
 		if (!ascii::is_cntrl((char)cp)) {
-			gp = ctx.font.get_glyph(cp, &n)!;
+			gp = ctx.get_glyph(cp, &n)!;
 			line_len += gp.adv;
 			if (n) { *update_atlas = true; }
 		} else if (cp == '\n'){

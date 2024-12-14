@@ -1,4 +1,6 @@
 # TODOs, semi-random sorting
+
+[ ] Check every instance of foreach to see if I am using by-copy or by-reference correctly
 [x] Implement glyph draw command
 [x] Implement div.view and scrollbars
 [ ] Port font system from C to C3 (rewrite1)
@@ -7,26 +9,33 @@
 [ ] Use an arena allocator for cache
 [ ] Do not redraw if there was no update (no layout and no draw)
 [ ] Better handling of the active and focused widgets, try
-    to maintain focus until mouse release (fix scroll bars)
+to maintain focus until mouse release (fix scroll bars)
+[ ] Write a description for each file and the structs, interfaces provided
 
 ## Commands
+
 [x] rect commads should have:
-	* border width
-	* border radius
+_ border width
+_ border radius
 [x] add a command to update an atlas
 
 ## Atlases
+
 [ ] Add an interface to create, destroy, update and get atlases based on their ids
 [ ] Implement multiple font atlases
+[ ] Create and use ShortIds for atlases
 
 ## Fonts
+
 [ ] Fix the missing alpha channel
 [x] Fix the alignment
 
 ## Raylib
+
 [ ] Implement type (Rect, Color, Point) conversion functions between rl:: and ugui::
 [x] Implement pixel radius rounding for border radius
 
 ## Widgets
+
 [ ] Dynamic text box to implement an fps counter
 [ ] Button with label
