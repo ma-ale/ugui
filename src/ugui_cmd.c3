@@ -7,6 +7,7 @@ enum CmdType {
 	CMD_RECT,
 	CMD_UPDATE_ATLAS,
 	CMD_SPRITE,
+	CMD_SCISSOR,
 }
 
 // command to draw a rect
@@ -16,7 +17,6 @@ struct CmdRect {
 	Color color;
 }
 
-// FIXME: For now only support black and white atlas, so PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
 struct CmdUpdateAtlas {
 	Id id;
 	char* raw_buffer;
@@ -31,6 +31,11 @@ struct CmdSprite {
 	Rect texture_rect;
 }
 
+// if rect is zero Rect{0} then reset the scissor
+struct CmdScissor {
+	Rect rect;
+}
+
 // command structure
 struct Cmd {
 	CmdType type;
@@ -38,6 +43,7 @@ struct Cmd {
 		CmdRect rect;
 		CmdUpdateAtlas update_atlas;
 		CmdSprite sprite;
+		CmdScissor scissor;
 	}
 }
 
@@ -96,6 +102,8 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 		return;
 	}
 
+	ctx.push_scissor(bounds)!;
+
 	short baseline = (short)ctx.font.ascender;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	short line_gap = (short)ctx.font.linegap;
@@ -135,6 +143,9 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 			continue;
 		}
 	}
+
+	// FIXME: we never get here if an error was thrown before
+	ctx.push_scissor(Rect{})!;
 }
 
 fn void! Ctx.push_update_atlas(&ctx, Atlas* atlas)
@@ -150,4 +161,13 @@ fn void! Ctx.push_update_atlas(&ctx, Atlas* atlas)
 			},
 		};
 	ctx.cmd_queue.enqueue(&up)!;
+}
+
+fn void! Ctx.push_scissor(&ctx, Rect rect)
+{
+	Cmd sc = {
+		.type = CMD_SCISSOR,
+		.scissor.rect = rect,
+	};
+	ctx.cmd_queue.enqueue(&sc)!;
 }

@@ -162,7 +162,6 @@ fn int main(String[] args)
 					rl::unload_texture(font_texture);
 				}
 				font_texture = rl::load_texture_from_image(font_atlas);
-				//rl::draw_texture(font_texture, 0, 0, rl::WHITE);
 			case ugui::CmdType.CMD_SPRITE:
 				rl::Rectangle source = {
 					.x = cmd.sprite.texture_rect.x,
@@ -176,12 +175,12 @@ fn int main(String[] args)
 				};
 
 				rl::draw_texture_rec(font_texture, source, position, rl::WHITE);
-				//rl::draw_rectangle(cmd.sprite.rect.x,
-				//    cmd.sprite.rect.y,
-				//    cmd.sprite.rect.w,
-				//    cmd.sprite.rect.h,
-				//    rl::WHITE
-				//);
+			case ugui::CmdType.CMD_SCISSOR:
+				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {
+					rl::end_scissor_mode();
+				} else {
+					rl::begin_scissor_mode(cmd.scissor.rect.x, cmd.scissor.rect.y, cmd.scissor.rect.w, cmd.scissor.rect.h);
+				}
 			default:
 				io::printfn("Unknown cmd type: %s", cmd.type);
 			}

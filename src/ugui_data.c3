@@ -54,7 +54,7 @@ enum DivLayout {
 }
 
 // div element
-struct Div {
+struct ElemDiv {
 	DivLayout layout;
 	struct scroll {
 		bool can_x;
@@ -70,12 +70,12 @@ struct Div {
 }
 
 // slider element
-struct Slider {
+struct ElemSlider {
 	float value;
 	Rect handle;
 }
 
-struct Text {
+struct ElemText {
 	char* str;
 }
 
@@ -87,9 +87,9 @@ struct Elem {
 	Rect bounds;
 	ElemType type;
 	union {
-		Div div;
-		Slider slider;
-		Text text;
+		ElemDiv div;
+		ElemSlider slider;
+		ElemText text;
 	}
 }
 

@@ -86,7 +86,7 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 {
 	Rect placement;
 	Point origin;
-	Div* div = &parent.div;
+	ElemDiv* div = &parent.div;
 
 	// 1. Select the right origin
 	switch (div.layout) {
