@@ -18,7 +18,7 @@ fn Codepoint str_to_codepoint(char[] str, usz* off)
 	return cp;
 }
 
-fn Rect! Ctx.get_text_bounds(&ctx, String text, bool* update_atlas)
+fn Rect! Ctx.get_text_bounds(&ctx, String text)
 {
 	Rect text_bounds;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
@@ -34,9 +34,8 @@ fn Rect! Ctx.get_text_bounds(&ctx, String text, bool* update_atlas)
 		off += x;
 		bool n;
 		if (!ascii::is_cntrl((char)cp)) {
-			gp = ctx.font.get_glyph(cp, &n)!;
+			gp = ctx.font.get_glyph(cp)!;
 			line_len += gp.adv;
-			if (n) { *update_atlas = true; }
 		} else if (cp == '\n'){
 			text_bounds.h += line_height + line_gap;
 			line_len = 0;
@@ -67,10 +66,9 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 	short baseline = (short)ctx.font.ascender;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	short line_gap = (short)ctx.font.linegap;
-	bool update_atlas;
 	// if the element is new or the parent was updated then redo layout
 	if (c_elem.flags.is_new || parent.flags.updated) {
-		Rect text_size = ctx.get_text_bounds(text, &update_atlas)!;
+		Rect text_size = ctx.get_text_bounds(text)!;
 
 		// 2. Layout
 		c_elem.bounds = ctx.position_element(parent, text_size, true);
@@ -78,26 +76,6 @@ fn void! Ctx.text_unbounded(&ctx, String label, String text)
 		// 3. Fill the button specific fields
 		c_elem.text.str = text;
 	}
-
-	if (update_atlas) {
-		// FIXME: atlas here is hardcoded, look at the todo in ugui_data
-		Cmd up = {
-			.type = CMD_UPDATE_ATLAS,
-			.update_atlas = {
-				.raw_buffer = ctx.font.atlas[0].buffer,
-				.width = ctx.font.atlas[0].width,
-				.height = ctx.font.atlas[0].height,
-			},
-		};
-		ctx.cmd_queue.enqueue(&up)!;
-	}
-
-	Cmd bounds = {
-		.type = CMD_RECT,
-		.rect.rect = c_elem.bounds,
-		.rect.color = uint_to_rgba(0x000000ff),
-	};
-	ctx.cmd_queue.enqueue(&bounds)!;
 
 	ctx.push_string(c_elem.bounds, text)!;
 }

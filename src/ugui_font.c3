@@ -34,7 +34,6 @@ struct Glyph {
 	ushort u, v;
 	ushort w, h;
 	short adv, ox, oy;
-	short idx; // atlas index
 }
 
 const uint FONT_CACHED = 512;
@@ -47,79 +46,23 @@ fault UgFontError {
 	RENDER_ERROR,
 }
 
-fault UgAtlasError {
-	CANNOT_PLACE,
-}
-
-// black and white atlas
-struct AtlasBW {
-	ushort width, height;
-	char[] buffer;
-
-	Point row;
-	ushort row_h;
-}
-
 struct Font {
 	schrift::Sft sft;
 	String path;
+	Id id; // font id, same as atlas id
 	GlyphTable table;
 
 	float size;
 	float ascender, descender, linegap; // Line Metrics
-	AtlasBW[] atlas;
+	Atlas atlas;
+	bool should_update; // should send update_atlas command, resets at frame_end()
 }
 
-fn void! AtlasBW.new(&atlas, ushort width, ushort height)
-{
-	atlas.width = width;
-	atlas.height = height;
-	atlas.buffer = mem::new_array(char, (usz)atlas.width*atlas.height);
-}
-
-fn void AtlasBW.free(&atlas)
-{
-	free(atlas.buffer);
-}
-
-// place a rect inside the atlas
-// uses a row first algorithm
-// TODO: use a skyline algorithm https://jvernay.fr/en/blog/skyline-2d-packer/implementation/
-fn Point! AtlasBW.place(&atlas, char[] pixels, ushort w, ushort h)
-{
-	Point p;
-
-	if (atlas.row.x + w <= atlas.width && atlas.row.y + h <= atlas.height) {
-		p = atlas.row;
-	} else {
-		atlas.row.x = 0;
-		atlas.row.y = atlas.row.y + atlas.row_h;
-		atlas.row_h = 0;
-		if (atlas.row.x + w <= atlas.width && atlas.row.y + h <= atlas.height) {
-			p = atlas.row;
-		} else {
-			return UgAtlasError.CANNOT_PLACE?;
-		}
-	}
-
-	for (usz y = 0; y < h; y++) {
-		for (usz x = 0; x < w; x++) {
-			atlas.buffer[(usz)(p.y+y)*atlas.width + (p.x+x)] = pixels[y*w + x];
-		}
-	}
-
-	atlas.row.x += w;
-	if (h > atlas.row_h) {
-		atlas.row_h = h;
-	}
-
-	return p;
-}
-
-fn void! Font.load(&font, String path, uint height, float scale = 1)
+fn void! Font.load(&font, String name, String path, uint height, float scale)
 {
 	font.table.new_init(capacity: FONT_CACHED);
-	
+	font.id = name.hash();
+
 	font.size = height*scale;
 
 	font.sft = schrift::Sft{
@@ -142,27 +85,25 @@ fn void! Font.load(&font, String path, uint height, float scale = 1)
 
 	// TODO: allocate buffer based on FONT_CACHED and the size of a sample letter
 	//       like the letter 'A'
-	font.atlas = mem::new_array(AtlasBW, 1);
 	ushort size = (ushort)font.size*256;
-	font.atlas[0].new(size, size)!;
-	
+	font.atlas.new(font.id, ATLAS_GRAYSCALE, size, size)!;
+
 	// preallocate the ASCII range
 //	for (char c = ' '; c < '~'; c++) {
 //		font.get_glyph((Codepoint)c)!;
 //	}
 }
 
-fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
+fn Glyph*! Font.get_glyph(&font, Codepoint code)
 {
 	Glyph*! gp;
 	gp = font.table.get_ref(code);
-	
+
 	if (catch excuse = gp) {
 		if (excuse != SearchResult.MISSING) {
 			return excuse?;
 		}
 	} else {
-		if (is_new) { *is_new = false; }
 		return gp;
 	}
 
@@ -171,7 +112,7 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 
 	schrift::SftGlyph gid;
 	schrift::SftGMetrics gmtx;
-	
+
 	if (schrift::lookup(&font.sft, code, &gid) < 0) {
 		return UgFontError.MISSING_GLYPH?;
 	}
@@ -199,8 +140,7 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 	//io::printfn("code=%c, w=%d, h=%d, ox=%d, oy=%d, adv=%d",
 	//    glyph.code, glyph.w, glyph.h, glyph.ox, glyph.oy, glyph.adv);
 
-	Point uv = font.atlas[0].place(pixels, glyph.w, glyph.h)!;
-	glyph.idx = 0;
+	Point uv = font.atlas.place(pixels, glyph.w, glyph.h)!;
 	glyph.u = uv.x;
 	glyph.v = uv.y;
 
@@ -208,14 +148,17 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code, bool* is_new = null)
 
 	font.table.set(code, glyph);
 
-	if (is_new) { *is_new = true; }
+	font.should_update = true;
 	return font.table.get_ref(code);
 }
 
 fn void Font.free(&font)
 {
-	foreach (atlas: font.atlas) {
-		atlas.free();
-	}
+	font.atlas.free();
 	schrift::freefont(font.sft.font);
+}
+
+fn void! Ctx.load_font(&ctx, String name, String path, uint height, float scale = 1.0)
+{
+	return ctx.font.load(name, path, height, scale);
 }

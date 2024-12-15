@@ -128,45 +128,6 @@ const uint MAX_ELEMS  = 128;
 const uint MAX_CMDS   = 256;
 const uint ROOT_ID    = 1;
 
-// command type
-enum CmdType {
-	CMD_RECT,
-	CMD_UPDATE_ATLAS,
-	CMD_SPRITE,
-}
-
-// command to draw a rect
-// TODO: implement radius
-struct CmdRect {
-	Rect rect;
-	ushort radius;
-	Color color;
-}
-
-// FIXME: For now only support black and white atlas, so PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
-struct CmdUpdateAtlas {
-	char* raw_buffer;
-	short width, height;
-}
-
-// TODO:
-//    1. Add atlases as a data type
-//    2. Each atlas has an id
-struct CmdSprite {
-	Rect rect;
-	Rect texture_rect;
-}
-
-// command structure
-struct Cmd {
-	CmdType type;
-	union {
-		CmdRect rect;
-		CmdUpdateAtlas update_atlas;
-		CmdSprite sprite;
-	}
-}
-
 enum Layout {
 	ROW,
 	COLUMN,

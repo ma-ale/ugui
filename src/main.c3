@@ -27,7 +27,7 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
-	ui.font.load("/usr/share/fonts/TTF/HackNerdFontMono-Regular.ttf", 16)!!;
+	ui.load_font("font1", "/usr/share/fonts/TTF/HackNerdFontMono-Regular.ttf", 16)!!;
 
 	short width = 800;
 	short height = 450;
@@ -195,7 +195,6 @@ fn int main(String[] args)
 
 	rl::close_window();
 
-	ui.font.free();
 	ui.free();
 	return 0;
 }

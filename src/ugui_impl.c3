@@ -67,6 +67,7 @@ fn void Ctx.free(&ctx)
 	(void)ctx.tree.free();
 	(void)ctx.cache.free();
 	(void)ctx.cmd_queue.free();
+	(void)ctx.font.free();
 }
 
 fn void! Ctx.frame_begin(&ctx)
@@ -127,8 +128,14 @@ fn void! Ctx.frame_end(&ctx)
 	ctx.input.events = (InputEvents)0;
 	ctx.input.events.force_update = f;
 
-	// draw mouse position
+	// send atlas updates
+	if (ctx.font.should_update) {
+		ctx.push_update_atlas(&ctx.font.atlas)!;
+		ctx.font.should_update = false;
+	}
+
 $if 1:
+	// draw mouse position
 	Cmd cmd = {
 		.type = CMD_RECT,
 		.rect.rect = {

@@ -2,6 +2,45 @@ module ugui;
 
 import std::ascii;
 
+// command type
+enum CmdType {
+	CMD_RECT,
+	CMD_UPDATE_ATLAS,
+	CMD_SPRITE,
+}
+
+// command to draw a rect
+struct CmdRect {
+	Rect rect;
+	ushort radius;
+	Color color;
+}
+
+// FIXME: For now only support black and white atlas, so PIXELFORMAT_UNCOMPRESSED_GRAYSCALE
+struct CmdUpdateAtlas {
+	Id id;
+	char* raw_buffer;
+	short width, height, bpp;
+}
+
+// TODO:
+//    1. Add atlases as a data type
+//    2. Each atlas has an id
+struct CmdSprite {
+	Rect rect;
+	Rect texture_rect;
+}
+
+// command structure
+struct Cmd {
+	CmdType type;
+	union {
+		CmdRect rect;
+		CmdUpdateAtlas update_atlas;
+		CmdSprite sprite;
+	}
+}
+
 // FIXME: is this really the best solution?
 // "rect" is the bounding box of the element, which includes the border and the padding (so not just the content)
 fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, bool do_padding = false, bool do_radius = false)
@@ -96,4 +135,19 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 			continue;
 		}
 	}
+}
+
+fn void! Ctx.push_update_atlas(&ctx, Atlas* atlas)
+{
+	Cmd up = {
+		.type = CMD_UPDATE_ATLAS,
+		.update_atlas = {
+			.id = atlas.id,
+			.raw_buffer = atlas.buffer,
+			.width = atlas.width,
+			.height = atlas.height,
+			.bpp = (ushort)atlas.type.bpp(),
+			},
+		};
+	ctx.cmd_queue.enqueue(&up)!;
 }
