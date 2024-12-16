@@ -29,6 +29,7 @@ struct CmdUpdateAtlas {
 struct CmdSprite {
 	Rect rect;
 	Rect texture_rect;
+	Id texture_id;
 }
 
 // if rect is zero Rect{0} then reset the scissor
@@ -86,12 +87,13 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 }
 
 // TODO: add texture id
-fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture)
+fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id)
 {
 	Cmd cmd = {
 		.type = CMD_SPRITE,
 		.sprite.rect = bounds,
 		.sprite.texture_rect = texture,
+		.sprite.texture_id = texture_id,
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
 }
@@ -107,6 +109,7 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 	short baseline = (short)ctx.font.ascender;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	short line_gap = (short)ctx.font.linegap;
+	Id texture_id = ctx.font.id;  // or ctx.font.atlas.id
 	Point orig = {
 		.x = bounds.x,
 		.y = bounds.y,
@@ -121,19 +124,19 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 		if (!ascii::is_cntrl((char)cp)) {
 			gp = ctx.font.get_glyph(cp)!;
 			Rect gb = {
-			.x = orig.x + line_len + gp.ox,
-			.y = orig.y + gp.oy + baseline,
-			.w = gp.w,
-			.h = gp.h,
+				.x = orig.x + line_len + gp.ox,
+				.y = orig.y + gp.oy + baseline,
+				.w = gp.w,
+				.h = gp.h,
 			};
 			Rect gt = {
-			.x = gp.u,
-			.y = gp.v,
-			.w = gp.w,
-			.h = gp.h,
+				.x = gp.u,
+				.y = gp.v,
+				.w = gp.w,
+				.h = gp.h,
 			};
 			if (rect_collision(gb, bounds)) {
-				ctx.push_sprite(gb, gt)!;
+				ctx.push_sprite(gb, gt, texture_id)!;
 			}
 			line_len += gp.adv;
 		} else if (cp == '\n'){

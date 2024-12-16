@@ -64,7 +64,12 @@ fn int main(String[] args)
 	time::Clock clock;
 	Times ui_times;
 	Times draw_times;
+
+	// font stuff
 	rl::Shader font_shader = rl::load_shader_from_memory(null, FONT_FS);
+rl::Image font_atlas;
+	rl::Texture2D font_texture;
+	ugui::Id font_id = ui.get_font_id("font1");
 
 	// Main loop
 	while (!rl::window_should_close()) {
@@ -152,8 +157,6 @@ fn int main(String[] args)
 
 		rl::Color c;
 		rl::Rectangle r;
-		static rl::Image font_atlas;
-		static rl::Texture2D font_texture;
 		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
 			switch (cmd.type) {
 			case ugui::CmdType.CMD_RECT:
@@ -174,7 +177,8 @@ fn int main(String[] args)
 			    float roundness = r.width > r.height ? (2.1*rad)/r.height : (2.1*rad)/r.width;
 				rl::draw_rectangle_rounded(r, roundness, 0, c);
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
-				rl::unload_image(font_atlas);
+if (cmd.update_atlas.id != font_id) { break; }
+				//rl::unload_image(font_atlas);
 				font_atlas.data = cmd.update_atlas.raw_buffer;
 				font_atlas.width = cmd.update_atlas.width;
 				font_atlas.height = cmd.update_atlas.height;
@@ -186,6 +190,7 @@ fn int main(String[] args)
 				}
 				font_texture = rl::load_texture_from_image(font_atlas);
 			case ugui::CmdType.CMD_SPRITE:
+				if (cmd.sprite.texture_id != font_id) { break; }
 				rl::Rectangle source = {
 					.x = cmd.sprite.texture_rect.x,
 					.y = cmd.sprite.texture_rect.y,

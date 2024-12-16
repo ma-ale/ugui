@@ -211,3 +211,9 @@ fn Rect! Ctx.get_text_bounds(&ctx, String text)
 
 	return text_bounds;
 }
+
+// TODO: check if the font is present in the context
+fn Id Ctx.get_font_id(&ctx, String label)
+{
+	return (Id)label.hash();
+}
