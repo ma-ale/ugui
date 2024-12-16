@@ -92,9 +92,9 @@ fn void! Font.load(&font, String name, ZString path, uint height, float scale)
 	font.atlas.new(font.id, ATLAS_GRAYSCALE, size, size)!;
 
 	// preallocate the ASCII range
-//	for (char c = ' '; c < '~'; c++) {
-//		font.get_glyph((Codepoint)c)!;
-//	}
+	for (char c = ' '; c < '~'; c++) {
+		font.get_glyph((Codepoint)c)!;
+	}
 }
 
 fn Glyph*! Font.get_glyph(&font, Codepoint code)
