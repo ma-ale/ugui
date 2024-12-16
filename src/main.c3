@@ -5,6 +5,7 @@ import ugui;
 import rl;
 import std::time;
 import std::collections::ringbuffer;
+import std::core::string;
 
 def Times = ringbuffer::RingBuffer(<time::NanoDuration, 128>);
 
@@ -22,6 +23,26 @@ fn void Times.print_stats(&times)
 
 	io::printfn("min=%s, max=%s, avg=%s", min, max, avg);
 }
+
+struct TimeStats {
+	time::NanoDuration min, max, avg;
+}
+
+fn TimeStats Times.get_stats(&times)
+{
+	time::NanoDuration min, max, avg, x;
+	min = times.get(0);
+	for (usz i = 0; i < times.written; i++) {
+		x = times.get(i);
+		if (x < min) { min = x; }
+		if (x > max) { max = x; }
+		avg += x;
+	}
+	avg = (NanoDuration)((ulong)avg/128.0);
+
+	return TimeStats{.min = min, .max = max, .avg = avg};
+}
+
 
 const ZString FONT_FS = `
 #version 330
@@ -67,7 +88,7 @@ fn int main(String[] args)
 
 	// font stuff
 	rl::Shader font_shader = rl::load_shader_from_memory(null, FONT_FS);
-rl::Image font_atlas;
+	rl::Image font_atlas;
 	rl::Texture2D font_texture;
 	ugui::Id font_id = ui.get_font_id("font1");
 
@@ -146,6 +167,23 @@ rl::Image font_atlas;
 		|};
 		ui.div_end()!!;
 
+		// Timings counter
+		TimeStats dts = draw_times.get_stats();
+		TimeStats uts = ui_times.get_stats();
+
+		ui.layout_set_floating()!!;
+		ui.div_begin("fps", ugui::Rect{0, ui.height-50, 200, 50})!!;
+		{|
+			ui.layout_set_row()!!;
+			ui.text_unbounded("ui avg", string::tformat("ui avg: %s", uts.avg))!!;
+
+			ui.layout_next_row()!!;
+			ui.text_unbounded("draw avg", string::tformat("draw avg: %s", dts.avg))!!;
+
+			//ui.force_update()!!;
+		|};
+		ui.div_end()!!;
+
 		ui.frame_end()!!;
 		/* End UI Handling */
 		ui_times.push(clock.mark());
@@ -161,10 +199,10 @@ rl::Image font_atlas;
 			switch (cmd.type) {
 			case ugui::CmdType.CMD_RECT:
 				c = rl::Color{
-				    .r = cmd.rect.color.r,
-				    .g = cmd.rect.color.g,
-				    .b = cmd.rect.color.b,
-				    .a = cmd.rect.color.a,
+					.r = cmd.rect.color.r,
+					.g = cmd.rect.color.g,
+					.b = cmd.rect.color.b,
+					.a = cmd.rect.color.a,
 				};
 				r = rl::Rectangle{
 					.x = cmd.rect.rect.x,
@@ -172,12 +210,12 @@ rl::Image font_atlas;
 					.height = cmd.rect.rect.h,
 					.width = cmd.rect.rect.w,
 				};
-			    float rad = cmd.rect.radius;
+				float rad = cmd.rect.radius;
 				// for some weird-ass reason the straight forward inverse formula does not work
-			    float roundness = r.width > r.height ? (2.1*rad)/r.height : (2.1*rad)/r.width;
+				float roundness = r.width > r.height ? (2.1*rad)/r.height : (2.1*rad)/r.width;
 				rl::draw_rectangle_rounded(r, roundness, 0, c);
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
-if (cmd.update_atlas.id != font_id) { break; }
+				if (cmd.update_atlas.id != font_id) { break; }
 				//rl::unload_image(font_atlas);
 				font_atlas.data = cmd.update_atlas.raw_buffer;
 				font_atlas.width = cmd.update_atlas.width;
