@@ -39,7 +39,8 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	}
 
 	// Add the background to the draw stack
-	ctx.push_rect(c_elem.bounds, c_elem.div.color_bg)!;
+	bool do_border = parent.div.layout == LAYOUT_FLOATING; 
+	ctx.push_rect(c_elem.bounds, c_elem.div.color_bg, do_border: do_border)!;
 
 	// TODO: check active
 	// TODO: check resizeable

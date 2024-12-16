@@ -120,6 +120,9 @@ fn void! Ctx.force_update(&ctx)
 
 fn void! Ctx.frame_end(&ctx)
 {
+	Elem* root = ctx.get_elem_by_tree_idx(0)!;
+	root.div.layout = LAYOUT_ROW;
+
 	// 1. clear the tree
 	ctx.tree.prune(0)!;
 
