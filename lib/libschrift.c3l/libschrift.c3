@@ -45,10 +45,10 @@ struct SftImage
 	int   height;
 }
 
-extern fn char* sft_version() @extern("sft_version");
+extern fn ZString sft_version() @extern("sft_version");
 
 extern fn SftFont loadmem(void* mem, usz size) @extern("sft_loadmem");
-extern fn SftFont loadfile(char* filename) @extern("sft_loadfile");
+extern fn SftFont loadfile(ZString filename) @extern("sft_loadfile");
 extern fn void freefont(SftFont font) @extern("sft_freefont");
 
 extern fn int lmetrics(Sft* sft, SftLMetrics* metrics) @extern("sft_lmetrics");
