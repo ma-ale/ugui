@@ -23,6 +23,28 @@ fn void Times.print_stats(&times)
 	io::printfn("min=%s, max=%s, avg=%s", min, max, avg);
 }
 
+const ZString FONT_FS = `
+#version 330
+
+// Input vertex attributes (from vertex shader)
+in vec2 fragTexCoord;
+in vec4 fragColor;
+
+// Input uniform values
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+
+// Output fragment color
+out vec4 finalColor;
+
+void main()
+{
+    vec4 alpha = texture(texture0, fragTexCoord);
+    finalColor = colDiffuse*fragColor;
+    finalColor.a *= alpha.r;
+}
+`;
+
 fn int main(String[] args)
 {
 	ugui::Ctx ui;
@@ -42,6 +64,7 @@ fn int main(String[] args)
 	time::Clock clock;
 	Times ui_times;
 	Times draw_times;
+	rl::Shader font_shader = rl::load_shader_from_memory(null, FONT_FS);
 
 	// Main loop
 	while (!rl::window_should_close()) {
@@ -173,8 +196,9 @@ fn int main(String[] args)
 					.x = cmd.sprite.rect.x,
 					.y = cmd.sprite.rect.y,
 				};
-
+				rl::begin_shader_mode(font_shader);
 				rl::draw_texture_rec(font_texture, source, position, rl::WHITE);
+				rl::end_shader_mode();
 			case ugui::CmdType.CMD_SCISSOR:
 				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {
 					rl::end_scissor_mode();

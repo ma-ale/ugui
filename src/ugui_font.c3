@@ -61,7 +61,7 @@ struct Font {
 	bool should_update; // should send update_atlas command, resets at frame_end()
 }
 
-fn void! Font.load(&font, String name, String path, uint height, float scale)
+fn void! Font.load(&font, String name, ZString path, uint height, float scale)
 {
 	font.table.new_init(capacity: FONT_CACHED);
 	font.id = name.hash();
@@ -161,7 +161,7 @@ fn void Font.free(&font)
 	schrift::freefont(font.sft.font);
 }
 
-fn void! Ctx.load_font(&ctx, String name, String path, uint height, float scale = 1.0)
+fn void! Ctx.load_font(&ctx, String name, ZString path, uint height, float scale = 1.0)
 {
 	return ctx.font.load(name, path, height, scale);
 }
