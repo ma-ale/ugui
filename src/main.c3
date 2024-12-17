@@ -70,7 +70,7 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
-	ui.load_font("font1", "/usr/share/fonts/TTF/HackNerdFontMono-Regular.ttf", 16)!!;
+	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
 
 	short width = 800;
 	short height = 450;
@@ -123,7 +123,7 @@ fn int main(String[] args)
 		{|
 
 			ui.layout_set_row()!!;
-			if (ui.button("button0", ugui::Rect{0,0,30,30})!!.mouse_press) {
+			if (ui.button("button0", ugui::Rect{0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;
 				ui.force_update()!!;
@@ -147,9 +147,7 @@ fn int main(String[] args)
 		|};
 		ui.div_end()!!;
 
-		ui.div_begin("second", ugui::DIV_FILL)!!;
-		ugui::Elem* de = ui.get_elem_by_label("second")!!;
-		de.div.scroll.can_y = true;
+		ui.div_begin("second", ugui::DIV_FILL, scroll_y: true)!!;
 		{|
 			ui.layout_set_column()!!;
 			if (ui.slider_ver("slider_other", ugui::Rect{0,0,30,100})!!.update) {
@@ -160,10 +158,12 @@ fn int main(String[] args)
 			ui.button("button11", ugui::Rect{0,0,50,50})!!;
 			ui.button("button12", ugui::Rect{0,0,50,50})!!;
 			ui.button("button13", ugui::Rect{0,0,50,50})!!;
-			ui.button("button14", ugui::Rect{0,0,50,50})!!;
-			ui.button("button15", ugui::Rect{0,0,50,50})!!;
-			ui.button("button16", ugui::Rect{0,0,50,50})!!;
-			ui.button("button17", ugui::Rect{0,0,50,50})!!;
+			if (toggle) {
+				ui.button("button14", ugui::Rect{0,0,50,50})!!;
+				ui.button("button15", ugui::Rect{0,0,50,50})!!;
+				ui.button("button16", ugui::Rect{0,0,50,50})!!;
+				ui.button("button17", ugui::Rect{0,0,50,50})!!;
+			}
 		|};
 		ui.div_end()!!;
 
@@ -172,13 +172,13 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", ugui::Rect{0, ui.height-50, 200, 50})!!;
+		ui.div_begin("fps", ugui::Rect{0, ui.height-60, 200, 60})!!;
 		{|
 			ui.layout_set_row()!!;
-			ui.text_unbounded("ui avg", string::tformat("ui avg: %s", uts.avg))!!;
+			ui.text_unbounded("ui avg", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 
-			ui.layout_next_row()!!;
-			ui.text_unbounded("draw avg", string::tformat("draw avg: %s", dts.avg))!!;
+			//ui.layout_next_row()!!;
+			//ui.text_unbounded("draw avg", string::tformat("draw avg: %s", dts.avg))!!;
 
 			//ui.force_update()!!;
 		|};
@@ -187,7 +187,7 @@ fn int main(String[] args)
 		ui.frame_end()!!;
 		/* End UI Handling */
 		ui_times.push(clock.mark());
-		ui_times.print_stats();
+		//ui_times.print_stats();
 
 		/* Start UI Drawing */
 		rl::begin_drawing();
@@ -253,7 +253,7 @@ fn int main(String[] args)
 			}
 		}
 		draw_times.push(clock.mark());
-		draw_times.print_stats();
+		//draw_times.print_stats();
 		rl::end_drawing();
 		/* End Drawing */
 

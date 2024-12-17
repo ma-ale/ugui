@@ -135,7 +135,8 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 				.w = gp.w,
 				.h = gp.h,
 			};
-			if (rect_collision(gb, bounds)) {
+			// push the sprite only if it collides with the bounds
+			if (gb.collides(bounds)) {
 				ctx.push_sprite(gb, gt, texture_id)!;
 			}
 			line_len += gp.adv;

@@ -22,7 +22,7 @@
     //"RAYGUI_CUSTOM_ICONS",
   ],
   // Authors, optionally with email.
-  "authors": [ "John Doe <ale@shitposting.expert>" ],
+  "authors": [ "Alessandro Mauri <ale@shitposting.expert>" ],
   // Version using semantic versioning.
   "version": "0.1.0",
   // Sources compiled for all targets.

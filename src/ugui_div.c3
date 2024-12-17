@@ -2,7 +2,39 @@ module ugui;
 
 import std::io;
 
-fn void! Ctx.div_begin(&ctx, String label, Rect size)
+enum DivLayout {
+	LAYOUT_ROW,
+	LAYOUT_COLUMN,
+	LAYOUT_FLOATING,
+}
+
+// div element
+struct ElemDiv {
+	DivLayout layout;
+	struct scroll {
+		bool can_x;
+		bool can_y;
+		bool on_x;
+		bool on_y;
+		float value_x;
+		float value_y;
+	}
+	Rect children_bounds;
+	Point origin_r, origin_c;
+	Color bgcolor;
+}
+
+const Elem DIV_DEFAULTS = {
+	.type = ETYPE_DIV,
+	.div = {
+		.scroll.can_x = false,
+		.scroll.can_y = false,
+		.scroll.value_x = 0,
+		.scroll.value_y = 0,
+	},
+};
+
+fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, bool scroll_y = false)
 {
 	Id id = label.hash();
 
@@ -11,21 +43,22 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	isz div_node = ctx.tree.add(id, ctx.active_div)!;
 	ctx.active_div = div_node;
 
-	// 1. Fill the element fields
-	c_elem.type = ETYPE_DIV;
+	bool needs_layout = c_elem.flags.is_new || parent.flags.updated;
+
+	if (c_elem.flags.is_new) {
+		*c_elem = DIV_DEFAULTS;
+	} else if (c_elem.type != ETYPE_DIV) {
+		return UgError.WRONG_ELEMENT_TYPE?;
+	}
+	c_elem.div.scroll.can_x = scroll_x;
+	c_elem.div.scroll.can_y = scroll_y;
 
 	// do layout and update flags only if the element was updated
-	if (c_elem.flags.is_new || parent.flags.updated) {
+	if (needs_layout) {
 		// 2. layout the element
 		c_elem.bounds = ctx.position_element(parent, size);
-		if (c_elem.flags.is_new) {
-			c_elem.div.children_bounds = c_elem.bounds;
-			c_elem.div.color_bg = ctx.style.bgcolor;
-			c_elem.div.scroll.can_x = false;
-			c_elem.div.scroll.can_y = false;
-			c_elem.div.scroll.value_x = 0;
-			c_elem.div.scroll.value_y = 0;
-		}
+		c_elem.div.children_bounds = c_elem.bounds;
+		c_elem.div.bgcolor = ctx.style.bgcolor;
 
 		// 3. Mark the element as updated
 		c_elem.flags.updated = true;
@@ -39,14 +72,14 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size)
 	}
 
 	// Add the background to the draw stack
-	bool do_border = parent.div.layout == LAYOUT_FLOATING; 
-	ctx.push_rect(c_elem.bounds, c_elem.div.color_bg, do_border: do_border)!;
+	bool do_border = parent.div.layout == LAYOUT_FLOATING;
+	ctx.push_rect(c_elem.bounds, c_elem.div.bgcolor, do_border: do_border)!;
 
 	// TODO: check active
 	// TODO: check resizeable
 
 	// check and draw scroll bars
-	if (!rect_contains(c_elem.bounds, c_elem.div.children_bounds)) {
+	if (!c_elem.bounds.contains(c_elem.div.children_bounds)) {
 		Point cbc = {
 			.x = c_elem.div.children_bounds.x + c_elem.div.children_bounds.w,
 			.y = c_elem.div.children_bounds.y + c_elem.div.children_bounds.h,

@@ -47,28 +47,6 @@ bitstruct ElemEvents : uint {
 	bool update        : 7;
 }
 
-enum DivLayout {
-	LAYOUT_ROW,
-	LAYOUT_COLUMN,
-	LAYOUT_FLOATING,
-}
-
-// div element
-struct ElemDiv {
-	DivLayout layout;
-	struct scroll {
-		bool can_x;
-		bool can_y;
-		bool on_x;
-		bool on_y;
-		float value_x;
-		float value_y;
-	}
-	Rect children_bounds;
-	Point origin_r, origin_c;
-	Color color_bg;
-}
-
 // slider element
 struct ElemSlider {
 	float value;
@@ -88,6 +66,7 @@ struct Elem {
 	ElemType type;
 	union {
 		ElemDiv div;
+		ElemButton button;
 		ElemSlider slider;
 		ElemText text;
 	}
@@ -107,14 +86,15 @@ fault UgError {
 	INVALID_SIZE,
 	EVENT_UNSUPPORTED,
 	UNEXPECTED_ELEMENT,
+	WRONG_ELEMENT_TYPE,
 }
 
-macro uint_to_rgba(uint u) {
+macro Color uint_to_rgba(uint $u) {
 	return Color{
-		.r = (char)((u >> 24) & 0xff),
-		.g = (char)((u >> 16) & 0xff),
-		.b = (char)((u >> 8) & 0xff),
-		.a = (char)((u >> 0) & 0xff)
+		.r = (char)(($u >> 24) & 0xff),
+		.g = (char)(($u >> 16) & 0xff),
+		.b = (char)(($u >> 8) & 0xff),
+		.a = (char)(($u >> 0) & 0xff)
 	};
 }
 
@@ -179,12 +159,12 @@ macro point_in_rect(Point p, Rect r)
 }
 
 // return true if rect a contains b
-macro rect_contains(Rect a, Rect b)
+macro bool Rect.contains(Rect a, Rect b)
 {
 	return (a.x <= b.x && a.y <= b.y && a.x+a.w >= b.x+b.w && a.y+a.h >= b.y+b.h);
 }
 
-macro rect_intersection(Rect a, Rect b)
+macro Rect Rect.intersection(Rect a, Rect b)
 {
 	return Rect{
 		.x = (short)max(a.x, b.x),
@@ -195,7 +175,9 @@ macro rect_intersection(Rect a, Rect b)
 }
 
 // rect intersection not null
-macro rect_collision(Rect a, Rect b)
+macro bool Rect.collides(Rect a, Rect b)
 {
 	return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
 }
+
+macro bool Rect.is_null(r) => r.x == 0 && r.y == 0 && r.x == 0 && r.w == 0;

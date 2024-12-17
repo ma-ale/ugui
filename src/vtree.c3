@@ -27,7 +27,7 @@ macro @zero()
 	$if $assignable(0, ElemType):
 		return 0;
 	$else
-		return ElemType{0};
+		return ElemType{};
 	$endif
 }
 
@@ -184,6 +184,15 @@ fn usz! VTree.prune(&tree, isz ref)
 	}
 
 	return count;
+}
+
+fn usz VTree.nuke(&tree)
+{
+	tree.vector[0..] = @zero();
+	tree.refs[0..] = -1;
+	usz x = tree.elements;
+	tree.elements = 0;
+	return x;
 }
 
 // find the size of the subtree starting from ref

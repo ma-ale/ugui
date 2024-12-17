@@ -2,8 +2,21 @@ module ugui;
 
 import std::io;
 
+// button element
+struct ElemButton {
+	Color color;
+	bool active;
+}
+
+const Elem BUTTON_DEFAULTS = {
+	.type = ETYPE_BUTTON,
+	.button = {
+		.color = uint_to_rgba(0x0000ffff),
+	},
+};
+
 // draw a button, return the events on that button
-fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
+fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 {
 	Id id = label.hash();
 
@@ -12,29 +25,39 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size)
 	// add it to the tree
 	ctx.tree.add(id, ctx.active_div)!;
 
-	// 1. Fill the element fields
-	// this resets the flags
-	c_elem.type     = ETYPE_BUTTON;
-	Color bg_color = uint_to_rgba(0x0000ffff);
+	bool needs_layout = c_elem.flags.is_new || parent.flags.updated;
 
-	// if the element is new or the parent was updated then redo layout
-	if (c_elem.flags.is_new || parent.flags.updated) {
-		// 2. Layout
-		c_elem.bounds = ctx.position_element(parent, size, true);
-
-		// TODO: 3. Fill the button specific fields
+	if (c_elem.flags.is_new) {
+		*c_elem = BUTTON_DEFAULTS;
+	} else if (c_elem.type != ETYPE_BUTTON) {
+		return UgError.WRONG_ELEMENT_TYPE?;
 	}
 
+	// if the element is new or the parent was updated then redo layout
+	if (needs_layout) {
+		c_elem.bounds = ctx.position_element(parent, size, true);
+	}
+
+	// if the bounds are null the element is outside the div view,
+	//  no interaction should occur so just return
+	if (c_elem.bounds.is_null()) { return ElemEvents{}; }
+
 	c_elem.events = ctx.get_elem_events(c_elem);
-	if (parent.flags.has_focus) {
-		if (c_elem.events.mouse_hover) {
+	if (c_elem.events.mouse_hover) {
+		if (parent.flags.has_focus) {
 			c_elem.flags.has_focus = true;
-			bg_color = uint_to_rgba(0x00ff00ff);
+			c_elem.button.color = uint_to_rgba(0x00ff00ff);
 		}
+	} else {
+		c_elem.button.color = uint_to_rgba(0x0000ffff);
+	}
+
+	if (state) {
+		c_elem.button.color = uint_to_rgba(0xff00ffff);
 	}
 
 	// Draw the button
-	ctx.push_rect(c_elem.bounds, bg_color, do_border: true, do_radius: true)!;
+	ctx.push_rect(c_elem.bounds, c_elem.button.color, do_border: true, do_radius: true)!;
 
 	return c_elem.events;
 }

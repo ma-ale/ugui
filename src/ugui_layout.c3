@@ -163,7 +163,7 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	}
 
 	// 6. check if the placement is inside the view
-	if (rect_collision(placement, view)) {
+	if (placement.collides(view)) {
 		return Rect{
 			.x = placement.x - off.x,
 			.y = placement.y - off.y,

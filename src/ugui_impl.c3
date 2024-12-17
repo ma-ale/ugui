@@ -124,7 +124,7 @@ fn void! Ctx.frame_end(&ctx)
 	root.div.layout = LAYOUT_ROW;
 
 	// 1. clear the tree
-	ctx.tree.prune(0)!;
+	ctx.tree.nuke();
 
 	// 2. clear input fields
 	bool f = ctx.input.events.force_update;
