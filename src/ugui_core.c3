@@ -99,12 +99,6 @@ const uint MAX_ELEMS  = 128;
 const uint MAX_CMDS   = 256;
 const uint ROOT_ID    = 1;
 
-enum Layout {
-	ROW,
-	COLUMN,
-	FLOATING
-}
-
 // global style, similar to the css box model
 struct Style { // css box model
 	Rect  padding;
@@ -118,7 +112,6 @@ struct Style { // css box model
 
 
 struct Ctx {
-	Layout layout;
 	IdTree tree;
 	ElemCache cache;
 	CmdQueue cmd_queue;
@@ -141,6 +134,7 @@ struct Ctx {
 		}
 	}
 
+	Rect div_scissor;
 	isz active_div; // tree node indicating the current active div
 }
 
@@ -178,6 +172,12 @@ fn Elem*! Ctx.get_parent(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	return ctx.cache.search(parent_id);
+}
+
+macro Id! Ctx.gen_id(&ctx, String label)
+{
+	Id parent_id = ctx.tree.get(ctx.active_div)!;
+	return parent_id ^ label.hash();
 }
 
 // get or push an element from the cache, return a pointer to it
@@ -218,7 +218,6 @@ fn void! Ctx.init(&ctx)
 	ctx.cmd_queue.init(MAX_ELEMENTS)!;
 	defer catch { (void)ctx.cmd_queue.free(); }
 
-	ctx.layout = Layout.ROW;
 	ctx.active_div = 0;
 
 	// TODO: add style config
@@ -274,6 +273,8 @@ fn void! Ctx.frame_begin(&ctx)
 
 	// 3. Push the root element into the element tree
 	ctx.active_div = ctx.tree.add(ROOT_ID, 0)!;
+
+	ctx.div_scissor = {0, 0, ctx.width, ctx.height};
 
 	// The root element does not push anything to the stack
 	// TODO: add a background color taken from a theme or config

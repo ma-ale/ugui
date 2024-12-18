@@ -94,9 +94,11 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		origin = div.origin_r;
 	case LAYOUT_COLUMN:
 		origin = div.origin_c;
-	case LAYOUT_FLOATING: // none
-	default:
-		// Error
+	case LAYOUT_FLOATING: // none, relative to zero zero
+	case LAYOUT_ABSOLUTE: // absolute position, this is a no-op, return the rect
+		return rect;
+	default: // error
+		return Rect{};
 	}
 
 	// the bottom-right border of the element box

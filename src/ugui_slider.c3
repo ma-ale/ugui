@@ -8,10 +8,6 @@ struct ElemSlider {
 	Rect handle;
 }
 
-const Elem SLIDER_DEFAULT = {
-	.type = ETYPE_SLIDER,
-};
-
 /*       handle
  * +----+-----+---------------------+
  * |    |#####|                     |
@@ -20,9 +16,15 @@ const Elem SLIDER_DEFAULT = {
 <*
 @require value != null
 *>
-fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size, float* value)
+fn ElemEvents! Ctx.slider_hor(&ctx,
+    String label,
+    Rect size,
+    float* value,
+    float hpercent = 0.25,
+    Color bgcolor = uint_to_rgba(0x0000ffff),
+    Color handlecolor = uint_to_rgba(0x0ff000ff))
 {
-	Id id = label.hash();
+	Id id = ctx.gen_id(label)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;
@@ -31,8 +33,8 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size, float* value)
 
 	// 1. Fill the element fields
 	if (c_elem.flags.is_new) {
-		*c_elem = SLIDER_DEFAULT;
-	} else if (c_elem.type != SLIDER_DEFAULT.type) {
+		c_elem.type = ETYPE_SLIDER;
+	} else if (c_elem.type != ETYPE_SLIDER) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
 
@@ -40,7 +42,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size, float* value)
 	c_elem.bounds = ctx.position_element(parent, size, true);
 
 	// handle width
-	short hw = (short)(c_elem.bounds.w * 0.25);
+	short hw = (short)(c_elem.bounds.w * hpercent);
 	Rect handle = {
 		.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, *value),
 		.y = c_elem.bounds.y,
@@ -60,10 +62,8 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size, float* value)
 	}
 
 	// Draw the slider background and handle
-	Color bg_color = uint_to_rgba(0x0000ffff);
-	Color handle_color = uint_to_rgba(0x0ff000ff);
-	ctx.push_rect(c_elem.bounds, bg_color)!;
-	ctx.push_rect(c_elem.slider.handle, handle_color)!;
+	ctx.push_rect(c_elem.bounds, bgcolor)!;
+	ctx.push_rect(c_elem.slider.handle, handlecolor)!;
 
 	return c_elem.events;
 }
@@ -80,9 +80,15 @@ fn ElemEvents! Ctx.slider_hor(&ctx, String label, Rect size, float* value)
  * | |
  * +-+
  */
-fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size, float* value)
+fn ElemEvents! Ctx.slider_ver(&ctx,
+    String label,
+    Rect size,
+    float* value,
+    float hpercent = 0.25,
+    Color bgcolor = uint_to_rgba(0x0000ffff),
+    Color handlecolor = uint_to_rgba(0x0ff000ff))
 {
-	Id id = label.hash();
+	Id id = ctx.gen_id(label)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;
@@ -91,8 +97,8 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size, float* value)
 
 	// 1. Fill the element fields
 	if (c_elem.flags.is_new) {
-		*c_elem = SLIDER_DEFAULT;
-	} else if (c_elem.type != SLIDER_DEFAULT.type) {
+		c_elem.type = ETYPE_SLIDER;
+	} else if (c_elem.type != ETYPE_SLIDER) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
 
@@ -100,7 +106,7 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size, float* value)
 	c_elem.bounds = ctx.position_element(parent, size, true);
 
 	// handle height
-	short hh = (short)(c_elem.bounds.h * 0.25);
+	short hh = (short)(c_elem.bounds.h * hpercent);
 	Rect handle = {
 		.x = c_elem.bounds.x,
 		.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, *value),
@@ -121,10 +127,8 @@ fn ElemEvents! Ctx.slider_ver(&ctx, String label, Rect size, float* value)
 	}
 
 	// Draw the slider background and handle
-	Color bg_color = uint_to_rgba(0x0000ffff);
-	Color handle_color = uint_to_rgba(0x0ff000ff);
-	ctx.push_rect(c_elem.bounds, bg_color)!;
-	ctx.push_rect(c_elem.slider.handle, handle_color)!;
+	ctx.push_rect(c_elem.bounds, bgcolor)!;
+	ctx.push_rect(c_elem.slider.handle, handlecolor)!;
 
 	return c_elem.events;
 }

@@ -150,18 +150,18 @@ fn int main(String[] args)
 		{|
 			ui.layout_set_column()!!;
 			static float slider2 = 0.5;
-			if (ui.slider_ver("slider_other", ugui::Rect{0,0,30,100}, &slider2)!!.update) {
+			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100}, &slider2)!!.update) {
 				io::printfn("other slider: %f", slider2);
 			}
-			ui.button("button10", ugui::Rect{0,0,50,50})!!;
-			ui.button("button11", ugui::Rect{0,0,50,50})!!;
-			ui.button("button12", ugui::Rect{0,0,50,50})!!;
-			ui.button("button13", ugui::Rect{0,0,50,50})!!;
+			ui.button("button0", ugui::Rect{0,0,50,50})!!;
+			ui.button("button1", ugui::Rect{0,0,50,50})!!;
+			ui.button("button2", ugui::Rect{0,0,50,50})!!;
+			ui.button("button3", ugui::Rect{0,0,50,50})!!;
 			if (toggle) {
-				ui.button("button14", ugui::Rect{0,0,50,50})!!;
-				ui.button("button15", ugui::Rect{0,0,50,50})!!;
-				ui.button("button16", ugui::Rect{0,0,50,50})!!;
-				ui.button("button17", ugui::Rect{0,0,50,50})!!;
+				ui.button("button4", ugui::Rect{0,0,50,50})!!;
+				ui.button("button5", ugui::Rect{0,0,50,50})!!;
+				ui.button("button6", ugui::Rect{0,0,50,50})!!;
+				ui.button("button7", ugui::Rect{0,0,50,50})!!;
 			}
 			ui.layout_next_column()!!;
 			ui.layout_set_row()!!;

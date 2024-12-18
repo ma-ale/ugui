@@ -8,27 +8,19 @@ struct ElemButton {
 	bool active;
 }
 
-const Elem BUTTON_DEFAULTS = {
-	.type = ETYPE_BUTTON,
-	.button = {
-		.color = uint_to_rgba(0x0000ffff),
-	},
-};
-
 // draw a button, return the events on that button
 fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 {
-	Id id = label.hash();
+	Id id = ctx.gen_id(label)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;
 	// add it to the tree
 	ctx.tree.add(id, ctx.active_div)!;
 
-	bool needs_layout = c_elem.flags.is_new || parent.flags.updated;
-
 	if (c_elem.flags.is_new) {
-		*c_elem = BUTTON_DEFAULTS;
+		c_elem.type = ETYPE_BUTTON;
+		c_elem.button.color = uint_to_rgba(0x0000ffff);
 	} else if (c_elem.type != ETYPE_BUTTON) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}

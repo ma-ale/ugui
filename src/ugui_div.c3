@@ -7,6 +7,7 @@ enum DivLayout {
 	LAYOUT_ROW,
 	LAYOUT_COLUMN,
 	LAYOUT_FLOATING,
+	LAYOUT_ABSOLUTE,
 }
 
 // div element
@@ -26,19 +27,9 @@ struct ElemDiv {
 	Color bgcolor;
 }
 
-const Elem DIV_DEFAULTS = {
-	.type = ETYPE_DIV,
-	.div = {
-		.scroll.can_x = false,
-		.scroll.can_y = false,
-		.scroll.value_x = 0,
-		.scroll.value_y = 0,
-	},
-};
-
 fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, bool scroll_y = false)
 {
-	Id id = label.hash();
+	Id id = ctx.gen_id(label)!;
 
 	Elem* parent = ctx.get_parent()!;
 	Elem* c_elem = ctx.get_elem(id)!;
@@ -48,7 +39,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	bool is_new = c_elem.flags.is_new;
 
 	if (c_elem.flags.is_new) {
-		*c_elem = DIV_DEFAULTS;
+		c_elem.type = ETYPE_DIV;
 	} else if (c_elem.type != ETYPE_DIV) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
@@ -59,6 +50,10 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	c_elem.bounds = ctx.position_element(parent, size);
 	c_elem.div.children_bounds = c_elem.bounds;
 	c_elem.div.bgcolor = ctx.style.bgcolor;
+
+	// update the ctx scissor
+	ctx.div_scissor = c_elem.bounds;
+	ctx.push_scissor(c_elem.bounds)!;
 
 	// 4. Fill the div fields
 	c_elem.div.origin_c = Point{
@@ -77,8 +72,23 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	// TODO: check active
 	// TODO: check resizeable
 
-	// FIXME: we cannot use slider elements as scrollbars because of id management
-	// scrollbars
+	if (parent.flags.has_focus) {
+		if (point_in_rect(ctx.input.mouse.pos, c_elem.bounds)) {
+			c_elem.flags.has_focus = true;
+		}
+	}
+
+}
+
+fn void! Ctx.div_end(&ctx)
+{
+	// swap the children bounds
+	Elem* parent = ctx.get_parent()!;
+	Elem* c_elem = ctx.get_elem_by_tree_idx(ctx.active_div)!;
+	c_elem.div.pcb = c_elem.div.children_bounds;
+
+	c_elem.events = ctx.get_elem_events(c_elem);
+	
 	Rect cb = c_elem.div.pcb;
 	// children bounds bottom-right corner
 	Point cbc = {
@@ -105,25 +115,10 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 			.w = 10,
 			.h = c_elem.bounds.h,
 		};
-
-		short hh = (short)(max((float)bc.y / cbc.y, (float)0.15) * c_elem.bounds.h);
-		Rect vhandle = {
-			.x = c_elem.bounds.x + c_elem.bounds.w - 10,
-			.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, c_elem.div.scroll.value_y),
-			.w = 10,
-			.h = hh,
-		};
-
-		Point m = ctx.input.mouse.pos;
-		if (parent.flags.has_focus && c_elem.events.mouse_hover &&
-		    c_elem.events.mouse_hold && point_in_rect(m, vhandle)) {
-			vhandle.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, c_elem.div.scroll.value_y);
-			c_elem.div.scroll.value_y = calc_value(c_elem.bounds.y, m.y, c_elem.bounds.h, hh);
-			c_elem.flags.updated = true;
-		}
-
-		ctx.push_rect(vslider, uint_to_rgba(0x999999ff))!;
-		ctx.push_rect(vhandle, uint_to_rgba(0x9999ffff))!;
+		DivLayout prev_l = c_elem.div.layout;
+		c_elem.div.layout = LAYOUT_ABSOLUTE;
+		ctx.slider_ver("div_scrollbar_vertical", vslider, &c_elem.div.scroll.value_y, max((float)bc.y / cbc.y, (float)0.15))!;
+		c_elem.div.layout = prev_l;
 	}
 
 	if (c_elem.div.scroll.on_x) {
@@ -133,40 +128,11 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 			.w = c_elem.bounds.w,
 			.h = 10,
 		};
-
-		short hw = (short)(max((float)bc.x / cbc.x, (float)0.15) * c_elem.bounds.w);
-		Rect hhandle = {
-			.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, c_elem.div.scroll.value_x),
-			.y = c_elem.bounds.y + c_elem.bounds.h - 10,
-			.w = hw,
-			.h = 10,
-		};
-
-		Point m = ctx.input.mouse.pos;
-		if (parent.flags.has_focus && c_elem.events.mouse_hover &&
-		    c_elem.events.mouse_hold && point_in_rect(m, hhandle)) {
-			hhandle.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, c_elem.div.scroll.value_x);
-			c_elem.div.scroll.value_x = calc_value(c_elem.bounds.x, m.x, c_elem.bounds.w, hw);
-			c_elem.flags.updated = true;
-		}
-
-		ctx.push_rect(hslider, uint_to_rgba(0x999999ff))!;
-		ctx.push_rect(hhandle, uint_to_rgba(0x9999ffff))!;
+		DivLayout prev_l = c_elem.div.layout;
+		c_elem.div.layout = LAYOUT_ABSOLUTE;
+		ctx.slider_hor("div_scrollbar_horizontal", hslider, &c_elem.div.scroll.value_x, max((float)bc.x / cbc.x, (float)0.15))!;
+		c_elem.div.layout = prev_l;
 	}
-
-	if (parent.flags.has_focus) {
-		if (point_in_rect(ctx.input.mouse.pos, c_elem.bounds)) {
-			c_elem.flags.has_focus = true;
-		}
-	}
-
-}
-
-fn void! Ctx.div_end(&ctx)
-{
-	// swap the children bounds
-	Elem* c_elem = ctx.get_elem_by_tree_idx(ctx.active_div)!;
-	c_elem.div.pcb = c_elem.div.children_bounds;
 
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;

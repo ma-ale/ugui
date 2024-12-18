@@ -4,7 +4,7 @@ import std::io;
 
 fn void! Ctx.text_unbounded(&ctx, String label, String text)
 {
-	Id id = label.hash();
+	Id id = ctx.gen_id(label)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *c_elem = ctx.get_elem(id)!;

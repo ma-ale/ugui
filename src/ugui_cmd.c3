@@ -171,7 +171,7 @@ fn void! Ctx.push_scissor(&ctx, Rect rect)
 {
 	Cmd sc = {
 		.type = CMD_SCISSOR,
-		.scissor.rect = rect,
+		.scissor.rect = rect.intersection(ctx.div_scissor),
 	};
 	ctx.cmd_queue.enqueue(&sc)!;
 }
