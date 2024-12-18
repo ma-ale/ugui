@@ -1,5 +1,11 @@
 module ugui;
 
+enum Layout {
+	LAYOUT_ROW,
+	LAYOUT_COLUMN,
+	LAYOUT_FLOATING,
+	LAYOUT_ABSOLUTE,
+}
 
 fn void! Ctx.layout_set_row(&ctx)
 {
@@ -139,19 +145,21 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	};
 
 	// 4. Calculate the "scrolled" view
-	Point off;
+	Rect off;
 	Rect* cb = &div.children_bounds;
-	if (div.scroll.can_x && div.scroll.on_x) {
-		off.x = (short)((float)(div.pcb.w - parent.bounds.w) * div.scroll.value_x);
+	if (div.scroll_x.enabled && div.scroll_x.on) {
+		off.x = (short)((float)(div.pcb.w - parent.bounds.w) * div.scroll_x.value);
+		off.w = SCROLLBAR_DIM;
 	}
-	if (div.scroll.can_y && div.scroll.on_y) {
-		off.y = (short)((float)(div.pcb.h - parent.bounds.h) * div.scroll.value_y);
+	if (div.scroll_y.enabled && div.scroll_y.on) {
+		off.y = (short)((float)(div.pcb.h - parent.bounds.h) * div.scroll_y.value);
+		off.h = SCROLLBAR_DIM;
 	}
 	Rect view = {
 		.x = parent.bounds.x + off.x,
 		.y = parent.bounds.y + off.y,
-		.w = parent.bounds.w,
-		.h = parent.bounds.h,
+		.w = parent.bounds.w - off.w,
+		.h = parent.bounds.h - off.h,
 	};
 
 	// 5. check if the placement overflows the children ounds, if so update them

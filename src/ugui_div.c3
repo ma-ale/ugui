@@ -3,23 +3,22 @@ module ugui;
 import std::io;
 import std::math;
 
-enum DivLayout {
-	LAYOUT_ROW,
-	LAYOUT_COLUMN,
-	LAYOUT_FLOATING,
-	LAYOUT_ABSOLUTE,
-}
+const short SCROLLBAR_DIM = 5;
 
 // div element
 struct ElemDiv {
-	DivLayout layout;
-	struct scroll {
-		bool can_x;
-		bool can_y;
-		bool on_x;
-		bool on_y;
-		float value_x;
-		float value_y;
+	Layout layout;
+	struct scroll_x {
+		bool enabled;
+		bool on;
+		bool focus;
+		float value;
+	}
+	struct scroll_y {
+		bool enabled;
+		bool on;
+		bool focus;
+		float value;
 	}
 	Rect children_bounds; // current frame children bounds
 	Rect pcb; // previous frame children bounds
@@ -43,8 +42,8 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	} else if (c_elem.type != ETYPE_DIV) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
-	c_elem.div.scroll.can_x = scroll_x;
-	c_elem.div.scroll.can_y = scroll_y;
+	c_elem.div.scroll_x.enabled = scroll_x;
+	c_elem.div.scroll_y.enabled = scroll_y;
 
 	// 2. layout the element
 	c_elem.bounds = ctx.position_element(parent, size);
@@ -103,34 +102,37 @@ fn void! Ctx.div_end(&ctx)
 
 
 	// set the scrollbar flag, is used in layout
-	// vertical overflow
-	c_elem.div.scroll.on_y = cbc.y > bc.y && c_elem.div.scroll.can_y;
 	// horizontal overflow
-	c_elem.div.scroll.on_x = cbc.x > bc.x && c_elem.div.scroll.can_x;
+	c_elem.div.scroll_x.on = cbc.x > bc.x && c_elem.div.scroll_x.enabled;
+	// vertical overflow
+	c_elem.div.scroll_y.on = cbc.y > bc.y && c_elem.div.scroll_y.enabled;
 
-	if (c_elem.div.scroll.on_y) {
+	short wdim = c_elem.div.scroll_y.focus ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM;
+	short hdim = c_elem.div.scroll_x.focus ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM;
+
+	if (c_elem.div.scroll_y.on) {
 		Rect vslider = {
-			.x = c_elem.bounds.x + c_elem.bounds.w - 10,
+			.x = c_elem.bounds.x + c_elem.bounds.w - wdim,
 			.y = c_elem.bounds.y,
-			.w = 10,
+			.w = wdim,
 			.h = c_elem.bounds.h,
 		};
-		DivLayout prev_l = c_elem.div.layout;
+		Layout prev_l = c_elem.div.layout;
 		c_elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_ver("div_scrollbar_vertical", vslider, &c_elem.div.scroll.value_y, max((float)bc.y / cbc.y, (float)0.15))!;
+		ctx.slider_ver("div_scrollbar_vertical", vslider, &c_elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
 		c_elem.div.layout = prev_l;
 	}
 
-	if (c_elem.div.scroll.on_x) {
+	if (c_elem.div.scroll_x.on) {
 		Rect hslider = {
 			.x = c_elem.bounds.x,
-			.y = c_elem.bounds.y + c_elem.bounds.h - 10,
+			.y = c_elem.bounds.y + c_elem.bounds.h - hdim,
 			.w = c_elem.bounds.w,
-			.h = 10,
+			.h = hdim,
 		};
-		DivLayout prev_l = c_elem.div.layout;
+		Layout prev_l = c_elem.div.layout;
 		c_elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_hor("div_scrollbar_horizontal", hslider, &c_elem.div.scroll.value_x, max((float)bc.x / cbc.x, (float)0.15))!;
+		ctx.slider_hor("div_scrollbar_horizontal", hslider, &c_elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
 		c_elem.div.layout = prev_l;
 	}
 
