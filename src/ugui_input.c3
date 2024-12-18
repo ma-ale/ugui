@@ -1,6 +1,7 @@
 module ugui;
 
 import std::io;
+import std::math;
 
 // TODO: this could be a bitstruct
 bitstruct InputEvents : uint {
@@ -84,8 +85,8 @@ fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 // Mouse was moved, report absolute position
 fn void Ctx.input_mouse_abs(&ctx, short x, short y)
 {
-	ctx.input.mouse.pos.x = clamp(x, 0u16, ctx.width);
-	ctx.input.mouse.pos.y = clamp(y, 0u16, ctx.height);
+	ctx.input.mouse.pos.x = math::clamp(x, 0u16, ctx.width);
+	ctx.input.mouse.pos.y = math::clamp(y, 0u16, ctx.height);
 
 	short dx, dy;
 	dx = x - ctx.input.mouse.pos.x;
@@ -107,8 +108,8 @@ fn void Ctx.input_mouse_delta(&ctx, short dx, short dy)
 	mx = ctx.input.mouse.pos.x + dx;
 	my = ctx.input.mouse.pos.y + dy;
 
-	ctx.input.mouse.pos.x = clamp(mx, 0u16, ctx.width);
-	ctx.input.mouse.pos.y = clamp(my, 0u16, ctx.height);
+	ctx.input.mouse.pos.x = math::clamp(mx, 0u16, ctx.width);
+	ctx.input.mouse.pos.y = math::clamp(my, 0u16, ctx.height);
 
 	ctx.input.events.mouse_move = true;
 }

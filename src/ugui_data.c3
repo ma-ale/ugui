@@ -47,12 +47,6 @@ bitstruct ElemEvents : uint {
 	bool update        : 7;
 }
 
-// slider element
-struct ElemSlider {
-	float value;
-	Rect handle;
-}
-
 struct ElemText {
 	char* str;
 }
@@ -99,9 +93,6 @@ macro Color uint_to_rgba(uint $u) {
 }
 
 const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
-
-macro abs(a) { return a < 0 ? -a : a; }
-macro clamp(x, min, max) { return x < min ? min : (x > max ? max : x); }
 
 const uint STACK_STEP = 10;
 const uint MAX_ELEMS  = 128;

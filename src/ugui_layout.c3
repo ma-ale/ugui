@@ -140,10 +140,10 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	Point off;
 	Rect* cb = &div.children_bounds;
 	if (div.scroll.can_x && div.scroll.on_x) {
-		off.x = (short)(cb.w * div.scroll.value_x);
+		off.x = (short)((float)(div.pcb.w - parent.bounds.w) * div.scroll.value_x);
 	}
 	if (div.scroll.can_y && div.scroll.on_y) {
-		off.y = (short)((float)(cb.h - parent.bounds.h) * div.scroll.value_y);
+		off.y = (short)((float)(div.pcb.h - parent.bounds.h) * div.scroll.value_y);
 	}
 	Rect view = {
 		.x = parent.bounds.x + off.x,

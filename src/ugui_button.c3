@@ -33,10 +33,7 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
 
-	// if the element is new or the parent was updated then redo layout
-	if (needs_layout) {
-		c_elem.bounds = ctx.position_element(parent, size, true);
-	}
+	c_elem.bounds = ctx.position_element(parent, size, true);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return

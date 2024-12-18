@@ -1,6 +1,7 @@
 module ugui;
 
 import std::io;
+import std::math;
 
 enum DivLayout {
 	LAYOUT_ROW,
@@ -19,7 +20,8 @@ struct ElemDiv {
 		float value_x;
 		float value_y;
 	}
-	Rect children_bounds;
+	Rect children_bounds; // current frame children bounds
+	Rect pcb; // previous frame children bounds
 	Point origin_r, origin_c;
 	Color bgcolor;
 }
@@ -38,12 +40,12 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 {
 	Id id = label.hash();
 
-	Elem *parent = ctx.get_parent()!;
+	Elem* parent = ctx.get_parent()!;
 	Elem* c_elem = ctx.get_elem(id)!;
 	isz div_node = ctx.tree.add(id, ctx.active_div)!;
 	ctx.active_div = div_node;
 
-	bool needs_layout = c_elem.flags.is_new || parent.flags.updated;
+	bool is_new = c_elem.flags.is_new;
 
 	if (c_elem.flags.is_new) {
 		*c_elem = DIV_DEFAULTS;
@@ -53,86 +55,104 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	c_elem.div.scroll.can_x = scroll_x;
 	c_elem.div.scroll.can_y = scroll_y;
 
-	// do layout and update flags only if the element was updated
-	if (needs_layout) {
-		// 2. layout the element
-		c_elem.bounds = ctx.position_element(parent, size);
-		c_elem.div.children_bounds = c_elem.bounds;
-		c_elem.div.bgcolor = ctx.style.bgcolor;
+	// 2. layout the element
+	c_elem.bounds = ctx.position_element(parent, size);
+	c_elem.div.children_bounds = c_elem.bounds;
+	c_elem.div.bgcolor = ctx.style.bgcolor;
 
-		// 3. Mark the element as updated
-		c_elem.flags.updated = true;
-		// 4. Fill the div fields
-		c_elem.div.origin_c = Point{
-			.x = c_elem.bounds.x,
-			.y = c_elem.bounds.y,
-		};
-		c_elem.div.origin_r = c_elem.div.origin_c;
-		c_elem.div.layout   = parent.div.layout;
-	}
+	// 4. Fill the div fields
+	c_elem.div.origin_c = Point{
+		.x = c_elem.bounds.x,
+		.y = c_elem.bounds.y,
+	};
+	c_elem.div.origin_r = c_elem.div.origin_c;
+	c_elem.div.layout   = parent.div.layout;
 
 	// Add the background to the draw stack
 	bool do_border = parent.div.layout == LAYOUT_FLOATING;
 	ctx.push_rect(c_elem.bounds, c_elem.div.bgcolor, do_border: do_border)!;
 
+	c_elem.events = ctx.get_elem_events(c_elem);
+
 	// TODO: check active
 	// TODO: check resizeable
 
-	// check and draw scroll bars
-	if (!c_elem.bounds.contains(c_elem.div.children_bounds)) {
-		Point cbc = {
-			.x = c_elem.div.children_bounds.x + c_elem.div.children_bounds.w,
-			.y = c_elem.div.children_bounds.y + c_elem.div.children_bounds.h,
+	// FIXME: we cannot use slider elements as scrollbars because of id management
+	// scrollbars
+	Rect cb = c_elem.div.pcb;
+	// children bounds bottom-right corner
+	Point cbc = {
+		.x = cb.x + cb.w,
+		.y = cb.y + cb.h,
+	};
+	// div bounds bottom-right corner
+	Point bc = {
+		.x = c_elem.bounds.x + c_elem.bounds.w,
+		.y = c_elem.bounds.y + c_elem.bounds.h,
+	};
+
+
+	// set the scrollbar flag, is used in layout
+	// vertical overflow
+	c_elem.div.scroll.on_y = cbc.y > bc.y && c_elem.div.scroll.can_y;
+	// horizontal overflow
+	c_elem.div.scroll.on_x = cbc.x > bc.x && c_elem.div.scroll.can_x;
+
+	if (c_elem.div.scroll.on_y) {
+		Rect vslider = {
+			.x = c_elem.bounds.x + c_elem.bounds.w - 10,
+			.y = c_elem.bounds.y,
+			.w = 10,
+			.h = c_elem.bounds.h,
 		};
-		Point bc = {
-			.x = c_elem.bounds.x + c_elem.bounds.w,
-			.y = c_elem.bounds.y + c_elem.bounds.h,
+
+		short hh = (short)(max((float)bc.y / cbc.y, (float)0.15) * c_elem.bounds.h);
+		Rect vhandle = {
+			.x = c_elem.bounds.x + c_elem.bounds.w - 10,
+			.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, c_elem.div.scroll.value_y),
+			.w = 10,
+			.h = hh,
 		};
-		// vertical overflow, check and draw scroll bar
-		if (cbc.y > bc.y && c_elem.div.scroll.can_y) {
-			// set the scrollbar flag, is used in layout
-			c_elem.div.scroll.on_y = true;
 
-			Rect vslider = {
-				.x = c_elem.bounds.x + c_elem.bounds.w - 10,
-				.y = c_elem.bounds.y,
-				.w = 10,
-				.h = c_elem.bounds.h,
-			};
-
-			float vh = max((float)bc.y / cbc.y, (float)0.15);
-			Rect vhandle = {
-				.x = c_elem.bounds.x + c_elem.bounds.w - 10,
-				.y = (short)(c_elem.bounds.y + (int)(c_elem.bounds.h*(1-vh) * c_elem.div.scroll.value_y)),
-				.w = 10,
-				.h = (short)(c_elem.bounds.h * vh),
-			};
-
-			c_elem.events = ctx.get_elem_events(c_elem);
-			if (parent.flags.has_focus && c_elem.events.mouse_hover && c_elem.events.mouse_hold && point_in_rect(ctx.input.mouse.pos, vhandle)) {
-				short y = (short)clamp(ctx.input.mouse.pos.y - vhandle.h/2, vslider.y, vslider.y + vslider.h - vhandle.h);
-				vhandle.y = y;
-				float v = (float)(vhandle.y-vslider.y) / (float)(vslider.h-vhandle.h);
-				c_elem.div.scroll.value_y = v;
-				c_elem.flags.updated = true;
-				c_elem.div.origin_c = Point{
-					.x = c_elem.bounds.x,
-					.y = c_elem.bounds.y,
-				};
-				c_elem.div.origin_r = c_elem.div.origin_c;
-			}
-
-			ctx.push_rect(vslider, uint_to_rgba(0x999999ff))!;
-			ctx.push_rect(vhandle, uint_to_rgba(0x9999ffff))!;
-		} else {
-			c_elem.div.scroll.on_y = false;
+		Point m = ctx.input.mouse.pos;
+		if (parent.flags.has_focus && c_elem.events.mouse_hover &&
+		    c_elem.events.mouse_hold && point_in_rect(m, vhandle)) {
+			vhandle.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, c_elem.div.scroll.value_y);
+			c_elem.div.scroll.value_y = calc_value(c_elem.bounds.y, m.y, c_elem.bounds.h, hh);
+			c_elem.flags.updated = true;
 		}
+
+		ctx.push_rect(vslider, uint_to_rgba(0x999999ff))!;
+		ctx.push_rect(vhandle, uint_to_rgba(0x9999ffff))!;
 	}
 
-	// if the bounds are outside of the view then allocate space for scrollbars
-	DivLayout old_layout = c_elem.div.layout;
-	c_elem.div.layout = LAYOUT_FLOATING;
-	c_elem.div.layout = old_layout;
+	if (c_elem.div.scroll.on_x) {
+		Rect hslider = {
+			.x = c_elem.bounds.x,
+			.y = c_elem.bounds.y + c_elem.bounds.h - 10,
+			.w = c_elem.bounds.w,
+			.h = 10,
+		};
+
+		short hw = (short)(max((float)bc.x / cbc.x, (float)0.15) * c_elem.bounds.w);
+		Rect hhandle = {
+			.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, c_elem.div.scroll.value_x),
+			.y = c_elem.bounds.y + c_elem.bounds.h - 10,
+			.w = hw,
+			.h = 10,
+		};
+
+		Point m = ctx.input.mouse.pos;
+		if (parent.flags.has_focus && c_elem.events.mouse_hover &&
+		    c_elem.events.mouse_hold && point_in_rect(m, hhandle)) {
+			hhandle.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, c_elem.div.scroll.value_x);
+			c_elem.div.scroll.value_x = calc_value(c_elem.bounds.x, m.x, c_elem.bounds.w, hw);
+			c_elem.flags.updated = true;
+		}
+
+		ctx.push_rect(hslider, uint_to_rgba(0x999999ff))!;
+		ctx.push_rect(hhandle, uint_to_rgba(0x9999ffff))!;
+	}
 
 	if (parent.flags.has_focus) {
 		if (point_in_rect(ctx.input.mouse.pos, c_elem.bounds)) {
@@ -144,6 +164,10 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 
 fn void! Ctx.div_end(&ctx)
 {
+	// swap the children bounds
+	Elem* c_elem = ctx.get_elem_by_tree_idx(ctx.active_div)!;
+	c_elem.div.pcb = c_elem.div.children_bounds;
+
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
 }

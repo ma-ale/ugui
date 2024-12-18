@@ -138,21 +138,21 @@ fn int main(String[] args)
 					io::printn("release button2");
 				}
 			}
-			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100})!!.update) {
-				ugui::Elem* e = ui.get_elem_by_label("slider")!!;
-				io::printfn("slider: %f", e.slider.value);
+			static float slider1;
+			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100}, &slider1)!!.update) {
+				io::printfn("slider: %f", slider1);
 			}
 
 			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡")!!;
 		|};
 		ui.div_end()!!;
 
-		ui.div_begin("second", ugui::DIV_FILL, scroll_y: true)!!;
+		ui.div_begin("second", ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
 		{|
 			ui.layout_set_column()!!;
-			if (ui.slider_ver("slider_other", ugui::Rect{0,0,30,100})!!.update) {
-				ugui::Elem* e = ui.get_elem_by_label("slider_other")!!;
-				io::printfn("other slider: %f", e.slider.value);
+			static float slider2 = 0.5;
+			if (ui.slider_ver("slider_other", ugui::Rect{0,0,30,100}, &slider2)!!.update) {
+				io::printfn("other slider: %f", slider2);
 			}
 			ui.button("button10", ugui::Rect{0,0,50,50})!!;
 			ui.button("button11", ugui::Rect{0,0,50,50})!!;
@@ -164,6 +164,11 @@ fn int main(String[] args)
 				ui.button("button16", ugui::Rect{0,0,50,50})!!;
 				ui.button("button17", ugui::Rect{0,0,50,50})!!;
 			}
+			ui.layout_next_column()!!;
+			ui.layout_set_row()!!;
+			static float f1, f2;
+			ui.slider_hor("hs1", ugui::Rect{0,0,100,30}, &f1)!!;
+			ui.slider_hor("hs2", ugui::Rect{0,0,100,30}, &f2)!!;
 		|};
 		ui.div_end()!!;
 
