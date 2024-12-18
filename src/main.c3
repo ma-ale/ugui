@@ -126,7 +126,6 @@ fn int main(String[] args)
 			if (ui.button("button0", ugui::Rect{0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;
-				ui.force_update()!!;
 			}
 			//ui.layout_next_column()!!;
 			if (ui.button("button1", ugui::Rect{0,0,30,30})!!.mouse_press) {
@@ -181,11 +180,6 @@ fn int main(String[] args)
 		{|
 			ui.layout_set_row()!!;
 			ui.text_unbounded("ui avg", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
-
-			//ui.layout_next_row()!!;
-			//ui.text_unbounded("draw avg", string::tformat("draw avg: %s", dts.avg))!!;
-
-			//ui.force_update()!!;
 		|};
 		ui.div_end()!!;
 

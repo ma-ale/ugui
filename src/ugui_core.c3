@@ -176,8 +176,6 @@ macro bool Rect.is_null(r) => r.x == 0 && r.y == 0 && r.x == 0 && r.w == 0;
 // return a pointer to the parent of the current active div
 fn Elem*! Ctx.get_parent(&ctx)
 {
-	// FIXME: if the tree held pointers to the elements then no more
-	//        redundant cache search
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	return ctx.cache.search(parent_id);
 }
@@ -249,8 +247,7 @@ fn void! Ctx.frame_begin(&ctx)
 	// The root should have the updated flag only if the size of the window
 	// was changed between frames, this propagates an element size recalculation
 	// down the element tree
-	c_elem.flags.updated = ctx.input.events.resize | ctx.input.events.force_update;
-	ctx.input.events.force_update = false;
+	c_elem.flags.updated = ctx.input.events.resize;
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
@@ -282,11 +279,6 @@ fn void! Ctx.frame_begin(&ctx)
 	// TODO: add a background color taken from a theme or config
 }
 
-fn void! Ctx.force_update(&ctx)
-{
-	ctx.input.events.force_update = true;
-}
-
 fn void! Ctx.frame_end(&ctx)
 {
 	Elem* root = ctx.get_elem_by_tree_idx(0)!;
@@ -296,9 +288,7 @@ fn void! Ctx.frame_end(&ctx)
 	ctx.tree.nuke();
 
 	// 2. clear input fields
-	bool f = ctx.input.events.force_update;
 	ctx.input.events = (InputEvents)0;
-	ctx.input.events.force_update = f;
 
 	// send atlas updates
 	if (ctx.font.should_update) {

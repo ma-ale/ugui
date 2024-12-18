@@ -9,7 +9,6 @@ bitstruct InputEvents : uint {
 	bool change_focus : 1; // window focus changed
 	bool mouse_move : 2; // mouse was moved
 	bool mouse_btn : 3; // mouse button pressed or released
-	bool force_update : 4;
 }
 
 // Window size was changed
