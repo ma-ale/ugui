@@ -190,6 +190,8 @@ macro Ctx.get_elem(&ctx, Id id)
 	elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
 	elem.flags = (ElemFlags)0;
 	elem.flags.is_new = is_new;
+	// FIXME: should this be here? or is it better to have the elements set the id?
+	elem.id = id;
 	return elem;
 }
 
