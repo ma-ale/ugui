@@ -9,7 +9,7 @@
 [ ] Do not redraw if there was no update (no layout and no draw)
 [ ] Better handling of the active and focused widgets, try
 to maintain focus until mouse release (fix scroll bars)
-[ ] Clip element bounds to parent div, specifically text
+[x] Clip element bounds to parent div, specifically text
 
 ## Commands
 
@@ -35,5 +35,5 @@ _ border radius
 
 ## Widgets
 
-[ ] Dynamic text box to implement an fps counter
+[x] Dynamic text box to implement an fps counter
 [ ] Button with label
