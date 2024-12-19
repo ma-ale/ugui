@@ -45,13 +45,13 @@ macro Ctx.mouse_pressed(&ctx) => ctx.input.mouse.updated & ctx.input.mouse.down;
 macro Ctx.mouse_released(&ctx) => ctx.input.mouse.updated & ~ctx.input.mouse.down;
 macro Ctx.mouse_down(&ctx) => ctx.input.mouse.down;
 
-const MouseButtons BTN_NONE = (MouseButtons)0u;
-const MouseButtons BTN_ANY = (MouseButtons)(uint.max);
-const MouseButtons BTN_LEFT = {.btn_left = true};
+const MouseButtons BTN_NONE   = (MouseButtons)0u;
+const MouseButtons BTN_ANY    = (MouseButtons)(uint.max);
+const MouseButtons BTN_LEFT   = {.btn_left = true};
 const MouseButtons BTN_MIDDLE = {.btn_middle = true};
-const MouseButtons BTN_RIGHT = {.btn_right = true};
-const MouseButtons BTN_4 = {.btn_4 = true};
-const MouseButtons BTN_5 = {.btn_5 = true};
+const MouseButtons BTN_RIGHT  = {.btn_right = true};
+const MouseButtons BTN_4      = {.btn_4 = true};
+const MouseButtons BTN_5      = {.btn_5 = true};
 
 // FIXME: hthis compairson could be done with a cast using MouseButtons.inner
 // property but I could not figure out how
@@ -63,7 +63,7 @@ macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
 	// TODO: add the other events
 	// FIXME: active should be elsewhere
-	bool active = elem.events.mouse_hold || ctx.is_hovered(elem);
+	bool active = ctx.is_hovered(elem);
 	ElemEvents ev = {
 		.mouse_hover = ctx.is_hovered(elem),
 		.mouse_press = active & ctx.is_mouse_pressed(BTN_ANY),

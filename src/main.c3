@@ -132,10 +132,8 @@ fn int main(String[] args)
 				io::printn("press button1");
 			}
 			//ui.layout_next_column()!!;
-			if (toggle) {
-				if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
-					io::printn("release button2");
-				}
+			if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
+				io::printn("release button2");
 			}
 			static float slider1;
 			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100}, &slider1)!!.update) {

@@ -27,45 +27,45 @@ fn ElemEvents! Ctx.slider_hor(&ctx,
 	Id id = ctx.gen_id(label)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *c_elem = ctx.get_elem(id)!;
+	Elem *elem = ctx.get_elem(id)!;
 	// add it to the tree
 	ctx.tree.add(id, ctx.active_div)!;
 
 	// 1. Fill the element fields
-	if (c_elem.flags.is_new) {
-		c_elem.type = ETYPE_SLIDER;
-	} else if (c_elem.type != ETYPE_SLIDER) {
+	if (elem.flags.is_new) {
+		elem.type = ETYPE_SLIDER;
+	} else if (elem.type != ETYPE_SLIDER) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
 
 	// 2. Layout
-	c_elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, true);
 
 	// handle width
-	short hw = (short)(c_elem.bounds.w * hpercent);
+	short hw = (short)(elem.bounds.w * hpercent);
 	Rect handle = {
-		.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, *value),
-		.y = c_elem.bounds.y,
+		.x = calc_slider(elem.bounds.x, elem.bounds.w-hw, *value),
+		.y = elem.bounds.y,
 		.w = hw,
-		.h = c_elem.bounds.h,
+		.h = elem.bounds.h,
 	};
-	c_elem.slider.handle = handle;
+	elem.slider.handle = handle;
 
 	Point m = ctx.input.mouse.pos;
-	c_elem.events = ctx.get_elem_events(c_elem);
+	elem.events = ctx.get_elem_events(elem);
 	
-	if (parent.flags.has_focus && c_elem.events.mouse_hover &&
-	    point_in_rect(m, handle) && c_elem.events.mouse_hold) {
-		*value = calc_value(c_elem.bounds.x, m.x, c_elem.bounds.w, hw);
-		c_elem.slider.handle.x = calc_slider(c_elem.bounds.x, c_elem.bounds.w-hw, *value);
-		c_elem.events.update = true;
+	if (parent.flags.has_focus && elem.events.mouse_hover &&
+	    point_in_rect(m, handle) && elem.events.mouse_hold) {
+		*value = calc_value(elem.bounds.x, m.x, elem.bounds.w, hw);
+		elem.slider.handle.x = calc_slider(elem.bounds.x, elem.bounds.w-hw, *value);
+		elem.events.update = true;
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(c_elem.bounds, bgcolor)!;
-	ctx.push_rect(c_elem.slider.handle, handlecolor)!;
+	ctx.push_rect(elem.bounds, bgcolor)!;
+	ctx.push_rect(elem.slider.handle, handlecolor)!;
 
-	return c_elem.events;
+	return elem.events;
 }
 
 /*
@@ -91,46 +91,46 @@ fn ElemEvents! Ctx.slider_ver(&ctx,
 	Id id = ctx.gen_id(label)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *c_elem = ctx.get_elem(id)!;
+	Elem *elem = ctx.get_elem(id)!;
 	// add it to the tree
 	ctx.tree.add(id, ctx.active_div)!;
 
 	// 1. Fill the element fields
-	if (c_elem.flags.is_new) {
-		c_elem.type = ETYPE_SLIDER;
-	} else if (c_elem.type != ETYPE_SLIDER) {
+	if (elem.flags.is_new) {
+		elem.type = ETYPE_SLIDER;
+	} else if (elem.type != ETYPE_SLIDER) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
 
 	// 2. Layout
-	c_elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, true);
 
 	// handle height
-	short hh = (short)(c_elem.bounds.h * hpercent);
+	short hh = (short)(elem.bounds.h * hpercent);
 	Rect handle = {
-		.x = c_elem.bounds.x,
-		.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, *value),
-		.w = c_elem.bounds.w,
+		.x = elem.bounds.x,
+		.y = calc_slider(elem.bounds.y, elem.bounds.h-hh, *value),
+		.w = elem.bounds.w,
 		.h = hh,
 	};
-	c_elem.slider.handle = handle;
+	elem.slider.handle = handle;
 
 	Point m = ctx.input.mouse.pos;
-	c_elem.events = ctx.get_elem_events(c_elem);
+	elem.events = ctx.get_elem_events(elem);
 	
-	if (parent.flags.has_focus && c_elem.events.mouse_hover &&
+	if (parent.flags.has_focus && elem.events.mouse_hover &&
 	    point_in_rect(m, handle) &&
-	    c_elem.events.mouse_hold) {
-		*value = calc_value(c_elem.bounds.y, m.y, c_elem.bounds.h, hh);
-		c_elem.slider.handle.y = calc_slider(c_elem.bounds.y, c_elem.bounds.h-hh, *value);
-		c_elem.events.update = true;
+	    elem.events.mouse_hold) {
+		*value = calc_value(elem.bounds.y, m.y, elem.bounds.h, hh);
+		elem.slider.handle.y = calc_slider(elem.bounds.y, elem.bounds.h-hh, *value);
+		elem.events.update = true;
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(c_elem.bounds, bgcolor)!;
-	ctx.push_rect(c_elem.slider.handle, handlecolor)!;
+	ctx.push_rect(elem.bounds, bgcolor)!;
+	ctx.push_rect(elem.slider.handle, handlecolor)!;
 
-	return c_elem.events;
+	return elem.events;
 }
 
 macro short calc_slider(ushort off, ushort dim, float value) => (short)off + (short)(dim * value);

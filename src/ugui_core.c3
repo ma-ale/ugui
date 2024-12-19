@@ -134,7 +134,7 @@ struct Ctx {
 		}
 	}
 
-	Rect div_scissor;
+	Rect div_scissor; // the current div bounds used for scissor test
 	isz active_div; // tree node indicating the current active div
 }
 
@@ -186,11 +186,11 @@ macro Ctx.get_elem(&ctx, Id id)
 {
 	Elem empty_elem;
 	bool is_new;
-	Elem* c_elem;
-	c_elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
-	c_elem.flags = (ElemFlags)0;
-	c_elem.flags.is_new = is_new;
-	return c_elem;
+	Elem* elem;
+	elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
+	elem.flags = (ElemFlags)0;
+	elem.flags.is_new = is_new;
+	return elem;
 }
 
 // this searches an element in the cache by label, it does not create a new element
@@ -242,15 +242,15 @@ fn void! Ctx.frame_begin(&ctx)
 {
 
 	// 2. Get the root element from the cache and update it
-	Elem* c_elem = ctx.get_elem(ROOT_ID)!;
+	Elem* elem = ctx.get_elem(ROOT_ID)!;
 	// The root should have the updated flag only if the size of the window
 	// was changed between frames, this propagates an element size recalculation
 	// down the element tree
-	c_elem.flags.updated = ctx.input.events.resize;
+	elem.flags.updated = ctx.input.events.resize;
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
-	c_elem.flags.has_focus = ctx.has_focus;
+	elem.flags.has_focus = ctx.has_focus;
 
 	Elem def_root = {
 		.id = ROOT_ID,
@@ -266,10 +266,10 @@ fn void! Ctx.frame_begin(&ctx)
 				.h = ctx.height,
 			}
 		},
-		.flags = c_elem.flags,
+		.flags = elem.flags,
 	};
 
-	*c_elem = def_root;
+	*elem = def_root;
 
 	// 3. Push the root element into the element tree
 	ctx.active_div = ctx.tree.add(ROOT_ID, 0)!;
