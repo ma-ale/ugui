@@ -59,20 +59,6 @@ macro Ctx.is_mouse_pressed(&ctx, MouseButtons btn) => (ctx.mouse_pressed() & btn
 macro Ctx.is_mouse_released(&ctx, MouseButtons btn) => (ctx.mouse_released() & btn) != BTN_NONE;
 macro Ctx.is_mouse_down(&ctx, MouseButtons btn) => (ctx.mouse_down() & btn) != BTN_NONE;
 
-macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
-{
-	// TODO: add the other events
-	// FIXME: active should be elsewhere
-	bool active = ctx.is_hovered(elem);
-	ElemEvents ev = {
-		.mouse_hover = ctx.is_hovered(elem),
-		.mouse_press = active & ctx.is_mouse_pressed(BTN_ANY),
-		.mouse_release = active & ctx.is_mouse_released(BTN_ANY),
-		.mouse_hold = active & ctx.is_mouse_down(BTN_ANY),
-	};
-	return ev;
-}
-
 // Mouse Button moved
 fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 {

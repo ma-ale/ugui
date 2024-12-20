@@ -23,9 +23,6 @@ struct ElemDiv {
 	Rect children_bounds; // current frame children bounds
 	Rect pcb; // previous frame children bounds
 	Point origin_r, origin_c;
-	// the id of the active element, this field is set and reset by the elements themselves and it is
-	// used to keep track of which element should handle some input events between frames
-	Id active_id;
 }
 
 fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, bool scroll_y = false)
@@ -71,13 +68,6 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 
 	// TODO: check active
 	// TODO: check resizeable
-
-	if (parent.flags.has_focus) {
-		if (point_in_rect(ctx.input.mouse.pos, elem.bounds)) {
-			elem.flags.has_focus = true;
-		}
-	}
-
 }
 
 fn void! Ctx.div_end(&ctx)
@@ -87,7 +77,9 @@ fn void! Ctx.div_end(&ctx)
 	Elem* elem = ctx.get_elem_by_tree_idx(ctx.active_div)!;
 	elem.div.pcb = elem.div.children_bounds;
 
-	elem.events = ctx.get_elem_events(elem);
+	// FIXME: this causes all elements inside the div to loose focus since the mouse press happens
+	//        both inside the element and inside the div bounds
+	//elem.events = ctx.get_elem_events(elem);
 	
 	Rect cb = elem.div.pcb;
 	// children bounds bottom-right corner

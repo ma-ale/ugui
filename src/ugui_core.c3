@@ -32,8 +32,7 @@ enum ElemType {
 
 bitstruct ElemFlags : uint {
 	bool updated : 0;
-	bool has_focus : 1;
-	bool is_new : 2;
+	bool is_new : 1;
 }
 
 bitstruct ElemEvents : uint {
@@ -134,6 +133,9 @@ struct Ctx {
 		}
 	}
 
+	Id hover_id;
+	Id focus_id;
+
 	Rect div_scissor; // the current div bounds used for scissor test
 	isz active_div; // tree node indicating the current active div
 }
@@ -195,13 +197,15 @@ macro Ctx.get_elem(&ctx, Id id)
 	return elem;
 }
 
+// FIXME: Since ids are now keyed with the element's parent id, this function does not work
+//        outside of the element's div block.
 // this searches an element in the cache by label, it does not create a new element
 // if it does't find one
-macro Ctx.get_elem_by_label(&ctx, String label)
-{
-	Id id = label.hash();
-	return ctx.cache.search(id);
-}
+//macro Ctx.get_elem_by_label(&ctx, String label)
+//{
+//	Id id = ctx.get_id(label);
+//	return ctx.cache.search(id);
+//}
 
 macro Ctx.get_elem_by_tree_idx(&ctx, isz idx) @private
 {
@@ -252,7 +256,7 @@ fn void! Ctx.frame_begin(&ctx)
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
-	elem.flags.has_focus = ctx.has_focus;
+	//elem.flags.has_focus = ctx.has_focus;
 
 	Elem def_root = {
 		.id = ROOT_ID,
@@ -317,8 +321,39 @@ $endif
 
 <*
  * @ensure elem != null
- *>
-fn bool Ctx.is_hovered(&ctx, Elem *elem)
+*>
+macro bool Ctx.is_hovered(&ctx, Elem *elem)
 {
 	return point_in_rect(ctx.input.mouse.pos, elem.bounds);
 }
+
+macro bool Ctx.elem_focus(&ctx, Elem *elem)
+{
+	return ctx.focus_id == elem.id;
+}
+
+// TODO: add other events
+// FIXME: this does not work with touch
+macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
+{
+	//io::printfn("id %x, focus id %x", elem.id, ctx.focus_id);
+	
+	bool hover = ctx.is_hovered(elem);
+	bool focus = ctx.focus_id == elem.id || (hover && ctx.is_mouse_pressed(BTN_LEFT));
+
+	if (hover) {
+		ctx.hover_id = elem.id;
+	}
+	if (focus) {
+		ctx.focus_id = elem.id;
+	}
+	
+	ElemEvents ev = {
+		.mouse_hover = hover,
+		.mouse_press = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
+		.mouse_release = hover && focus && ctx.is_mouse_released(BTN_ANY),
+		.mouse_hold = hover && focus && ctx.is_mouse_down(BTN_ANY),
+	};
+	return ev;
+}
+

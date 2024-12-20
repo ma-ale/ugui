@@ -122,7 +122,7 @@ fn int main(String[] args)
 		ui.div_begin("main", ugui::Rect{.w=ui.width/2})!!;
 		{|
 
-			ui.layout_set_row()!!;
+			ui.layout_set_column()!!;
 			if (ui.button("button0", ugui::Rect{0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;

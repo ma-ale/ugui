@@ -4,8 +4,7 @@ import std::io;
 
 // button element
 struct ElemButton {
-	Color color;
-	bool active;
+	int filler;
 }
 
 // draw a button, return the events on that button
@@ -20,7 +19,6 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_BUTTON;
-		elem.button.color = uint_to_rgba(0x0000ffff);
 	} else if (elem.type != ETYPE_BUTTON) {
 		return UgError.WRONG_ELEMENT_TYPE?;
 	}
@@ -31,22 +29,16 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 	//  no interaction should occur so just return
 	if (elem.bounds.is_null()) { return ElemEvents{}; }
 
+	Color col = uint_to_rgba(0x0000ffff);
 	elem.events = ctx.get_elem_events(elem);
-	if (elem.events.mouse_hover) {
-		if (parent.flags.has_focus) {
-			elem.flags.has_focus = true;
-			elem.button.color = uint_to_rgba(0x00ff00ff);
-		}
-	} else {
-		elem.button.color = uint_to_rgba(0x0000ffff);
-	}
-
 	if (state) {
-		elem.button.color = uint_to_rgba(0xff00ffff);
+		col = uint_to_rgba(0xff0000ff);
+	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
+		col = uint_to_rgba(0xff00ffff);
 	}
 
 	// Draw the button
-	ctx.push_rect(elem.bounds, elem.button.color, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
 
 	return elem.events;
 }
