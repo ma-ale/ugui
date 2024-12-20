@@ -212,6 +212,14 @@ fn Rect! Ctx.get_text_bounds(&ctx, String text)
 	return text_bounds;
 }
 
+fn Point Ctx.center_text(&ctx, Rect text_bounds, Rect bounds)
+{
+	short dw = bounds.w - text_bounds.w;
+	short dh = bounds.h - text_bounds.h;
+
+	return Point{.x = dw/2, .y = dh/2};
+}
+
 // TODO: check if the font is present in the context
 fn Id Ctx.get_font_id(&ctx, String label)
 {

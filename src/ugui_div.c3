@@ -100,8 +100,8 @@ fn void! Ctx.div_end(&ctx)
 	Id hsid = ctx.gen_id("div_scrollbar_horizontal")!;
 	Id vsid = ctx.gen_id("div_scrollbar_vertical")!;
 	
-	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
-	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid || ctx.hover_id == vsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid || ctx.hover_id == hsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 
 	if (elem.div.scroll_y.on) {
 		Rect vslider = {

@@ -46,10 +46,6 @@ bitstruct ElemEvents : uint {
 	bool update        : 7;
 }
 
-struct ElemText {
-	char* str;
-}
-
 // element structure
 struct Elem {
 	Id id;
@@ -168,6 +164,16 @@ macro bool Rect.collides(Rect a, Rect b)
 }
 
 macro bool Rect.is_null(r) => r.x == 0 && r.y == 0 && r.x == 0 && r.w == 0;
+
+macro Rect rect_add(Rect r1, Rect r2)
+{
+	return Rect{
+		.x = r1.x + r2.x,
+		.y = r1.y + r2.y,
+		.w = r1.w + r2.w,
+		.h = r1.h + r2.h,
+	};
+}
 
 // return a pointer to the parent of the current active div
 fn Elem*! Ctx.get_parent(&ctx)
@@ -334,19 +340,19 @@ macro bool Ctx.elem_focus(&ctx, Elem *elem)
 
 // TODO: add other events
 // FIXME: this does not work with touch
-macro ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
+// FIXME: hacked together, please do better
+fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
-	//io::printfn("id %x, focus id %x", elem.id, ctx.focus_id);
-	
 	bool hover = ctx.is_hovered(elem);
 	bool focus = ctx.focus_id == elem.id || (hover && ctx.is_mouse_pressed(BTN_LEFT));
+	
+	if (ctx.is_mouse_pressed(BTN_ANY) && !hover){
+		focus = false;
+		if (ctx.focus_id == elem.id) ctx.focus_id = 0;
+	}
 
-	if (hover) {
-		ctx.hover_id = elem.id;
-	}
-	if (focus) {
-		ctx.focus_id = elem.id;
-	}
+	if (hover) { ctx.hover_id = elem.id; }
+	if (focus) { ctx.focus_id = elem.id; }
 	
 	ElemEvents ev = {
 		.mouse_hover = hover,

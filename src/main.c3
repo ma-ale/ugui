@@ -121,7 +121,6 @@ fn int main(String[] args)
 		// main div, fill the whole window
 		ui.div_begin("main", ugui::Rect{.w=ui.width/2})!!;
 		{|
-
 			ui.layout_set_column()!!;
 			if (ui.button("button0", ugui::Rect{0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
@@ -135,12 +134,20 @@ fn int main(String[] args)
 			if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
-			static float slider1;
-			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100}, &slider1)!!.update) {
-				io::printfn("slider: %f", slider1);
-			}
+			
+			ui.layout_set_row()!!;
+			ui.layout_next_row()!!;
+			static float rf, gf, bf, af;
+			ui.slider_ver("slider_r", ugui::Rect{0,0,30,100}, &rf)!!;
+			ui.slider_ver("slider_g", ugui::Rect{0,0,30,100}, &gf)!!;
+			ui.slider_ver("slider_b", ugui::Rect{0,0,30,100}, &bf)!!;
+			ui.slider_ver("slider_a", ugui::Rect{0,0,30,100}, &af)!!;
 
+			ui.layout_next_column()!!;
 			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡")!!;
+
+			ui.layout_next_column()!!;
+			ui.button_label("Continua!")!!;
 		|};
 		ui.div_end()!!;
 
