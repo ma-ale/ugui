@@ -182,10 +182,13 @@ fn Elem*! Ctx.get_parent(&ctx)
 	return ctx.cache.search(parent_id);
 }
 
+// generate an id combining the hashes of the parent id and the label
+// with the Cantor pairing function
 macro Id! Ctx.gen_id(&ctx, String label)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	return parent_id ^ label.hash();
+	Id a = ctx.tree.get(ctx.active_div)!;
+	Id b = label.hash();
+	return (a + b) * (a + b + 1) / 2 + a;
 }
 
 // get or push an element from the cache, return a pointer to it
