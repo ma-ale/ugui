@@ -11,13 +11,11 @@ struct ElemDiv {
 	struct scroll_x {
 		bool enabled;
 		bool on;
-		bool focus;
 		float value;
 	}
 	struct scroll_y {
 		bool enabled;
 		bool on;
-		bool focus;
 		float value;
 	}
 	Rect children_bounds; // current frame children bounds
@@ -99,8 +97,11 @@ fn void! Ctx.div_end(&ctx)
 	// vertical overflow
 	elem.div.scroll_y.on = cbc.y > bc.y && elem.div.scroll_y.enabled;
 
-	short wdim = elem.div.scroll_y.on ? (elem.div.scroll_y.focus ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
-	short hdim = elem.div.scroll_x.on ? (elem.div.scroll_x.focus ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	Id hsid = ctx.gen_id("div_scrollbar_horizontal")!;
+	Id vsid = ctx.gen_id("div_scrollbar_vertical")!;
+	
+	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 
 	if (elem.div.scroll_y.on) {
 		Rect vslider = {

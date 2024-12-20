@@ -54,7 +54,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx,
 	Point m = ctx.input.mouse.pos;
 	elem.events = ctx.get_elem_events(elem);
 	
-	if (ctx.elem_focus(elem) && elem.events.mouse_hold) {
+	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
 		*value = calc_value(elem.bounds.x, m.x, elem.bounds.w, hw);
 		elem.slider.handle.x = calc_slider(elem.bounds.x, elem.bounds.w-hw, *value);
 		elem.events.update = true;
@@ -117,7 +117,7 @@ fn ElemEvents! Ctx.slider_ver(&ctx,
 	Point m = ctx.input.mouse.pos;
 	elem.events = ctx.get_elem_events(elem);
 
-	if (ctx.elem_focus(elem) && elem.events.mouse_hold) {
+	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
 		*value = calc_value(elem.bounds.y, m.y, elem.bounds.h, hh);
 		elem.slider.handle.y = calc_slider(elem.bounds.y, elem.bounds.h-hh, *value);
 		elem.events.update = true;
