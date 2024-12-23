@@ -66,6 +66,16 @@ void main()
 }
 `;
 
+macro rl::Color ugui::Color.conv(color)
+{
+	return rl::Color{.r = color.r, .g = color.g, .b = color.b, .a = color.a};
+}
+
+macro rl::Rectangle ugui::Rect.conv(rect)
+{
+	return rl::Rectangle{.x = rect.x, .y = rect.y, .width = rect.w, .height = rect.h};
+}
+
 fn int main(String[] args)
 {
 	ugui::Ctx ui;
@@ -95,6 +105,17 @@ fn int main(String[] args)
 	// Main loop
 	while (!rl::window_should_close()) {
 		clock.mark();
+
+		KeyboardKey k;
+		do {
+			k = rl::get_key_pressed();
+			if (!k) { break; }
+			if (rl::is_key_down(k)) { io::print("down "); }
+			if (rl::is_key_pressed(k)) { io::print("pressed "); }
+			if (rl::is_key_released(k)) { io::print("released "); }
+			io::printfn("%s", k);
+		} while (k != 0);
+
 
 		/* Start Input Handling */
 		if (rl::is_window_resized()) {
@@ -197,27 +218,14 @@ fn int main(String[] args)
 		rl::begin_drawing();
 		// ClearBackground(BLACK);
 
-		rl::Color c;
-		rl::Rectangle r;
 		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
 			switch (cmd.type) {
 			case ugui::CmdType.CMD_RECT:
-				c = rl::Color{
-					.r = cmd.rect.color.r,
-					.g = cmd.rect.color.g,
-					.b = cmd.rect.color.b,
-					.a = cmd.rect.color.a,
-				};
-				r = rl::Rectangle{
-					.x = cmd.rect.rect.x,
-					.y = cmd.rect.rect.y,
-					.height = cmd.rect.rect.h,
-					.width = cmd.rect.rect.w,
-				};
+				Rect r = cmd.rect.rect;
 				float rad = cmd.rect.radius;
 				// for some weird-ass reason the straight forward inverse formula does not work
-				float roundness = r.width > r.height ? (2.1*rad)/r.height : (2.1*rad)/r.width;
-				rl::draw_rectangle_rounded(r, roundness, 0, c);
+				float roundness = r.w > r.h ? (2.1f*rad)/(float)r.h : (2.1f*rad)/(float)r.w;
+				rl::draw_rectangle_rounded(cmd.rect.rect.conv(), roundness, 0, cmd.rect.color.conv());
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
 				if (cmd.update_atlas.id != font_id) { break; }
 				//rl::unload_image(font_atlas);
@@ -233,18 +241,12 @@ fn int main(String[] args)
 				font_texture = rl::load_texture_from_image(font_atlas);
 			case ugui::CmdType.CMD_SPRITE:
 				if (cmd.sprite.texture_id != font_id) { break; }
-				rl::Rectangle source = {
-					.x = cmd.sprite.texture_rect.x,
-					.y = cmd.sprite.texture_rect.y,
-					.width = cmd.sprite.texture_rect.w,
-					.height = cmd.sprite.texture_rect.h,
-				};
 				rl::Vector2 position = {
 					.x = cmd.sprite.rect.x,
 					.y = cmd.sprite.rect.y,
 				};
 				rl::begin_shader_mode(font_shader);
-				rl::draw_texture_rec(font_texture, source, position, rl::WHITE);
+				rl::draw_texture_rec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
 				rl::end_shader_mode();
 			case ugui::CmdType.CMD_SCISSOR:
 				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {

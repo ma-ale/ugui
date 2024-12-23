@@ -29,6 +29,7 @@ struct CmdUpdateAtlas {
 struct CmdSprite {
 	Rect rect;
 	Rect texture_rect;
+	Color hue;
 	Id texture_id;
 }
 
@@ -48,15 +49,29 @@ struct Cmd {
 	}
 }
 
+macro bool cull_rect(Rect rect, Rect clip = {0,0,short.max,short.max})
+{
+	bool no_area = rect.w <= 0 || rect.h <= 0;
+	return no_area || !rect.collides(clip);
+}
+
+// FIXME: this whole thing could be done at compile time, maybe
+macro Ctx.push_cmd(&ctx, Cmd *cmd)
+{
+	Rect rect;
+	switch (cmd.type) {
+	case CMD_RECT: rect = cmd.rect.rect;
+	case CMD_SPRITE: rect = cmd.sprite.rect;
+	default: return ctx.cmd_queue.enqueue(cmd);
+	}
+	if (cull_rect(rect, ctx.div_scissor)) return;
+	return ctx.cmd_queue.enqueue(cmd);
+}
+
 // FIXME: is this really the best solution?
 // "rect" is the bounding box of the element, which includes the border and the padding (so not just the content)
 fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, bool do_padding = false, bool do_radius = false)
 {
-	// FIXME: this should be culled higher up, maybe
-	if (rect.w <= 0 || rect.h <= 0) {
-		return;
-	}
-
 	Rect border = ctx.style.border;
 	Rect padding = ctx.style.padding;
 	ushort radius = ctx.style.radius;
@@ -69,7 +84,7 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 			.rect.color = border_color,
 			.rect.radius = do_radius ? radius : 0,
 		};
-		ctx.cmd_queue.enqueue(&cmd)!;
+		ctx.push_cmd(&cmd)!;
 	}
 
 	Cmd cmd = {
@@ -83,22 +98,24 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 		.rect.color = color,
 		.rect.radius = do_radius ? radius : 0,
 	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	if (cull_rect(cmd.rect.rect, ctx.div_scissor)) return;
+	ctx.push_cmd(&cmd)!;
 }
 
 // TODO: add texture id
-fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id)
+fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = uint_to_rgba(0xffffffff))
 {
 	Cmd cmd = {
 		.type = CMD_SPRITE,
 		.sprite.rect = bounds,
 		.sprite.texture_rect = texture,
 		.sprite.texture_id = texture_id,
+		.sprite.hue = hue,
 	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	ctx.push_cmd(&cmd)!;
 }
 
-fn void! Ctx.push_string(&ctx, Rect bounds, String text)
+fn void! Ctx.push_string(&ctx, Rect bounds, String text, Color hue = uint_to_rgba(0xffffffff))
 {
 	if (text.len == 0) {
 		return;
@@ -136,9 +153,7 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text)
 				.h = gp.h,
 			};
 			// push the sprite only if it collides with the bounds
-			if (gb.collides(bounds)) {
-				ctx.push_sprite(gb, gt, texture_id)!;
-			}
+			if (!cull_rect(gb, bounds)) ctx.push_sprite(gb, gt, texture_id, hue)!;
 			line_len += gp.adv;
 		} else if (cp == '\n'){
 			orig.y += line_height + line_gap;
@@ -164,7 +179,7 @@ fn void! Ctx.push_update_atlas(&ctx, Atlas* atlas)
 			.bpp = (ushort)atlas.type.bpp(),
 			},
 		};
-	ctx.cmd_queue.enqueue(&up)!;
+	ctx.push_cmd(&up)!;
 }
 
 fn void! Ctx.push_scissor(&ctx, Rect rect)
@@ -173,5 +188,5 @@ fn void! Ctx.push_scissor(&ctx, Rect rect)
 		.type = CMD_SCISSOR,
 		.scissor.rect = rect.intersection(ctx.div_scissor),
 	};
-	ctx.cmd_queue.enqueue(&sc)!;
+	ctx.push_cmd(&sc)!;
 }
