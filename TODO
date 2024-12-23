@@ -15,6 +15,10 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] Touch input
 [ ] Resizeable divs
 [ ] Implement a z index
+[ ] Text reflow
+[ ] Standardize element handling, for example all buttons do almost the same thing, so write a lot of boiler plate and reuse it
+[ ] The id combination in gen_id() uses an intger division, which is costly, use another combination function that is non-linear and doesn't use division
+[ ] Animations, somehow
 
 ## Commands
 
@@ -36,7 +40,7 @@ _ border radius
 
 ## Raylib
 
-[ ] Implement type (Rect, Color, Point) conversion functions between rl:: and ugui::
+[x] Implement type (Rect, Color, Point) conversion functions between rl:: and ugui::
 [x] Implement pixel radius rounding for border radius
 
 ## Widgets
