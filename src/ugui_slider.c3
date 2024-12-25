@@ -130,5 +130,6 @@ fn ElemEvents! Ctx.slider_ver(&ctx,
 	return elem.events;
 }
 
-macro short calc_slider(ushort off, ushort dim, float value) => (short)off + (short)(dim * value);
-macro float calc_value(ushort off, ushort mouse, ushort dim, ushort slider) => math::clamp((float)(mouse-off-slider/2)/(float)(dim-slider), 0.0f, 1.0f);
+macro short calc_slider(short off, short dim, float value) => (short)off + (short)(dim * value);
+macro float calc_value(short off, short mouse, short dim, short slider)
+	=> math::clamp((float)(mouse-off-slider/2)/(float)(dim-slider), 0.0f, 1.0f);

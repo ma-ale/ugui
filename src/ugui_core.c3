@@ -93,6 +93,7 @@ const uint STACK_STEP = 10;
 const uint MAX_ELEMS  = 128;
 const uint MAX_CMDS   = 256;
 const uint ROOT_ID    = 1;
+const uint TEXT_MAX   = 64;
 
 // global style, similar to the css box model
 struct Style { // css box model
@@ -126,6 +127,13 @@ struct Ctx {
 			// mouse_pressed  = mouse_updated & mouse_down
 			MouseButtons down;
 			MouseButtons updated;
+			// scroll wheel
+			Point scroll;
+		}
+		struct keyboard {
+			char[TEXT_MAX] text;
+			usz text_len;
+			ModKeys down;
 		}
 	}
 
@@ -182,18 +190,26 @@ fn Elem*! Ctx.get_parent(&ctx)
 	return ctx.cache.search(parent_id);
 }
 
+macro @bits(#a) => $typeof(#a).sizeof*8;
+macro Id.rotate_left(id, uint $n) => (id << $n) | (id >> (@bits(id) - $n));
+const uint GOLDEN_RATIO = 0x9E3779B9;
+
 // generate an id combining the hashes of the parent id and the label
 // with the Cantor pairing function
 macro Id! Ctx.gen_id(&ctx, String label)
 {
-	Id a = ctx.tree.get(ctx.active_div)!;
-	Id b = label.hash();
-	return (a + b) * (a + b + 1) / 2 + a;
+	Id id1 = ctx.tree.get(ctx.active_div)!;
+	Id id2 = label.hash();
+	// Mix the two IDs non-linearly
+	Id mixed = id1 ^ id2.rotate_left(13);
+	mixed ^= id1.rotate_left(7);
+	mixed += GOLDEN_RATIO;
+	return mixed;
 }
 
 // get or push an element from the cache, return a pointer to it
 // resets all flags except is_new which is set accordingly
-macro Ctx.get_elem(&ctx, Id id)
+fn Elem*! Ctx.get_elem(&ctx, Id id)
 {
 	Elem empty_elem;
 	bool is_new;
@@ -203,6 +219,18 @@ macro Ctx.get_elem(&ctx, Id id)
 	elem.flags.is_new = is_new;
 	// FIXME: should this be here? or is it better to have the elements set the id?
 	elem.id = id;
+	return elem;
+}
+
+// find an element, does not allocate a new one in cache
+// THIS HAS TO BE A MACRO SINCE IT RETURNS A POINTER TO A TEMPORARY VALUE
+macro Elem* Ctx.find_elem(&ctx, Id id)
+{
+	Elem*! elem;
+	elem = ctx.cache.search(id);
+	if (catch elem) {
+		return &&Elem{};
+	}
 	return elem;
 }
 
@@ -305,6 +333,7 @@ fn void! Ctx.frame_end(&ctx)
 
 	// 2. clear input fields
 	ctx.input.events = (InputEvents)0;
+	ctx.input.keyboard.text_len = 0;
 
 	// send atlas updates
 	if (ctx.font.should_update) {

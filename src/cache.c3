@@ -62,8 +62,9 @@ fn Value*! Cache.search(&cache, Key id)
 	// get_entry() faults on miss
 	IdTableEntry* entry = cache.table.get_entry(id)!;
 
-	/* MISS */
+	/* MISS, wrong key */
 	if (entry.key != id) {
+		cache.table.remove(id)!;
 		return SearchResult.MISSING?;
 	}
 
@@ -77,6 +78,18 @@ fn Value*! Cache.search(&cache, Key id)
 	/* HIT, set as recently used */
 	cache.used[entry.value] = true;
 	return &(cache.pool[entry.value]);
+}
+
+fn void Cache.remove(&cache, Key id)
+{
+	IdTableEntry*! entry = cache.table.get_entry(id);
+	if (catch entry) {
+		return;
+	}
+
+	// found, remove it
+	cache.present[entry.value] = false;
+	(void)cache.table.remove(id);
 }
 
 /* Look for a free spot in the present bitmap and return its index */

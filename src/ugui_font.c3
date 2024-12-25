@@ -76,6 +76,7 @@ fn void! Font.load(&font, String name, ZString path, uint height, float scale)
 
 	font.sft.font = schrift::loadfile(path);
 	if (font.sft.font == null) {
+		font.table.free();
 		return UgFontError.TTF_LOAD_FAILED?;
 	}
 

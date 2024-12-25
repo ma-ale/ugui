@@ -99,11 +99,14 @@ fn void! Ctx.div_end(&ctx)
 
 	Id hsid = ctx.gen_id("div_scrollbar_horizontal")!;
 	Id vsid = ctx.gen_id("div_scrollbar_vertical")!;
-	
-	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid || ctx.hover_id == vsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
-	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid || ctx.hover_id == hsid ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid || ctx.is_hovered(ctx.find_elem(vsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid || ctx.is_hovered(ctx.find_elem(hsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 
 	if (elem.div.scroll_y.on) {
+		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id) {
+			elem.div.scroll_y.value += ctx.input.mouse.scroll.y * 0.07f;
+			elem.div.scroll_y.value = math::clamp(elem.div.scroll_y.value, 0.0f, 1.0f);
+		}
 		Rect vslider = {
 			.x = elem.bounds.x + elem.bounds.w - wdim,
 			.y = elem.bounds.y,
@@ -117,6 +120,10 @@ fn void! Ctx.div_end(&ctx)
 	}
 
 	if (elem.div.scroll_x.on) {
+		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id) {
+			elem.div.scroll_x.value += ctx.input.mouse.scroll.x * 0.07f;
+			elem.div.scroll_x.value = math::clamp(elem.div.scroll_x.value, 0.0f, 1.0f);
+		}
 		Rect hslider = {
 			.x = elem.bounds.x,
 			.y = elem.bounds.y + elem.bounds.h - hdim,

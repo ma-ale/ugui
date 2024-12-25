@@ -7,18 +7,31 @@
 [ ] Write a README.md
 [ ] Use an arena allocator for cache
 [ ] Do not redraw if there was no update (no layout and no draw)
+[ ] Do command buffer damage tracking based on a context grid (see rxi writeup)
 [x] Better handling of the active and focused widgets, try
 to maintain focus until mouse release (fix scroll bars)
 [x] Clip element bounds to parent div, specifically text
-[ ] Keyboard input
-[ ] Mouse scroll wheel
-[ ] Touch input
 [ ] Resizeable divs
-[ ] Implement a z index
-[ ] Text reflow
+[ ] Implement a z index and sort command buffer based on that
 [ ] Standardize element handling, for example all buttons do almost the same thing, so write a lot of boiler plate and reuse it
-[ ] The id combination in gen_id() uses an intger division, which is costly, use another combination function that is non-linear and doesn't use division
+[x] The id combination in gen_id() uses an intger division, which is costly, use another combination function that is non-linear and doesn't use division
 [ ] Animations, somehow
+[ ] Maybe cache codepoint converted strings
+[x] Fix scroll wheel when div is scrolled
+
+## Layout
+
+[ ] Text reflow
+[ ] Flexbox
+[ ] Center elements to the row/column
+
+## Input
+
+[x] Keyboard input
+[x] Mouse scroll wheel
+[ ] Touch input
+[x] Do not set input event to true if the movement was zero (like no mouse movement)
+[ ] Use input event flags, for example to consume the input event
 
 ## Commands
 
@@ -49,3 +62,5 @@ _ border radius
 [x] Button with label
 [ ] Text Input box
 [ ] Icon Buttons
+[ ] Switch
+

@@ -106,6 +106,7 @@ fn int main(String[] args)
 	while (!rl::window_should_close()) {
 		clock.mark();
 
+/*
 		KeyboardKey k;
 		do {
 			k = rl::get_key_pressed();
@@ -115,7 +116,12 @@ fn int main(String[] args)
 			if (rl::is_key_released(k)) { io::print("released "); }
 			io::printfn("%s", k);
 		} while (k != 0);
-
+*/
+		for (int c; (c = rl::get_char_pressed()) != 0;) {
+			int[1] ts;
+			ts[0] = c;
+			ui.input_text_unicode(ts[..]);
+		}
 
 		/* Start Input Handling */
 		if (rl::is_window_resized()) {
@@ -128,11 +134,14 @@ fn int main(String[] args)
 
 		rl::Vector2 mpos = rl::get_mouse_position();
 		ui.input_mouse_abs((short)mpos.x, (short)mpos.y);
+		rl::Vector2 mwheel = rl::get_mouse_wheel_move_v();
+		ui.input_mouse_wheel((short)mwheel.x, (short)mwheel.y);
 
-		ugui::MouseButtons buttons;
-		buttons.btn_left = rl::is_mouse_button_down(rl::MOUSE_BUTTON_LEFT);
-		buttons.btn_right = rl::is_mouse_button_down(rl::MOUSE_BUTTON_RIGHT);
-		buttons.btn_middle = rl::is_mouse_button_down(rl::MOUSE_BUTTON_MIDDLE);
+		ugui::MouseButtons buttons = {
+			.btn_left = rl::is_mouse_button_down(rl::MOUSE_BUTTON_LEFT),
+			.btn_right = rl::is_mouse_button_down(rl::MOUSE_BUTTON_RIGHT),
+			.btn_middle = rl::is_mouse_button_down(rl::MOUSE_BUTTON_MIDDLE),
+		};
 		ui.input_mouse_button(buttons);
 		/* End Input Handling */
 
@@ -196,16 +205,17 @@ fn int main(String[] args)
 			ui.slider_hor("hs2", ugui::Rect{0,0,100,30}, &f2)!!;
 		|};
 		ui.div_end()!!;
-
+		
 		// Timings counter
 		TimeStats dts = draw_times.get_stats();
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", ugui::Rect{0, ui.height-60, 200, 60})!!;
+		ui.div_begin("fps", ugui::Rect{0, ui.height-100, 200, 100})!!;
 		{|
-			ui.layout_set_row()!!;
-			ui.text_unbounded("ui avg", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
+			ui.layout_set_column()!!;
+			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
+			ui.text_unbounded("ui text input", (String)ui.input.keyboard.text[..])!!;
 		|};
 		ui.div_end()!!;
 
