@@ -1,0 +1,194 @@
+module ugui;
+
+
+// ---------------------------------------------------------------------------------- //
+//                                  RECTANGLE                                         //
+// ---------------------------------------------------------------------------------- //
+
+// Rect and it's methods
+struct Rect {
+	short x, y, w, h;
+}
+
+// return true if rect a contains b
+macro bool Rect.contains(Rect a, Rect b)
+{
+	return (a.x <= b.x && a.y <= b.y && a.x+a.w >= b.x+b.w && a.y+a.h >= b.y+b.h);
+}
+
+// returns the intersection of a and b
+macro Rect Rect.intersection(Rect a, Rect b)
+{
+	return Rect{
+		.x = (short)max(a.x, b.x),
+		.y = (short)max(a.y, b.y),
+		.w = (short)min(a.x+a.w, b.x+b.w) - (short)max(a.x, b.x),
+		.h = (short)min(a.y+a.h, b.y+b.h) - (short)max(a.y, b.y),
+	};
+}
+
+// returns true if the intersection not null
+macro bool Rect.collides(Rect a, Rect b)
+{
+	return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
+}
+
+// check for empty rect
+macro bool Rect.is_null(Rect r) => r.x == 0 && r.y == 0 && r.x == 0 && r.w == 0;
+
+// returns the element-wise addition of r1 and r2
+macro Rect Rect.add(Rect r1, Rect r2)
+{
+	return Rect{
+		.x = r1.x + r2.x,
+		.y = r1.y + r2.y,
+		.w = r1.w + r2.w,
+		.h = r1.h + r2.h,
+	};
+}
+
+// returns the element-wise subtraction of r1 and r2
+macro Rect Rect.sub(Rect r1, Rect r2)
+{
+	return Rect{
+		.x = r1.x - r2.x,
+		.y = r1.y - r2.y,
+		.w = r1.w - r2.w,
+		.h = r1.h - r2.h,
+	};
+}
+
+// returns the element-wise multiplication of r1 and r2
+macro Rect Rect.mul(Rect r1, Rect r2)
+{
+	return Rect{
+		.x = r1.x * r2.x,
+		.y = r1.y * r2.y,
+		.w = r1.w * r2.w,
+		.h = r1.h * r2.h,
+	};
+}
+
+macro Point Rect.position(Rect r)
+{
+	return Point{
+		.x = r.x,
+		.y = r.y,
+	};
+}
+
+macro Point Rect.size(Rect r)
+{
+	return Point{
+		.x = r.w,
+		.y = r.h,
+	};
+}
+
+macro Rect Rect.max(Rect a, Rect b)
+{
+	return Rect{
+		.x = max(a.x, b.x),
+		.y = max(a.y, b.y),
+		.w = max(a.w, b.w),
+		.h = max(a.h, b.h),
+	};
+}
+
+macro Rect Rect.min(Rect a, Rect b)
+{
+	return Rect{
+		.x = min(a.x, b.x),
+		.y = min(a.y, b.y),
+		.w = min(a.w, b.w),
+		.h = min(a.h, b.h),
+	};
+}
+
+// Offset a rect by a point
+macro Rect Rect.off(Rect r, Point p)
+{
+	return Rect{
+		.x = r.x + p.x,
+		.y = r.y + p.y,
+		.w = r.w,
+		.h = r.h,
+	};
+}
+
+// Resize a rect width and height
+macro Rect Rect.grow(Rect r, Point p)
+{
+	return Rect{
+		.x = r.x,
+		.y = r.y,
+		.w = r.w + p.x,
+		.h = r.h + p.y,
+	};
+}
+
+// Return the bottom-right corner of a rectangle
+macro Point Rect.bottom_right(Rect r)
+{
+	return Point{
+		.x = r.x + r.w,
+		.y = r.y + r.h,
+	};
+}
+
+
+// ---------------------------------------------------------------------------------- //
+//                                    POINT                                           //
+// ---------------------------------------------------------------------------------- //
+
+struct Point {
+	short x, y;
+}
+
+// returns true if a point is inside the rectangle
+macro bool Point.in_rect(Point p, Rect r)
+{
+	return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
+}
+
+macro Point Point.add(Point a, Point b)
+{
+	return Point{
+		.x = a.x + b.x,
+		.y = a.y + b.y,
+	};
+}
+
+macro Point Point.sub(Point a, Point b)
+{
+	return Point{
+		.x = a.x - b.x,
+		.y = a.y - b.y,
+	};
+}
+
+macro Point Point.neg(Point p) => Point{-p.x, -p.y};
+
+macro Point Point.max(Point a, Point b)
+{
+	return Point{
+		.x = max(a.x, b.x),
+		.y = max(a.y, b.y),
+	};
+}
+
+macro Point Point.min(Point a, Point b)
+{
+	return Point{
+		.x = min(a.x, b.x),
+		.y = min(a.y, b.y),
+	};
+}
+
+// ---------------------------------------------------------------------------------- //
+//                                    COLOR                                           //
+// ---------------------------------------------------------------------------------- //
+
+struct Color{
+	char r, g, b, a;
+}

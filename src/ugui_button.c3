@@ -58,7 +58,7 @@ fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.m
 
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	Rect text_size = ctx.get_text_bounds(label)!;
-	Rect btn_size = rect_add(text_size, Rect{0,0,10,10});
+	Rect btn_size = text_size.add(Rect{0,0,10,10});
 
 	// 2. Layout
 	elem.bounds = ctx.position_element(parent, btn_size, true);

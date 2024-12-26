@@ -7,17 +7,6 @@ import fifo;
 import std::io;
 import std::core::string;
 
-struct Rect {
-	short x, y, w, h;
-}
-
-struct Point {
-	short x, y;
-}
-
-struct Color{
-	char r, g, b, a;
-}
 
 // element ids are just long ints
 def Id = usz;
@@ -142,45 +131,6 @@ struct Ctx {
 
 	Rect div_scissor; // the current div bounds used for scissor test
 	isz active_div; // tree node indicating the current active div
-}
-
-macro point_in_rect(Point p, Rect r)
-{
-	return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
-}
-
-// return true if rect a contains b
-macro bool Rect.contains(Rect a, Rect b)
-{
-	return (a.x <= b.x && a.y <= b.y && a.x+a.w >= b.x+b.w && a.y+a.h >= b.y+b.h);
-}
-
-macro Rect Rect.intersection(Rect a, Rect b)
-{
-	return Rect{
-		.x = (short)max(a.x, b.x),
-		.y = (short)max(a.y, b.y),
-		.w = (short)min(a.x+a.w, b.x+b.w) - (short)max(a.x, b.x),
-		.h = (short)min(a.y+a.h, b.y+b.h) - (short)max(a.y, b.y),
-	};
-}
-
-// rect intersection not null
-macro bool Rect.collides(Rect a, Rect b)
-{
-	return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
-}
-
-macro bool Rect.is_null(r) => r.x == 0 && r.y == 0 && r.x == 0 && r.w == 0;
-
-macro Rect rect_add(Rect r1, Rect r2)
-{
-	return Rect{
-		.x = r1.x + r2.x,
-		.y = r1.y + r2.y,
-		.w = r1.w + r2.w,
-		.h = r1.h + r2.h,
-	};
 }
 
 // return a pointer to the parent of the current active div
@@ -362,7 +312,7 @@ $endif
 *>
 macro bool Ctx.is_hovered(&ctx, Elem *elem)
 {
-	return point_in_rect(ctx.input.mouse.pos, elem.bounds);
+	return ctx.input.mouse.pos.in_rect(elem.bounds);
 }
 
 macro bool Ctx.elem_focus(&ctx, Elem *elem)

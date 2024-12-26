@@ -149,7 +149,7 @@ fn int main(String[] args)
 		ui.frame_begin()!!;
 
 		// main div, fill the whole window
-		ui.div_begin("main", ugui::Rect{.w=ui.width/2})!!;
+		ui.div_begin("main", ugui::Rect{.w=-100})!!;
 		{|
 			ui.layout_set_column()!!;
 			if (ui.button("button0", ugui::Rect{0,0,30,30}, toggle)!!.mouse_press) {
@@ -211,7 +211,7 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", ugui::Rect{0, ui.height-100, 200, 100})!!;
+		ui.div_begin("fps", ugui::Rect{0, ui.height-100, -300, 100})!!;
 		{|
 			ui.layout_set_column()!!;
 			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;

@@ -80,6 +80,26 @@ fn void! Ctx.layout_next_column(&ctx)
 	parent.div.origin_r = parent.div.origin_c;
 }
 
+
+macro Rect Elem.get_view(&elem)
+{
+	Rect off;
+	if (elem.div.scroll_x.enabled && elem.div.scroll_x.on) {
+		off.x = (short)((float)(elem.div.pcb.w - elem.bounds.w) * elem.div.scroll_x.value);
+		off.w = -SCROLLBAR_DIM;
+	}
+	if (elem.div.scroll_y.enabled && elem.div.scroll_y.on) {
+		off.y = (short)((float)(elem.div.pcb.h - elem.bounds.h) * elem.div.scroll_y.value);
+		off.h = -SCROLLBAR_DIM;
+	}
+	return elem.bounds.add(off);
+}
+
+macro Point Elem.get_view_off(&elem)
+{
+	return elem.get_view().sub(elem.bounds).position();
+}
+
 // position the rectangle inside the parent according to the layout
 // parent: parent div
 // rect: the requested size
@@ -90,11 +110,13 @@ fn void! Ctx.layout_next_column(&ctx)
 *>
 fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 {
-	Rect placement;
-	Point origin;
 	ElemDiv* div = &parent.div;
 
+	Rect parent_bounds, parent_view;
+	Rect child_placement, child_occupied;
+
 	// 1. Select the right origin
+	Point origin;
 	switch (div.layout) {
 	case LAYOUT_ROW:
 		origin = div.origin_r;
@@ -107,81 +129,70 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		return Rect{};
 	}
 
-	// the bottom-right border of the element box
-	Point pl_corner;
+	// 2. Compute the parent's view
+	parent_bounds = parent.bounds;
+	parent_view = parent.get_view();
 
-	// 2. Calculate the placement
-	placement.x = (short)max(origin.x + rect.x, 0);
-	placement.y = (short)max(origin.y + rect.y, 0);
-	placement.w = rect.w > 0 ? rect.w : (short)max(parent.bounds.w - (placement.x - parent.bounds.x), 0);
-	placement.h = rect.h > 0 ? rect.h : (short)max(parent.bounds.h - (placement.y - parent.bounds.y), 0);
+	// 3. Compute the placement and occupied area
 
-	pl_corner.x = placement.x + placement.w;
-	pl_corner.y = placement.y + placement.h;
+	// grow rect (wanted size) when widht or height are less than zero
+	bool adapt_x = rect.w <= 0;
+	bool adapt_y = rect.h <= 0;
+	if (adapt_x) rect.w = parent_bounds.w - parent_bounds.x - origin.x;
+	if (adapt_y) rect.h = parent_bounds.h - parent_bounds.y - origin.y;
 
-	// 2.1 apply style, css box model
+	// offset placement and area
+	child_placement = child_placement.off(origin.add(rect.position()));
+	child_occupied  = child_occupied.off(origin.add(rect.position()));
 	if (style) {
-		Rect margin = ctx.style.margin;
-		Rect border = ctx.style.border;
+		Rect margin  = ctx.style.margin;
+		Rect border  = ctx.style.border;
 		Rect padding = ctx.style.padding;
 
-		placement.x += margin.x;
-		placement.y += margin.y;
-		if (rect.w != 0) { placement.w += border.x+border.w + padding.x+padding.w; }
-		if (rect.h != 0) { placement.h += border.y+border.h + padding.y+padding.h; }
-
-		pl_corner.x = placement.x + placement.w + margin.w;
-		pl_corner.y = placement.y + placement.h + margin.h;
+		// padding, grows both the placement and occupied area
+		child_placement = child_placement.grow(padding.position().add(padding.size()));
+		child_occupied  = child_occupied.grow(padding.position().add(padding.size()));
+		// border, grows both the placement and occupied area
+		child_placement = child_placement.grow(border.position().add(border.size()));
+		child_occupied  = child_occupied.grow(border.position().add(border.size()));
+		// margin, offsets the placement and grows the occupied area
+		child_placement = child_placement.off(margin.position());
+		child_occupied  = child_occupied.grow(margin.position().add(margin.size()));
+	
+		// oh yeah also adjust the rect if i was to grow
+		if (adapt_x) rect.w -= padding.x+padding.w + border.x+border.w + margin.x+margin.w;
+		if (adapt_y) rect.h -= padding.y+padding.h + border.y+border.h + margin.y+margin.h;
 	}
+	// set the size
+	child_placement = child_placement.grow(rect.size());
+	child_occupied  = child_occupied.grow(rect.size());
 
-	// 3. Update the origins of the parent
+	// 4. Update the parent's origin
 	div.origin_r = Point{
-		.x = pl_corner.x,
+		.x = child_occupied.bottom_right().x,
 		.y = origin.y,
 	};
 	div.origin_c = Point{
 		.x = origin.x,
-		.y = pl_corner.y,
+		.y = child_occupied.bottom_right().y,
 	};
 
-	// 4. Calculate the "scrolled" view
-	Rect off;
-	Rect* cb = &div.children_bounds;
-	if (div.scroll_x.enabled && div.scroll_x.on) {
-		off.x = (short)((float)(div.pcb.w - parent.bounds.w) * div.scroll_x.value);
-		off.w = SCROLLBAR_DIM;
-	}
-	if (div.scroll_y.enabled && div.scroll_y.on) {
-		off.y = (short)((float)(div.pcb.h - parent.bounds.h) * div.scroll_y.value);
-		off.h = SCROLLBAR_DIM;
-	}
-	Rect view = {
-		.x = parent.bounds.x + off.x,
-		.y = parent.bounds.y + off.y,
-		.w = parent.bounds.w - off.w,
-		.h = parent.bounds.h - off.h,
-	};
-
-	// 5. check if the placement overflows the children ounds, if so update them
-	if (!point_in_rect(pl_corner, *cb)) {
-		if (pl_corner.y > cb.y+cb.h) {
-			cb.h = pl_corner.y - cb.y;
+	// 5. Update the parent's children bounds
+	if (!child_occupied.bottom_right().in_rect(div.children_bounds)) {
+		// right overflow
+		if (child_occupied.bottom_right().x > div.children_bounds.bottom_right().x) {
+			div.children_bounds.w += child_occupied.bottom_right().x - div.children_bounds.bottom_right().x;
 		}
-		if (pl_corner.x > cb.x+cb.w) {
-			cb.w += pl_corner.x - (cb.x + cb.w);
+		// left overflow
+		if (child_occupied.bottom_right().y > div.children_bounds.bottom_right().y) {
+			div.children_bounds.h += child_occupied.bottom_right().y - div.children_bounds.bottom_right().y;
 		}
 	}
 
-	// 6. check if the placement is inside the view
-	if (placement.collides(view)) {
-		return Rect{
-			.x = placement.x - off.x,
-			.y = placement.y - off.y,
-			.w = placement.w,
-			.h = placement.h,
-		};
+	// 99. return the placement
+	if (child_placement.collides(parent_view)) {
+		return child_placement.off(parent.get_view_off().neg());
 	} else {
 		return Rect{};
 	}
 }
-

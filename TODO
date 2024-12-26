@@ -22,7 +22,7 @@ to maintain focus until mouse release (fix scroll bars)
 ## Layout
 
 [ ] Text reflow
-[ ] Flexbox
+[x] Flexbox
 [ ] Center elements to the row/column
 
 ## Input
