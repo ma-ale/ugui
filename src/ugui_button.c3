@@ -29,12 +29,12 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 	//  no interaction should occur so just return
 	if (elem.bounds.is_null()) { return ElemEvents{}; }
 
-	Color col = uint_to_rgba(0x0000ffff);
+	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
 	if (state) {
-		col = uint_to_rgba(0xff0000ff);
+		col = 0xff0000ffu.to_rgba();
 	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
-		col = uint_to_rgba(0xff00ffff);
+		col = 0xff00ffffu.to_rgba();
 	}
 
 	// Draw the button
@@ -64,12 +64,12 @@ fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.m
 	elem.bounds = ctx.position_element(parent, btn_size, true);
 	if (elem.bounds.is_null()) { return ElemEvents{}; }
 
-	Color col = uint_to_rgba(0x0000ffff);
+	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
 	if (state) {
-		col = uint_to_rgba(0xff0000ff);
+		col = 0xff0000ffu.to_rgba();
 	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
-		col = uint_to_rgba(0xff00ffff);
+		col = 0xff00ffffu.to_rgba();
 	}
 
 	// Draw the button

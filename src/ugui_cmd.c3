@@ -103,7 +103,7 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 }
 
 // TODO: add texture id
-fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = uint_to_rgba(0xffffffff))
+fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = 0xffffffffu.to_rgba())
 {
 	Cmd cmd = {
 		.type = CMD_SPRITE,
@@ -115,7 +115,7 @@ fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color h
 	ctx.push_cmd(&cmd)!;
 }
 
-fn void! Ctx.push_string(&ctx, Rect bounds, String text, Color hue = uint_to_rgba(0xffffffff))
+fn void! Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu.to_rgba())
 {
 	if (text.len == 0) {
 		return;

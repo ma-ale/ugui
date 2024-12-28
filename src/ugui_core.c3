@@ -67,15 +67,6 @@ fault UgError {
 	WRONG_ELEMENT_TYPE,
 }
 
-macro Color uint_to_rgba(uint $u) {
-	return Color{
-		.r = (char)(($u >> 24) & 0xff),
-		.g = (char)(($u >> 16) & 0xff),
-		.b = (char)(($u >> 8) & 0xff),
-		.a = (char)(($u >> 0) & 0xff)
-	};
-}
-
 const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
 
 const uint STACK_STEP = 10;
@@ -218,9 +209,9 @@ fn void! Ctx.init(&ctx)
 	ctx.style.border  = Rect{2, 2, 2, 2};
 	ctx.style.padding = Rect{1, 1, 1, 1};
 	ctx.style.radius  = 5;
-	ctx.style.bgcolor = uint_to_rgba(0x282828ff);
-	ctx.style.fgcolor = uint_to_rgba(0xfbf1c7ff);
-	ctx.style.brcolor = uint_to_rgba(0xd79921ff);
+	ctx.style.bgcolor = 0x282828ffu.to_rgba();
+	ctx.style.fgcolor = 0xfbf1c7ffu.to_rgba();
+	ctx.style.brcolor = 0xd79921ffu.to_rgba();
 }
 
 fn void Ctx.free(&ctx)
@@ -301,7 +292,7 @@ $if 1:
 			.w = 4,
 			.h = 4,
 		},
-		.rect.color = uint_to_rgba(0xff00ffff)
+		.rect.color = 0xff00ffffu.to_rgba()
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
 $endif

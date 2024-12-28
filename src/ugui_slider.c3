@@ -21,8 +21,8 @@ fn ElemEvents! Ctx.slider_hor(&ctx,
     Rect size,
     float* value,
     float hpercent = 0.25,
-    Color bgcolor = uint_to_rgba(0x0000ffff),
-    Color handlecolor = uint_to_rgba(0x0ff000ff))
+    Color bgcolor = 0x0000ffffu.to_rgba(),
+    Color handlecolor = 0x0ff000ffu.to_rgba())
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -84,8 +84,8 @@ fn ElemEvents! Ctx.slider_ver(&ctx,
     Rect size,
     float* value,
     float hpercent = 0.25,
-    Color bgcolor = uint_to_rgba(0x0000ffff),
-    Color handlecolor = uint_to_rgba(0x0ff000ff))
+    Color bgcolor = 0x0000ffffu.to_rgba(),
+    Color handlecolor = 0x0ff000ffu.to_rgba())
 {
 	Id id = ctx.gen_id(label)!;
 

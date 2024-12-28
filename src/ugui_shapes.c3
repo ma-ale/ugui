@@ -192,3 +192,13 @@ macro Point Point.min(Point a, Point b)
 struct Color{
 	char r, g, b, a;
 }
+
+macro Color uint.to_rgba(uint u)
+{
+	return Color{
+		.r = (char)((u >> 24) & 0xff),
+		.g = (char)((u >> 16) & 0xff),
+		.b = (char)((u >> 8) & 0xff),
+		.a = (char)((u >> 0) & 0xff)
+	};
+}
