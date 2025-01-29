@@ -81,6 +81,8 @@ fn int main(String[] args)
 	ugui::Ctx ui;
 	ui.init()!!;
 	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
+	ui.sprite_atlas_create("icons", AtlasType.ATLAS_RGBA32, 512, 512)!!;
+	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
 
 	short width = 800;
 	short height = 450;
@@ -99,8 +101,11 @@ fn int main(String[] args)
 	// font stuff
 	rl::Shader font_shader = rl::load_shader_from_memory(null, FONT_FS);
 	rl::Image font_atlas;
+	rl::Image sprite_atlas;
 	rl::Texture2D font_texture;
+	rl::Texture2D sprite_texture;
 	ugui::Id font_id = ui.get_font_id("font1");
+	ugui::Id sprite_id = ui.get_sprite_atlas_id("icons");
 
 	// Main loop
 	while (!rl::window_should_close()) {
@@ -164,7 +169,7 @@ fn int main(String[] args)
 			if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
-			
+
 			ui.layout_set_row()!!;
 			ui.layout_next_row()!!;
 			static float rf, gf, bf, af;
@@ -179,6 +184,7 @@ fn int main(String[] args)
 			ui.layout_next_column()!!;
 			ui.button_label("Continua!")!!;
 		|};
+		ui.draw_sprite("tux")!!;
 		ui.div_end()!!;
 
 		ui.div_begin("second", ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
@@ -205,7 +211,7 @@ fn int main(String[] args)
 			ui.slider_hor("hs2", ugui::Rect{0,0,100,30}, &f2)!!;
 		|};
 		ui.div_end()!!;
-		
+
 		// Timings counter
 		TimeStats dts = draw_times.get_stats();
 		TimeStats uts = ui_times.get_stats();
@@ -237,27 +243,48 @@ fn int main(String[] args)
 				float roundness = r.w > r.h ? (2.1f*rad)/(float)r.h : (2.1f*rad)/(float)r.w;
 				rl::draw_rectangle_rounded(cmd.rect.rect.conv(), roundness, 0, cmd.rect.color.conv());
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
-				if (cmd.update_atlas.id != font_id) { break; }
-				//rl::unload_image(font_atlas);
-				font_atlas.data = cmd.update_atlas.raw_buffer;
-				font_atlas.width = cmd.update_atlas.width;
-				font_atlas.height = cmd.update_atlas.height;
-				font_atlas.mipmaps = 1;
-				//font_atlas.format = rl::PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-				font_atlas.format = 1;
-				if (rl::is_texture_ready(font_texture)) {
-					rl::unload_texture(font_texture);
+				if (cmd.update_atlas.id == font_id) {
+					//rl::unload_image(font_atlas);
+					font_atlas.data = cmd.update_atlas.raw_buffer;
+					font_atlas.width = cmd.update_atlas.width;
+					font_atlas.height = cmd.update_atlas.height;
+					font_atlas.mipmaps = 1;
+					//font_atlas.format = rl::PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
+					font_atlas.format = 1;
+					if (rl::is_texture_ready(font_texture)) {
+						rl::unload_texture(font_texture);
+					}
+					font_texture = rl::load_texture_from_image(font_atlas);
+				} else if (cmd.update_atlas.id == sprite_id) {
+					sprite_atlas.data = cmd.update_atlas.raw_buffer;
+					sprite_atlas.width = cmd.update_atlas.width;
+					sprite_atlas.height = cmd.update_atlas.height;
+					sprite_atlas.mipmaps = 1;
+					//sprite_atlas.format = rl::PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
+					sprite_atlas.format = 7;
+					if (rl::is_texture_ready(sprite_texture)) {
+						rl::unload_texture(sprite_texture);
+					}
+					sprite_texture = rl::load_texture_from_image(sprite_atlas);
 				}
-				font_texture = rl::load_texture_from_image(font_atlas);
 			case ugui::CmdType.CMD_SPRITE:
-				if (cmd.sprite.texture_id != font_id) { break; }
-				rl::Vector2 position = {
-					.x = cmd.sprite.rect.x,
-					.y = cmd.sprite.rect.y,
-				};
-				rl::begin_shader_mode(font_shader);
-				rl::draw_texture_rec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
-				rl::end_shader_mode();
+				if (cmd.sprite.texture_id == font_id) {
+					rl::Vector2 position = {
+						.x = cmd.sprite.rect.x,
+						.y = cmd.sprite.rect.y,
+					};
+					rl::begin_shader_mode(font_shader);
+					rl::draw_texture_rec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
+					rl::end_shader_mode();
+				} else if (cmd.sprite.texture_id == sprite_id) {
+					rl::Vector2 position = {
+						.x = cmd.sprite.rect.x,
+						.y = cmd.sprite.rect.y,
+					};
+					rl::draw_texture_rec(sprite_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
+				} else {
+					io::printfn("unknown texture id: %d", cmd.sprite.texture_id);
+				}
 			case ugui::CmdType.CMD_SCISSOR:
 				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {
 					rl::end_scissor_mode();
@@ -272,7 +299,6 @@ fn int main(String[] args)
 		//draw_times.print_stats();
 		rl::end_drawing();
 		/* End Drawing */
-
 	}
 
 	rl::close_window();

@@ -1,0 +1,9 @@
+{
+  "provides" : "mqoi",
+  "targets" : {
+    "linux-x64" : {
+      "dependencies" : [],
+      "linked-libraries" : ["mqoi", "c"]
+    }
+  }
+}

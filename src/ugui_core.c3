@@ -95,6 +95,7 @@ struct Ctx {
 	ushort width, height;
 	Style style;
 	Font font;
+	SpriteAtlas sprite_atlas;
 
 	bool has_focus;
 	struct input {
@@ -220,6 +221,7 @@ fn void Ctx.free(&ctx)
 	(void)ctx.cache.free();
 	(void)ctx.cmd_queue.free();
 	(void)ctx.font.free();
+	(void)ctx.sprite_atlas.free();
 }
 
 fn void! Ctx.frame_begin(&ctx)
@@ -280,6 +282,10 @@ fn void! Ctx.frame_end(&ctx)
 	if (ctx.font.should_update) {
 		ctx.push_update_atlas(&ctx.font.atlas)!;
 		ctx.font.should_update = false;
+	}
+	if (ctx.sprite_atlas.should_update) {
+		ctx.push_update_atlas(&ctx.sprite_atlas.atlas)!;
+		ctx.sprite_atlas.should_update = false;
 	}
 
 $if 1:

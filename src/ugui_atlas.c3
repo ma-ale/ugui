@@ -9,6 +9,7 @@ fault UgAtlasError {
 
 enum AtlasType {
 	ATLAS_GRAYSCALE,
+	ATLAS_RGBA32,
 }
 
 // black and white atlas
@@ -28,6 +29,7 @@ macro usz AtlasType.bpp(type)
 {
 	switch (type) {
 	case ATLAS_GRAYSCALE: return 1;
+	case ATLAS_RGBA32: return 4;
 	}
 }
 
@@ -46,10 +48,25 @@ fn void Atlas.free(&atlas)
 	free(atlas.buffer);
 }
 
+
+/*
+ * pixels -> +--------------+-----+
+ *           |              |     | h
+ *           |              |     | e
+ *           |              |     | i
+ *           |              |     | g
+ *           |              |     | h
+ *           |              |     | t
+ *           +--------------+-----+
+ *           |<--- width -->|
+ *           |<----- stride ----->|
+ * bytes per pixels are inferred and have to be the same
+ * as the atlas type
+ */
 // place a rect inside the atlas
 // uses a row first algorithm
 // TODO: use a skyline algorithm https://jvernay.fr/en/blog/skyline-2d-packer/implementation/
-fn Point! Atlas.place(&atlas, char[] pixels, ushort w, ushort h)
+fn Point! Atlas.place(&atlas, char[] pixels, ushort w, ushort h, ushort stride)
 {
 	Point p;
 
@@ -66,11 +83,11 @@ fn Point! Atlas.place(&atlas, char[] pixels, ushort w, ushort h)
 		}
 	}
 
+	usz bpp = atlas.type.bpp();
 	for (usz y = 0; y < h; y++) {
 		for (usz x = 0; x < w; x++) {
-			char[] buf = atlas.buffer[(usz)(p.y+y)*atlas.width + (p.x+x) ..];
-			char[] pix = pixels[y*w + x ..];
-			usz bpp = atlas.type.bpp();
+			char[] buf = atlas.buffer[(usz)(p.y+y)*atlas.width*bpp + (p.x+x)*bpp ..];
+			char[] pix = pixels[(usz)y*stride*bpp + x*bpp ..];
 
 			buf[0..bpp-1] = pix[0..bpp-1];
 		}

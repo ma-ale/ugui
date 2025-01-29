@@ -18,6 +18,8 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] Animations, somehow
 [ ] Maybe cache codepoint converted strings
 [x] Fix scroll wheel when div is scrolled
+[ ] Be consistent with the initialization methods some are foo.new() and some are foo.init()
+[ ] Implement image loading (.bmp, .ff, .qoi and .png), in the future even lossy images like .jpg
 
 ## Layout
 
@@ -63,4 +65,3 @@ _ border radius
 [ ] Text Input box
 [ ] Icon Buttons
 [ ] Switch
-

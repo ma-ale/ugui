@@ -144,7 +144,7 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code)
 	//io::printfn("code=%c, w=%d, h=%d, ox=%d, oy=%d, adv=%d",
 	//    glyph.code, glyph.w, glyph.h, glyph.ox, glyph.oy, glyph.adv);
 
-	Point uv = font.atlas.place(pixels, glyph.w, glyph.h)!;
+	Point uv = font.atlas.place(pixels, glyph.w, glyph.h, (ushort)img.width)!;
 	glyph.u = uv.x;
 	glyph.v = uv.y;
 
@@ -159,6 +159,7 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code)
 fn void Font.free(&font)
 {
 	font.atlas.free();
+	font.table.free();
 	schrift::freefont(font.sft.font);
 }
 
