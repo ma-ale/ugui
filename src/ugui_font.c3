@@ -39,7 +39,7 @@ struct Glyph {
 	short adv, ox, oy;
 }
 
-const uint FONT_CACHED = 512;
+const uint FONT_CACHED = 128;
 def GlyphTable = map::HashMap(<Codepoint, Glyph>) @private;
 
 fault UgFontError {
@@ -89,7 +89,7 @@ fn void! Font.load(&font, String name, ZString path, uint height, float scale)
 
 	// TODO: allocate buffer based on FONT_CACHED and the size of a sample letter
 	//       like the letter 'A'
-	ushort size = (ushort)font.size*256;
+	ushort size = (ushort)font.size*(ushort)($$sqrt((float)FONT_CACHED));
 	font.atlas.new(font.id, ATLAS_GRAYSCALE, size, size)!;
 
 	// preallocate the ASCII range
