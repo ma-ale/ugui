@@ -58,17 +58,16 @@ const MouseButtons BTN_5      = {.btn_5      = true};
 
 const ModKeys KEY_ANY = (ModKeys)(ModKeys.inner.max);
 
-fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String key)
+fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String keys)
 {
 	bool is_mod = (bool)(ctx.input.keyboard.down & mod);
 	bool is_keys = true;
 	String haystack = (String)ctx.input.keyboard.text[0..ctx.input.keyboard.text_len];
 	char[2] needle;
-	foreach (c: key) {
+	foreach (c: keys) {
 		needle[0] = c;
 		is_keys = is_keys && haystack.contains((String)needle[..]);
 	}
-	io::printfn("%b %b", is_mod, is_keys);
 	return is_mod && is_keys;
 }
 
@@ -162,9 +161,9 @@ fn void Ctx.input_text_utf8(&ctx, char[] text)
 	ctx.input.events.text_input = true;
 }
 
-fn void Ctx.input_text_unicode(&ctx, int[] text)
+fn void Ctx.input_text_unicode(&ctx, char[] text)
 {
-	if (text.len == 0) { return; }
+	if (text.ptr == null || text.len == 0) { return; }
 
 	char[32] tmp;
 	usz remaining = ctx.input.keyboard.text.len - ctx.input.keyboard.text_len;

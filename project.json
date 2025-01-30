@@ -4,9 +4,9 @@
   // Warnings used for all targets.
   "warnings": ["no-unused"],
   // Directories where C3 library files may be found.
-  "dependency-search-paths": ["lib"],
+  "dependency-search-paths": ["lib", "../../Programs/Source/c3-vendor/libraries"],
   // Libraries to use for all targets.
-  "dependencies": ["raylib", "schrift", "grapheme", "mqoi"],
+  "dependencies": ["raylib55", "schrift", "grapheme", "mqoi"],
   "features": [
     // See rcore.c3
     //"SUPPORT_INTERNAL_MEMORY_MANAGEMENT",

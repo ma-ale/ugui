@@ -2,7 +2,7 @@ import std::io;
 import vtree;
 import cache;
 import ugui;
-import rl;
+import raylib5::rl;
 import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
@@ -88,11 +88,11 @@ fn int main(String[] args)
 
 	short width = 800;
 	short height = 450;
-	rl::set_config_flags(rl::FLAG_WINDOW_RESIZABLE);
-	rl::init_window(width, height, "Ugui Test");
+	rl::setConfigFlags(rl::FLAG_WINDOW_RESIZABLE);
+	rl::initWindow(width, height, "Ugui Test");
 	ui.input_window_size(width, height)!!;
-	rl::set_target_fps(60);
-	rl::enable_event_waiting();
+	rl::setTargetFPS(60);
+	rl::enableEventWaiting();
 
 	isz frame;
 	bool toggle = true;
@@ -101,7 +101,7 @@ fn int main(String[] args)
 	Times draw_times;
 
 	// font stuff
-	rl::Shader font_shader = rl::load_shader_from_memory(null, FONT_FS);
+	rl::Shader font_shader = rl::loadShaderFromMemory(null, FONT_FS);
 	rl::Image font_atlas;
 	rl::Image sprite_atlas;
 	rl::Texture2D font_texture;
@@ -110,7 +110,7 @@ fn int main(String[] args)
 	ugui::Id sprite_id = ui.get_sprite_atlas_id("icons");
 
 	// Main loop
-	while (!rl::window_should_close()) {
+	while (!rl::windowShouldClose()) {
 		clock.mark();
 
 /*
@@ -124,35 +124,37 @@ fn int main(String[] args)
 			io::printfn("%s", k);
 		} while (k != 0);
 */
+
 		ugui::ModKeys mod;
-		mod.rctrl = rl::is_key_pressed(rl::KEY_RIGHT_CONTROL);
-		mod.lctrl = rl::is_key_pressed(rl::KEY_LEFT_CONTROL);
+		mod.rctrl = rl::isKeyDown(rl::KEY_RIGHT_CONTROL);
+		mod.lctrl = rl::isKeyDown(rl::KEY_LEFT_CONTROL);
 		ui.input_mod_keys(mod);
 
-		for (int c; (c = rl::get_key_pressed()) != 0;) {
-			int[1] ts;
-			ts[0] = c;
-			ui.input_text_unicode(ts[..]);
+		for (rl::KeyboardKey key; (key = (KeyboardKey)rl::getKeyPressed()) != 0;) {
+			ZString kname = rl::getKeyName(key);
+			if (kname == null) continue;
+			ui.input_text_unicode(kname.str_view());
 		}
 
+
 		/* Start Input Handling */
-		if (rl::is_window_resized()) {
-			width  = (short)rl::get_screen_width();
-			height = (short)rl::get_screen_height();
+		if (rl::isWindowResized()) {
+			width  = (short)rl::getScreenWidth();
+			height = (short)rl::getScreenHeight();
 			ui.input_window_size(width, height)!!;
 		}
 
-		ui.input_changefocus(rl::is_window_focused());
+		ui.input_changefocus(rl::isWindowFocused());
 
-		rl::Vector2 mpos = rl::get_mouse_position();
+		rl::Vector2 mpos = rl::getMousePosition();
 		ui.input_mouse_abs((short)mpos.x, (short)mpos.y);
-		rl::Vector2 mwheel = rl::get_mouse_wheel_move_v();
+		rl::Vector2 mwheel = rl::getMouseWheelMoveV();
 		ui.input_mouse_wheel((short)mwheel.x, (short)mwheel.y);
 
 		ugui::MouseButtons buttons = {
-			.btn_left = rl::is_mouse_button_down(rl::MOUSE_BUTTON_LEFT),
-			.btn_right = rl::is_mouse_button_down(rl::MOUSE_BUTTON_RIGHT),
-			.btn_middle = rl::is_mouse_button_down(rl::MOUSE_BUTTON_MIDDLE),
+			.btn_left = rl::isMouseButtonDown(rl::MouseButton.LEFT),
+			.btn_right = rl::isMouseButtonDown(rl::MouseButton.RIGHT),
+			.btn_middle = rl::isMouseButtonDown(rl::MouseButton.MIDDLE),
 		};
 		ui.input_mouse_button(buttons);
 		/* End Input Handling */
@@ -240,7 +242,7 @@ fn int main(String[] args)
 		//ui_times.print_stats();
 
 		/* Start UI Drawing */
-		rl::begin_drawing();
+		rl::beginDrawing();
 		// ClearBackground(BLACK);
 
 		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
@@ -250,7 +252,7 @@ fn int main(String[] args)
 				float rad = cmd.rect.radius;
 				// for some weird-ass reason the straight forward inverse formula does not work
 				float roundness = r.w > r.h ? (2.1f*rad)/(float)r.h : (2.1f*rad)/(float)r.w;
-				rl::draw_rectangle_rounded(cmd.rect.rect.conv(), roundness, 0, cmd.rect.color.conv());
+				rl::drawRectangleRounded(cmd.rect.rect.conv(), roundness, 0, cmd.rect.color.conv());
 			case ugui::CmdType.CMD_UPDATE_ATLAS:
 				if (cmd.update_atlas.id == font_id) {
 					//rl::unload_image(font_atlas);
@@ -258,23 +260,21 @@ fn int main(String[] args)
 					font_atlas.width = cmd.update_atlas.width;
 					font_atlas.height = cmd.update_atlas.height;
 					font_atlas.mipmaps = 1;
-					//font_atlas.format = rl::PixelFormat.PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-					font_atlas.format = 1;
-					if (rl::is_texture_ready(font_texture)) {
-						rl::unload_texture(font_texture);
+					font_atlas.format = rl::PixelFormat.UNCOMPRESSED_GRAYSCALE;
+					if (rl::isTextureValid(font_texture)) {
+						rl::unloadTexture(font_texture);
 					}
-					font_texture = rl::load_texture_from_image(font_atlas);
+					font_texture = rl::loadTextureFromImage(font_atlas);
 				} else if (cmd.update_atlas.id == sprite_id) {
 					sprite_atlas.data = cmd.update_atlas.raw_buffer;
 					sprite_atlas.width = cmd.update_atlas.width;
 					sprite_atlas.height = cmd.update_atlas.height;
 					sprite_atlas.mipmaps = 1;
-					//sprite_atlas.format = rl::PixelFormat.PIXELFORMAT_UNCOMPRESSED_R8G8B8A8;
-					sprite_atlas.format = 7;
-					if (rl::is_texture_ready(sprite_texture)) {
-						rl::unload_texture(sprite_texture);
+					sprite_atlas.format = rl::PixelFormat.UNCOMPRESSED_R8G8B8A8;
+					if (rl::isTextureValid(sprite_texture)) {
+						rl::unloadTexture(sprite_texture);
 					}
-					sprite_texture = rl::load_texture_from_image(sprite_atlas);
+					sprite_texture = rl::loadTextureFromImage(sprite_atlas);
 				}
 			case ugui::CmdType.CMD_SPRITE:
 				if (cmd.sprite.texture_id == font_id) {
@@ -282,23 +282,23 @@ fn int main(String[] args)
 						.x = cmd.sprite.rect.x,
 						.y = cmd.sprite.rect.y,
 					};
-					rl::begin_shader_mode(font_shader);
-					rl::draw_texture_rec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
-					rl::end_shader_mode();
+					rl::beginShaderMode(font_shader);
+					rl::drawTextureRec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
+					rl::endShaderMode();
 				} else if (cmd.sprite.texture_id == sprite_id) {
 					rl::Vector2 position = {
 						.x = cmd.sprite.rect.x,
 						.y = cmd.sprite.rect.y,
 					};
-					rl::draw_texture_rec(sprite_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
+					rl::drawTextureRec(sprite_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
 				} else {
 					io::printfn("unknown texture id: %d", cmd.sprite.texture_id);
 				}
 			case ugui::CmdType.CMD_SCISSOR:
 				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {
-					rl::end_scissor_mode();
+					rl::endScissorMode();
 				} else {
-					rl::begin_scissor_mode(cmd.scissor.rect.x, cmd.scissor.rect.y, cmd.scissor.rect.w, cmd.scissor.rect.h);
+					rl::beginScissorMode(cmd.scissor.rect.x, cmd.scissor.rect.y, cmd.scissor.rect.w, cmd.scissor.rect.h);
 				}
 			default:
 				io::printfn("Unknown cmd type: %s", cmd.type);
@@ -306,11 +306,11 @@ fn int main(String[] args)
 		}
 		draw_times.push(clock.mark());
 		//draw_times.print_stats();
-		rl::end_drawing();
+		rl::endDrawing();
 		/* End Drawing */
 	}
 
-	rl::close_window();
+	rl::closeWindow();
 
 	return 0;
 }
