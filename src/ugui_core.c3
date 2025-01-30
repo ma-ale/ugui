@@ -17,6 +17,7 @@ enum ElemType {
 	ETYPE_BUTTON,
 	ETYPE_SLIDER,
 	ETYPE_TEXT,
+	ETYPE_SPRITE,
 }
 
 bitstruct ElemFlags : uint {
@@ -47,6 +48,7 @@ struct Elem {
 		ElemButton button;
 		ElemSlider slider;
 		ElemText text;
+		ElemSprite sprite;
 	}
 }
 
@@ -324,7 +326,7 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
 	bool hover = ctx.is_hovered(elem);
 	bool focus = ctx.focus_id == elem.id || (hover && ctx.is_mouse_pressed(BTN_LEFT));
-	
+
 	if (ctx.is_mouse_pressed(BTN_ANY) && !hover){
 		focus = false;
 		if (ctx.focus_id == elem.id) ctx.focus_id = 0;
@@ -332,7 +334,7 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 
 	if (hover) { ctx.hover_id = elem.id; }
 	if (focus) { ctx.focus_id = elem.id; }
-	
+
 	ElemEvents ev = {
 		.mouse_hover = hover,
 		.mouse_press = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
@@ -341,4 +343,3 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 	};
 	return ev;
 }
-

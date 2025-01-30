@@ -80,6 +80,8 @@ fn int main(String[] args)
 {
 	ugui::Ctx ui;
 	ui.init()!!;
+	defer ui.free();
+
 	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
 	ui.sprite_atlas_create("icons", AtlasType.ATLAS_RGBA32, 512, 512)!!;
 	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
@@ -122,7 +124,12 @@ fn int main(String[] args)
 			io::printfn("%s", k);
 		} while (k != 0);
 */
-		for (int c; (c = rl::get_char_pressed()) != 0;) {
+		ugui::ModKeys mod;
+		mod.rctrl = rl::is_key_pressed(rl::KEY_RIGHT_CONTROL);
+		mod.lctrl = rl::is_key_pressed(rl::KEY_LEFT_CONTROL);
+		ui.input_mod_keys(mod);
+
+		for (int c; (c = rl::get_key_pressed()) != 0;) {
 			int[1] ts;
 			ts[0] = c;
 			ui.input_text_unicode(ts[..]);
@@ -153,6 +160,8 @@ fn int main(String[] args)
 		/* Start UI Handling */
 		ui.frame_begin()!!;
 
+		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) break;
+
 		// main div, fill the whole window
 		ui.div_begin("main", ugui::Rect{.w=-100})!!;
 		{|
@@ -179,12 +188,12 @@ fn int main(String[] args)
 			ui.slider_ver("slider_a", ugui::Rect{0,0,30,100}, &af)!!;
 
 			ui.layout_next_column()!!;
-			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡")!!;
+			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
 
 			ui.layout_next_column()!!;
 			ui.button_label("Continua!")!!;
 		|};
-		ui.draw_sprite("tux")!!;
+		ui.draw_sprite("sprite1", "tux")!!;
 		ui.div_end()!!;
 
 		ui.div_begin("second", ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
@@ -303,7 +312,6 @@ fn int main(String[] args)
 
 	rl::close_window();
 
-	ui.free();
 	return 0;
 }
 

@@ -21,6 +21,9 @@ struct SpriteAtlas {
 	bool should_update;
 }
 
+struct ElemSprite {
+	Id id;
+}
 
 // name: some examples are "icons" or "images"
 fn void! SpriteAtlas.init(&this, String name, AtlasType type, ushort width, ushort height)
@@ -118,13 +121,34 @@ fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path)
 	ctx.sprite_atlas.insert(name, pixels, (ushort)w, (ushort)h, (ushort)w)!;
 }
 
-// FIXME: test function, very different from every other function here
-fn void! Ctx.draw_sprite(&ctx, String name)
+fn void! Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
 {
+	Id id = ctx.gen_id(label)!;
+
+	Elem *parent = ctx.get_parent()!;
+	Elem *elem = ctx.get_elem(id)!;
+	// add it to the tree
+	ctx.tree.add(id, ctx.active_div)!;
+
+	if (elem.flags.is_new) {
+		elem.type = ETYPE_SPRITE;
+	} else if (elem.type != ETYPE_SPRITE) {
+		return UgError.WRONG_ELEMENT_TYPE?;
+	}
+
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
-	Rect bounds = { 100, 100, sprite.w, sprite.h };
+
 	Rect uv = { sprite.u, sprite.v, sprite.w, sprite.h };
+	Rect bounds = { 0, 0, sprite.w, sprite.h };
+
+	elem.bounds = ctx.position_element(parent, bounds.off(off), true);
+	elem.sprite.id = ctx.get_sprite_atlas_id(name);
+
+	// if the bounds are null the element is outside the div view,
+	//  no interaction should occur so just return
+	if (elem.bounds.is_null())  return;
+
 	Id tex_id = ctx.sprite_atlas.id;
 
-	return ctx.push_sprite(bounds, uv, tex_id)!;
+	return ctx.push_sprite(elem.bounds, uv, tex_id)!;
 }

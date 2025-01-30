@@ -3,7 +3,7 @@ module ugui;
 import grapheme;
 import std::io;
 import std::math;
-
+import std::core::string;
 
 bitstruct InputEvents : uint {
 	bool resize       : 0; // window size was changed
@@ -57,6 +57,20 @@ const MouseButtons BTN_4      = {.btn_4      = true};
 const MouseButtons BTN_5      = {.btn_5      = true};
 
 const ModKeys KEY_ANY = (ModKeys)(ModKeys.inner.max);
+
+fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String key)
+{
+	bool is_mod = (bool)(ctx.input.keyboard.down & mod);
+	bool is_keys = true;
+	String haystack = (String)ctx.input.keyboard.text[0..ctx.input.keyboard.text_len];
+	char[2] needle;
+	foreach (c: key) {
+		needle[0] = c;
+		is_keys = is_keys && haystack.contains((String)needle[..]);
+	}
+	io::printfn("%b %b", is_mod, is_keys);
+	return is_mod && is_keys;
+}
 
 // Window size was changed
 fn void! Ctx.input_window_size(&ctx, short width, short height)
