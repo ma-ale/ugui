@@ -113,18 +113,6 @@ fn int main(String[] args)
 	while (!rl::windowShouldClose()) {
 		clock.mark();
 
-/*
-		KeyboardKey k;
-		do {
-			k = rl::get_key_pressed();
-			if (!k) { break; }
-			if (rl::is_key_down(k)) { io::print("down "); }
-			if (rl::is_key_pressed(k)) { io::print("pressed "); }
-			if (rl::is_key_released(k)) { io::print("released "); }
-			io::printfn("%s", k);
-		} while (k != 0);
-*/
-
 		ugui::ModKeys mod;
 		mod.rctrl = rl::isKeyDown(rl::KEY_RIGHT_CONTROL);
 		mod.lctrl = rl::isKeyDown(rl::KEY_LEFT_CONTROL);
@@ -194,6 +182,10 @@ fn int main(String[] args)
 
 			ui.layout_next_column()!!;
 			ui.button_label("Continua!")!!;
+
+			ui.layout_next_row()!!;
+			static bool check;
+			ui.checkbox("check1", "", ugui::Point{}, &check)!!;
 		|};
 		ui.draw_sprite("sprite1", "tux")!!;
 		ui.div_end()!!;

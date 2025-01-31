@@ -8,6 +8,8 @@ struct ElemButton {
 }
 
 // draw a button, return the events on that button
+// FIXME: "state" should be renamed "active" to toggle between an usable button and
+//        an inactive (greyed-out) button
 fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 {
 	Id id = ctx.gen_id(label)!;
@@ -82,4 +84,42 @@ fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.m
 	ctx.push_string(text_size, label)!;
 
 	return elem.events;
+}
+
+// FIXME: this should be inside the style
+const ushort DEFAULT_CHECKBOX_SIZE = 16;
+fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* state)
+{
+	Id id = ctx.gen_id(label)!;
+
+	Elem *parent = ctx.get_parent()!;
+	Elem *elem = ctx.get_elem(id)!;
+	// add it to the tree
+	ctx.tree.add(id, ctx.active_div)!;
+
+	// FIXME: for now checkboxes and buttons have no members so the element types
+	//        can be the same
+	if (elem.flags.is_new) {
+		elem.type = ETYPE_BUTTON;
+	} else if (elem.type != ETYPE_BUTTON) {
+		return UgError.WRONG_ELEMENT_TYPE?;
+	}
+
+	Rect size = {off.x, off.y, DEFAULT_CHECKBOX_SIZE, DEFAULT_CHECKBOX_SIZE};
+	elem.bounds = ctx.position_element(parent, size, true);
+
+	// if the bounds are null the element is outside the div view,
+	//  no interaction should occur so just return
+	if (elem.bounds.is_null()) return;
+
+	Color col = 0x0000ffffu.to_rgba();
+	elem.events = ctx.get_elem_events(elem);
+	if (state) {
+		col = 0xff0000ffu.to_rgba();
+	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
+		col = 0xff00ffffu.to_rgba();
+	}
+
+	// Draw the button
+	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
 }

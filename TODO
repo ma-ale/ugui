@@ -28,6 +28,8 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] gif support?
 [ ] layout_set_max_rows() and layout_set_max_columns()
 [ ] Maybe SDF sprites??
+[ ] Stylesheets and stylesheet import
+[ ] use SDF to draw anti-aliased rounded rectangles https://zed.dev/blog/videogame
 
 ## Layout
 
