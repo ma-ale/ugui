@@ -52,13 +52,12 @@ fn void! Ctx.layout_next_row(&ctx)
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
-		// what?
 		return UgError.UNEXPECTED_ELEMENT?;
 	}
 
 	parent.div.origin_r = Point{
 		.x = parent.bounds.x,
-		.y = parent.div.origin_c.y,
+		.y = parent.div.children_bounds.bottom_right().y,
 	};
 	parent.div.origin_c = parent.div.origin_r;
 }
@@ -69,12 +68,11 @@ fn void! Ctx.layout_next_column(&ctx)
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
-		// what?
 		return UgError.UNEXPECTED_ELEMENT?;
 	}
 
 	parent.div.origin_c = Point{
-		.x = parent.div.origin_r.x,
+		.x = parent.div.children_bounds.bottom_right().x,
 		.y = parent.bounds.y,
 	};
 	parent.div.origin_r = parent.div.origin_c;
@@ -158,7 +156,7 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		// margin, offsets the placement and grows the occupied area
 		child_placement = child_placement.off(margin.position());
 		child_occupied  = child_occupied.grow(margin.position().add(margin.size()));
-	
+
 		// oh yeah also adjust the rect if i was to grow
 		if (adapt_x) rect.w -= padding.x+padding.w + border.x+border.w + margin.x+margin.w;
 		if (adapt_y) rect.h -= padding.y+padding.h + border.y+border.h + margin.y+margin.h;
@@ -183,7 +181,7 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 		if (child_occupied.bottom_right().x > div.children_bounds.bottom_right().x) {
 			div.children_bounds.w += child_occupied.bottom_right().x - div.children_bounds.bottom_right().x;
 		}
-		// left overflow
+		// bottom overflow
 		if (child_occupied.bottom_right().y > div.children_bounds.bottom_right().y) {
 			div.children_bounds.h += child_occupied.bottom_right().y - div.children_bounds.bottom_right().y;
 		}

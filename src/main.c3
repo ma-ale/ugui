@@ -152,7 +152,6 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) break;
 
-		// main div, fill the whole window
 		ui.div_begin("main", ugui::Rect{.w=-100})!!;
 		{|
 			ui.layout_set_column()!!;
@@ -186,6 +185,17 @@ fn int main(String[] args)
 			ui.layout_next_row()!!;
 			static bool check;
 			ui.checkbox("check1", "", ugui::Point{}, &check)!!;
+
+/*
+			ui.layout_set_column()!!;
+			ui.button_label(" A ")!!;
+			ui.button_label(" B ")!!;
+			ui.layout_next_column()!!;
+			ui.button_label(" C ")!!;
+			ui.button_label(" D ")!!;
+			ui.layout_next_row()!!;
+			ui.button_label(" E ")!!;
+*/
 		|};
 		ui.draw_sprite("sprite1", "tux")!!;
 		ui.div_end()!!;

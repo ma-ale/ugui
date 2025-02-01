@@ -55,7 +55,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 		.h = size.h < 0 ? max(elem.div.pcb.h, (short)-size.h) : size.h,
 	};
 	elem.bounds = ctx.position_element(parent, wanted_size);
-	elem.div.children_bounds = elem.bounds;
+	elem.div.children_bounds = Rect{};
 
 	// update the ctx scissor
 	ctx.div_scissor = elem.bounds;
@@ -89,7 +89,7 @@ fn void! Ctx.div_end(&ctx)
 	// FIXME: this causes all elements inside the div to loose focus since the mouse press happens
 	//        both inside the element and inside the div bounds
 	//elem.events = ctx.get_elem_events(elem);
-	
+
 	Rect cb = elem.div.pcb;
 	// children bounds bottom-right corner
 	Point cbc = {
