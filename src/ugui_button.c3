@@ -112,11 +112,13 @@ fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 	//  no interaction should occur so just return
 	if (elem.bounds.is_null()) return;
 
-	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
-	if (state) {
+	if (elem.events.mouse_hover && elem.events.mouse_release) *state = !(*state);
+
+	Color col;
+	if (*state) {
 		col = 0xff0000ffu.to_rgba();
-	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
+	} else {
 		col = 0xff00ffffu.to_rgba();
 	}
 
