@@ -6,8 +6,16 @@ import mqoi;
 
 const usz SRITES_PER_ATLAS = 64;
 
+enum SpriteType {
+	SPRITE_NORMAL,
+	SPRITE_SDF,
+	SPRITE_MSDF,
+	SPRITE_ANIMATED,
+}
+
 struct Sprite {
 	Id id;
+	SpriteType type;
 	ushort u, v;
 	ushort w, h;
 }
@@ -46,10 +54,11 @@ fn void! SpriteAtlas.free(&this)
 }
 
 // FIXME: this should throw an error when a different pixel format than the atlas' is used
-fn Sprite*! SpriteAtlas.insert(&this, String name, char[] pixels, ushort w, ushort h, ushort stride)
+fn Sprite*! SpriteAtlas.insert(&this, String name, SpriteType type, char[] pixels, ushort w, ushort h, ushort stride)
 {
 	Sprite s;
 	s.id = name.hash();
+	s.type = type;
 	Point uv = this.atlas.place(pixels, w, h, stride)!;
 	s.w = w;
 	s.h = h;
@@ -81,12 +90,12 @@ fn Id Ctx.get_sprite_atlas_id(&ctx, String name)
 	return name.hash();
 }
 
-fn void! Ctx.import_sprite_memory(&ctx, String name, char[] pixels, ushort w, ushort h, ushort stride)
+fn void! Ctx.import_sprite_memory(&ctx, String name, char[] pixels, ushort w, ushort h, ushort stride, SpriteType type = SPRITE_NORMAL)
 {
-	ctx.sprite_atlas.insert(name, pixels, w, h, stride)!;
+	ctx.sprite_atlas.insert(name, type, pixels, w, h, stride)!;
 }
 
-fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path)
+fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType type = SPRITE_NORMAL)
 {
 	mqoi::Desc image_desc;
 	uint w, h;
@@ -118,7 +127,7 @@ fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path)
 		}
 	}
 
-	ctx.sprite_atlas.insert(name, pixels, (ushort)w, (ushort)h, (ushort)w)!;
+	ctx.sprite_atlas.insert(name, type, pixels, (ushort)w, (ushort)h, (ushort)w)!;
 }
 
 fn void! Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
@@ -146,9 +155,18 @@ fn void! Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
-	if (elem.bounds.is_null())  return;
+	if (elem.bounds.is_null()) return;
 
 	Id tex_id = ctx.sprite_atlas.id;
 
 	return ctx.push_sprite(elem.bounds, uv, tex_id)!;
+}
+
+fn void! Ctx.draw_sprite_raw(&ctx, String name, Rect bounds)
+{
+	Sprite* sprite = ctx.sprite_atlas.get(name)!;
+	Rect uv = { sprite.u, sprite.v, sprite.w, sprite.h };
+	//Rect bounds = Rect{ 0, 0, sprite.w, sprite.h }.off(off);
+	Id tex_id = ctx.sprite_atlas.id;
+	return ctx.push_sprite(bounds, uv, tex_id, type: sprite.type)!;
 }

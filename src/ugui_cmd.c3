@@ -23,14 +23,12 @@ struct CmdUpdateAtlas {
 	short width, height, bpp;
 }
 
-// TODO:
-//    1. Add atlases as a data type
-//    2. Each atlas has an id
 struct CmdSprite {
+	Id texture_id;
+	SpriteType type;
 	Rect rect;
 	Rect texture_rect;
 	Color hue;
-	Id texture_id;
 }
 
 // if rect is zero Rect{0} then reset the scissor
@@ -103,10 +101,11 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 }
 
 // TODO: add texture id
-fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = 0xffffffffu.to_rgba())
+fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
 {
 	Cmd cmd = {
 		.type = CMD_SPRITE,
+		.sprite.type = type,
 		.sprite.rect = bounds,
 		.sprite.texture_rect = texture,
 		.sprite.texture_id = texture_id,

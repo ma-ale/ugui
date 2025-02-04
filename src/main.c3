@@ -44,6 +44,35 @@ fn TimeStats Times.get_stats(&times)
 }
 
 
+const ZString MSDF_FS = `
+#version 330
+
+in vec2 fragTexCoord;
+out vec4 fragColor;
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+
+const float pxRange = 4.0f;
+
+float screenPxRange() {
+    vec2 unitRange = vec2(pxRange)/vec2(textureSize(texture0, 0));
+    vec2 screenTexSize = vec2(1.0)/fwidth(fragTexCoord);
+    return max(0.5*dot(unitRange, screenTexSize), 1.0);
+}
+
+float median(float r, float g, float b) {
+	return max(min(r, g), min(max(r, g), b));
+}
+
+void main() {
+	vec3 msd = texture(texture0, fragTexCoord).rgb;
+	float sd = median(msd.r, msd.g, msd.b);
+	float screenPxDistance = screenPxRange()*(sd - 0.5);
+	float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+	fragColor = colDiffuse * opacity;
+}
+`;
+
 const ZString FONT_FS = `
 #version 330
 
@@ -85,6 +114,7 @@ fn int main(String[] args)
 	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
 	ui.sprite_atlas_create("icons", AtlasType.ATLAS_RGBA32, 512, 512)!!;
 	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
+	ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
 
 	short width = 800;
 	short height = 450;
@@ -103,10 +133,13 @@ fn int main(String[] args)
 	// font stuff
 	rl::Shader font_shader = rl::loadShaderFromMemory(null, FONT_FS);
 	rl::Image font_atlas;
-	rl::Image sprite_atlas;
 	rl::Texture2D font_texture;
-	rl::Texture2D sprite_texture;
 	ugui::Id font_id = ui.get_font_id("font1");
+
+	// sprite stuff
+	rl::Shader msdf_shader = rl::loadShaderFromMemory(null, MSDF_FS);
+	rl::Image sprite_atlas;
+	rl::Texture2D sprite_texture;
 	ugui::Id sprite_id = ui.get_sprite_atlas_id("icons");
 
 	// Main loop
@@ -184,7 +217,7 @@ fn int main(String[] args)
 
 			ui.layout_next_row()!!;
 			static bool check;
-			ui.checkbox("check1", "", ugui::Point{}, &check)!!;
+			ui.checkbox("check1", "", ugui::Point{}, &check, "tick")!!;
 
 /*
 			ui.layout_set_column()!!;
@@ -288,11 +321,16 @@ fn int main(String[] args)
 					rl::drawTextureRec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
 					rl::endShaderMode();
 				} else if (cmd.sprite.texture_id == sprite_id) {
-					rl::Vector2 position = {
-						.x = cmd.sprite.rect.x,
-						.y = cmd.sprite.rect.y,
-					};
-					rl::drawTextureRec(sprite_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
+					// FIXME: THIS CODE IS SHIT, REAL DOO DOO
+					{|
+					if (cmd.sprite.type == SpriteType.SPRITE_MSDF) {
+						rl::beginShaderMode(msdf_shader);
+						defer rl::endShaderMode();
+						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), rl::Vector2{0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
+					} else {
+						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), rl::Vector2{0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
+					}
+					|};
 				} else {
 					io::printfn("unknown texture id: %d", cmd.sprite.texture_id);
 				}

@@ -27,10 +27,10 @@ to maintain focus until mouse release (fix scroll bars)
     [ ] .jpg
 [ ] gif support?
 [ ] layout_set_max_rows() and layout_set_max_columns()
-[ ] Maybe SDF sprites??
+[x] Maybe SDF sprites??
 [ ] Stylesheets and stylesheet import
 [ ] use SDF to draw anti-aliased rounded rectangles https://zed.dev/blog/videogame
-[ ] Subdivide modules into ugui::ug for exported functions and ugui::core for 
+[ ] Subdivide modules into ugui::ug for exported functions and ugui::core for
     internal use functions (used to create widgets)
 
 ## Layout
@@ -77,4 +77,4 @@ _ border radius
 [ ] Text Input box
 [ ] Icon Buttons
 [ ] Switch
-[ ] Checkbox
+[x] Checkbox

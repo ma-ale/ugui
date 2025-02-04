@@ -88,7 +88,7 @@ fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.m
 
 // FIXME: this should be inside the style
 const ushort DEFAULT_CHECKBOX_SIZE = 16;
-fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* state)
+fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* state, String tick_sprite = {})
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -116,12 +116,19 @@ fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 	if (elem.events.mouse_hover && elem.events.mouse_release) *state = !(*state);
 
 	Color col;
-	if (*state) {
-		col = 0xff0000ffu.to_rgba();
+	if (tick_sprite != String{}) {
+		col = ctx.style.bgcolor;
+		ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
+		if (*state) {
+			ctx.draw_sprite_raw(tick_sprite, elem.bounds)!;
+		}
 	} else {
-		col = 0xff00ffffu.to_rgba();
+		if (*state) {
+			col = 0xff0000ffu.to_rgba();
+		} else {
+			col = 0xff00ffffu.to_rgba();
+		}
+		// Draw the button
+		ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
 	}
-
-	// Draw the button
-	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
 }
