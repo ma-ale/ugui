@@ -32,6 +32,7 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] use SDF to draw anti-aliased rounded rectangles https://zed.dev/blog/videogame
 [ ] Subdivide modules into ugui::ug for exported functions and ugui::core for
     internal use functions (used to create widgets)
+[ ] The render loop RAPES the gpu, valve pls fix
 
 ## Layout
 

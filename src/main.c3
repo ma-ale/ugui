@@ -95,12 +95,30 @@ void main()
 }
 `;
 
+// SDF based rect rendering
+const ZString RECT_FS = `
+#version 330
+
+in vec2 fragTexCoord;
+in vec4 fragColor;
+out vec4 finalColor;
+
+uniform float radius;
+uniform float border;
+uniform vec2  size;
+
+void main()
+{
+
+}
+`;
+
 macro rl::Color ugui::Color.conv(color)
 {
 	return rl::Color{.r = color.r, .g = color.g, .b = color.b, .a = color.a};
 }
 
-macro rl::Rectangle ugui::Rect.conv(rect)
+macro rl::Rectangle Rect.conv(rect)
 {
 	return rl::Rectangle{.x = rect.x, .y = rect.y, .width = rect.w, .height = rect.h};
 }
@@ -185,29 +203,29 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) break;
 
-		ui.div_begin("main", ugui::Rect{.w=-100})!!;
+		ui.div_begin("main", Rect{.w=-100})!!;
 		{|
 			ui.layout_set_column()!!;
-			if (ui.button("button0", ugui::Rect{0,0,30,30}, toggle)!!.mouse_press) {
+			if (ui.button("button0", Rect{0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button1", ugui::Rect{0,0,30,30})!!.mouse_press) {
+			if (ui.button("button1", Rect{0,0,30,30})!!.mouse_press) {
 				io::printn("press button1");
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button2", ugui::Rect{0,0,30,30})!!.mouse_release) {
+			if (ui.button("button2", Rect{0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
 
 			ui.layout_set_row()!!;
 			ui.layout_next_row()!!;
 			static float rf, gf, bf, af;
-			ui.slider_ver("slider_r", ugui::Rect{0,0,30,100}, &rf)!!;
-			ui.slider_ver("slider_g", ugui::Rect{0,0,30,100}, &gf)!!;
-			ui.slider_ver("slider_b", ugui::Rect{0,0,30,100}, &bf)!!;
-			ui.slider_ver("slider_a", ugui::Rect{0,0,30,100}, &af)!!;
+			ui.slider_ver("slider_r", Rect{0,0,30,100}, &rf)!!;
+			ui.slider_ver("slider_g", Rect{0,0,30,100}, &gf)!!;
+			ui.slider_ver("slider_b", Rect{0,0,30,100}, &bf)!!;
+			ui.slider_ver("slider_a", Rect{0,0,30,100}, &af)!!;
 
 			ui.layout_next_column()!!;
 			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
@@ -217,7 +235,7 @@ fn int main(String[] args)
 
 			ui.layout_next_row()!!;
 			static bool check;
-			ui.checkbox("check1", "", ugui::Point{}, &check, "tick")!!;
+			ui.checkbox("check1", "", Point{}, &check, "tick")!!;
 
 /*
 			ui.layout_set_column()!!;
@@ -237,24 +255,24 @@ fn int main(String[] args)
 		{|
 			ui.layout_set_column()!!;
 			static float slider2 = 0.5;
-			if (ui.slider_ver("slider", ugui::Rect{0,0,30,100}, &slider2)!!.update) {
+			if (ui.slider_ver("slider", Rect{0,0,30,100}, &slider2)!!.update) {
 				io::printfn("other slider: %f", slider2);
 			}
-			ui.button("button0", ugui::Rect{0,0,50,50})!!;
-			ui.button("button1", ugui::Rect{0,0,50,50})!!;
-			ui.button("button2", ugui::Rect{0,0,50,50})!!;
-			ui.button("button3", ugui::Rect{0,0,50,50})!!;
+			ui.button("button0", Rect{0,0,50,50})!!;
+			ui.button("button1", Rect{0,0,50,50})!!;
+			ui.button("button2", Rect{0,0,50,50})!!;
+			ui.button("button3", Rect{0,0,50,50})!!;
 			if (toggle) {
-				ui.button("button4", ugui::Rect{0,0,50,50})!!;
-				ui.button("button5", ugui::Rect{0,0,50,50})!!;
-				ui.button("button6", ugui::Rect{0,0,50,50})!!;
-				ui.button("button7", ugui::Rect{0,0,50,50})!!;
+				ui.button("button4", Rect{0,0,50,50})!!;
+				ui.button("button5", Rect{0,0,50,50})!!;
+				ui.button("button6", Rect{0,0,50,50})!!;
+				ui.button("button7", Rect{0,0,50,50})!!;
 			}
 			ui.layout_next_column()!!;
 			ui.layout_set_row()!!;
 			static float f1, f2;
-			ui.slider_hor("hs1", ugui::Rect{0,0,100,30}, &f1)!!;
-			ui.slider_hor("hs2", ugui::Rect{0,0,100,30}, &f2)!!;
+			ui.slider_hor("hs1", Rect{0,0,100,30}, &f1)!!;
+			ui.slider_hor("hs2", Rect{0,0,100,30}, &f2)!!;
 		|};
 		ui.div_end()!!;
 
@@ -263,7 +281,7 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", ugui::Rect{0, ui.height-100, -300, 100})!!;
+		ui.div_begin("fps", Rect{0, ui.height-100, -300, 100})!!;
 		{|
 			ui.layout_set_column()!!;
 			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
@@ -282,13 +300,13 @@ fn int main(String[] args)
 
 		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
 			switch (cmd.type) {
-			case ugui::CmdType.CMD_RECT:
+			case CmdType.CMD_RECT:
 				Rect r = cmd.rect.rect;
 				float rad = cmd.rect.radius;
 				// for some weird-ass reason the straight forward inverse formula does not work
 				float roundness = r.w > r.h ? (2.1f*rad)/(float)r.h : (2.1f*rad)/(float)r.w;
 				rl::drawRectangleRounded(cmd.rect.rect.conv(), roundness, 0, cmd.rect.color.conv());
-			case ugui::CmdType.CMD_UPDATE_ATLAS:
+			case CmdType.CMD_UPDATE_ATLAS:
 				if (cmd.update_atlas.id == font_id) {
 					//rl::unload_image(font_atlas);
 					font_atlas.data = cmd.update_atlas.raw_buffer;
@@ -311,7 +329,7 @@ fn int main(String[] args)
 					}
 					sprite_texture = rl::loadTextureFromImage(sprite_atlas);
 				}
-			case ugui::CmdType.CMD_SPRITE:
+			case CmdType.CMD_SPRITE:
 				if (cmd.sprite.texture_id == font_id) {
 					rl::Vector2 position = {
 						.x = cmd.sprite.rect.x,
@@ -334,7 +352,7 @@ fn int main(String[] args)
 				} else {
 					io::printfn("unknown texture id: %d", cmd.sprite.texture_id);
 				}
-			case ugui::CmdType.CMD_SCISSOR:
+			case CmdType.CMD_SCISSOR:
 				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {
 					rl::endScissorMode();
 				} else {
@@ -354,40 +372,3 @@ fn int main(String[] args)
 
 	return 0;
 }
-
-/*
-fn void! test_vtree() @test
-{
-	vtree::VTree(<String>) vt;
-	vt.init(10)!!;
-	defer vt.free();
-
-	assert(vt.size() == 10, "Size is incorrect");
-
-	isz ref = vt.add("Ciao Mamma", 0)!!;
-	String s = vt.get(ref)!!;
-	assert(s == "Ciao Mamma", "String is incorrect");
-	isz par = vt.parentof(0)!!;
-	assert(ref == par, "Not Root");
-
-	vt.print();
-}
-
-def StrCache = cache::Cache(<int, String, 256>);
-fn void! test_cache() @test
-{
-	StrCache cc;
-	cc.init()!!;
-	defer cc.free();
-
-	String*! r = cc.search(1);
-	if (catch ex = r) {
-		if (ex != SearchResult.MISSING) {
-			return ex?;
-		}
-	}
-
-	r = cc.get_or_insert(&&"Ciao Mamma", 1)!;
-	assert(*r!! == "Ciao Mamma", "incorrect string");
-}
-*/
