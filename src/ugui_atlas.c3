@@ -9,7 +9,7 @@ fault UgAtlasError {
 
 enum AtlasType {
 	ATLAS_GRAYSCALE,
-	ATLAS_RGBA32,
+	ATLAS_R8G8B8A8,
 }
 
 // black and white atlas
@@ -29,7 +29,7 @@ macro usz AtlasType.bpp(type)
 {
 	switch (type) {
 	case ATLAS_GRAYSCALE: return 1;
-	case ATLAS_RGBA32: return 4;
+	case ATLAS_R8G8B8A8: return 4;
 	}
 }
 

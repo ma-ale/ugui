@@ -36,13 +36,13 @@ struct ElemSprite {
 // name: some examples are "icons" or "images"
 fn void! SpriteAtlas.init(&this, String name, AtlasType type, ushort width, ushort height)
 {
-	// FIXME: for now only RGBA32 format is supported
-	if (type != ATLAS_RGBA32) {
+	// FIXME: for now only R8G8B8A8 format is supported
+	if (type != ATLAS_R8G8B8A8) {
 		return UgAtlasError.INVALID_TYPE?;
 	}
 
 	this.id = name.hash();
-	this.atlas.new(this.id, AtlasType.ATLAS_RGBA32, width, height)!;
+	this.atlas.new(this.id, AtlasType.ATLAS_R8G8B8A8, width, height)!;
 	this.sprites.new_init(capacity: SRITES_PER_ATLAS);
 	this.should_update = false;
 }
@@ -54,6 +54,7 @@ fn void! SpriteAtlas.free(&this)
 }
 
 // FIXME: this should throw an error when a different pixel format than the atlas' is used
+//        or convert from the source's pixel format to the atlas'
 fn Sprite*! SpriteAtlas.insert(&this, String name, SpriteType type, char[] pixels, ushort w, ushort h, ushort stride)
 {
 	Sprite s;

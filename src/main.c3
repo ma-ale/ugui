@@ -130,7 +130,7 @@ fn int main(String[] args)
 	defer ui.free();
 
 	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
-	ui.sprite_atlas_create("icons", AtlasType.ATLAS_RGBA32, 512, 512)!!;
+	ui.sprite_atlas_create("icons", AtlasType.ATLAS_R8G8B8A8, 512, 512)!!;
 	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
 	ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
 
