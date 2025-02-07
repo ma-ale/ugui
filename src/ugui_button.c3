@@ -132,3 +132,45 @@ fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 		ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
 	}
 }
+
+// FIXME: this should be inside the style
+const short DEFAULT_SWITCH_SIZE = 16;
+fn void! Ctx.toggle(&ctx, String label, String description, Point off, bool* state)
+{
+	Id id = ctx.gen_id(label)!;
+
+	Elem *parent = ctx.get_parent()!;
+	Elem *elem = ctx.get_elem(id)!;
+	// add it to the tree
+	ctx.tree.add(id, ctx.active_div)!;
+
+	// FIXME: for now switches and buttons have no members so the element types
+	//        can be the same
+	if (elem.flags.is_new) {
+		elem.type = ETYPE_BUTTON;
+	} else if (elem.type != ETYPE_BUTTON) {
+		return UgError.WRONG_ELEMENT_TYPE?;
+	}
+
+	Rect size = {off.x, off.y, DEFAULT_SWITCH_SIZE*2, DEFAULT_SWITCH_SIZE};
+	elem.bounds = ctx.position_element(parent, size, true);
+
+	// if the bounds are null the element is outside the div view,
+	//  no interaction should occur so just return
+	if (elem.bounds.is_null()) return;
+
+	elem.events = ctx.get_elem_events(elem);
+	if (elem.events.mouse_hover && elem.events.mouse_release) *state = !(*state);
+
+	Color col;
+	if (*state) {
+		col = 0xff0000ffu.to_rgba();
+	} else {
+		col = 0xff00ffffu.to_rgba();
+	}
+	// Draw the button
+	// FIXME: THIS IS SHIT
+	ctx.push_rect(elem.bounds, ctx.style.bgcolor, do_border: true, do_radius: true)!;
+	Rect t = elem.bounds.add(Rect{*state ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
+	ctx.push_rect(t, col, do_border: false, do_radius: true)!;
+}

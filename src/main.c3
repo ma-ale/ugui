@@ -236,6 +236,7 @@ fn int main(String[] args)
 			ui.layout_next_row()!!;
 			static bool check;
 			ui.checkbox("check1", "", Point{}, &check, "tick")!!;
+			ui.toggle("toggle1", "", Point{}, &toggle)!!;
 
 /*
 			ui.layout_set_column()!!;
