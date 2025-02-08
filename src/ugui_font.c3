@@ -39,7 +39,7 @@ struct Glyph {
 	short adv, ox, oy;
 }
 
-const uint FONT_CACHED = 128;
+const uint FONT_CACHED = 255;
 def GlyphTable = map::HashMap(<Codepoint, Glyph>) @private;
 
 fault UgFontError {
