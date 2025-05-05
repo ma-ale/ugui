@@ -28,7 +28,7 @@ struct ElemDiv {
 // if the width or height are negative the width or height will be calculated based on the children size
 // sort similar to a flexbox, and the minimum size is set by the negative of the width or height
 // FIXME: there is a bug if the size.w or size.h == -0
-fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, bool scroll_y = false)
+fn void? Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, bool scroll_y = false)
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -42,7 +42,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_DIV;
 	} else if (elem.type != ETYPE_DIV) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
@@ -55,16 +55,16 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 		.h = size.h < 0 ? max(elem.div.pcb.h, (short)-size.h) : size.h,
 	};
 	elem.bounds = ctx.position_element(parent, wanted_size);
-	elem.div.children_bounds = Rect{};
+	elem.div.children_bounds = {};
 
 	// update the ctx scissor
 	ctx.div_scissor = elem.bounds;
 	ctx.push_scissor(elem.bounds)!;
 
 	// 4. Fill the div fields
-	elem.div.origin_c = Point{
+	elem.div.origin_c = {
 		.x = elem.bounds.x,
-		.y = elem.bounds.y,
+		.y = elem.bounds.y
 	};
 	elem.div.origin_r = elem.div.origin_c;
 	elem.div.layout   = parent.div.layout;
@@ -79,7 +79,7 @@ fn void! Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	// TODO: check resizeable
 }
 
-fn void! Ctx.div_end(&ctx)
+fn void? Ctx.div_end(&ctx)
 {
 	// swap the children bounds
 	Elem* parent = ctx.get_parent()!;

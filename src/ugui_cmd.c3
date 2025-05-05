@@ -68,7 +68,7 @@ macro Ctx.push_cmd(&ctx, Cmd *cmd)
 
 // FIXME: is this really the best solution?
 // "rect" is the bounding box of the element, which includes the border and the padding (so not just the content)
-fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, bool do_padding = false, bool do_radius = false)
+fn void? Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, bool do_padding = false, bool do_radius = false)
 {
 	Rect border = ctx.style.border;
 	Rect padding = ctx.style.padding;
@@ -101,7 +101,7 @@ fn void! Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 }
 
 // TODO: add texture id
-fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
+fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
 {
 	Cmd cmd = {
 		.type = CMD_SPRITE,
@@ -114,7 +114,7 @@ fn void! Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color h
 	ctx.push_cmd(&cmd)!;
 }
 
-fn void! Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu.to_rgba())
+fn void? Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu.to_rgba())
 {
 	if (text.len == 0) {
 		return;
@@ -163,10 +163,10 @@ fn void! Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu
 	}
 
 	// FIXME: we never get here if an error was thrown before
-	ctx.push_scissor(Rect{})!;
+	ctx.push_scissor({})!;
 }
 
-fn void! Ctx.push_update_atlas(&ctx, Atlas* atlas)
+fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
 {
 	Cmd up = {
 		.type = CMD_UPDATE_ATLAS,
@@ -181,7 +181,7 @@ fn void! Ctx.push_update_atlas(&ctx, Atlas* atlas)
 	ctx.push_cmd(&up)!;
 }
 
-fn void! Ctx.push_scissor(&ctx, Rect rect)
+fn void? Ctx.push_scissor(&ctx, Rect rect)
 {
 	Cmd sc = {
 		.type = CMD_SCISSOR,

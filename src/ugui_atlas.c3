@@ -2,10 +2,7 @@ module ugui;
 
 import std::io;
 
-fault UgAtlasError {
-	CANNOT_PLACE,
-	INVALID_TYPE,
-}
+faultdef CANNOT_PLACE, INVALID_TYPE;
 
 enum AtlasType {
 	ATLAS_GRAYSCALE,
@@ -33,7 +30,39 @@ macro usz AtlasType.bpp(type)
 	}
 }
 
-fn void! Atlas.new(&atlas, Id id, AtlasType type, ushort width, ushort height)
+macro typeid AtlasType.underlying(type)
+{
+	switch (type) {
+	case ATLAS_GRAYSCALE: return char;
+	case ATLAS_R8G8B8A8: return uint;
+	}
+}
+
+/*
+// FIXME: in and out types are not always known at compile time
+macro @pixel_convert(p, AtlasType $in, AtlasType $out)
+{
+	$if $in == $out:
+		return p;
+	$else
+		$switch
+		$case $in == ATLAS_R8G8B8A8 && $out == ATLAS_GRAYSCALE:
+			var r = ((p >> 0)  & 0xff);
+			var g = ((p >> 8)  & 0xff);
+			var b = ((p >> 16) & 0xff);
+			var a = ((p >> 24) & 0xff);
+			if (a == 0)	return (char)0;
+			return (ATLAS_GRAYSCALE.underlying())(((float)r+g+b) / 3.0f);
+		$case $in == ATLAS_GRAYSCALE && $out == ATLAS_R8G8B8A8:
+			var x = (char)(p/3.0);
+			return (ATLAS_R8G8B8A8.underlying())(x|(x<<8)|(x<<16)|(255<<24));
+		$default: $error "Unimplemented pixel format conversion";
+		$endswitch
+	$endif
+}
+*/
+
+fn void? Atlas.new(&atlas, Id id, AtlasType type, ushort width, ushort height)
 {
 	atlas.id = id;
 	atlas.type = type;
@@ -66,7 +95,7 @@ fn void Atlas.free(&atlas)
 // place a rect inside the atlas
 // uses a row first algorithm
 // TODO: use a skyline algorithm https://jvernay.fr/en/blog/skyline-2d-packer/implementation/
-fn Point! Atlas.place(&atlas, char[] pixels, ushort w, ushort h, ushort stride)
+fn Point? Atlas.place(&atlas, char[] pixels, ushort w, ushort h, ushort stride)
 {
 	Point p;
 
@@ -79,7 +108,7 @@ fn Point! Atlas.place(&atlas, char[] pixels, ushort w, ushort h, ushort stride)
 		if (atlas.row.x + w <= atlas.width && atlas.row.y + h <= atlas.height) {
 			p = atlas.row;
 		} else {
-			return UgAtlasError.CANNOT_PLACE?;
+			return CANNOT_PLACE?;
 		}
 	}
 

@@ -9,7 +9,7 @@ import std::core::string;
 
 
 // element ids are just long ints
-def Id = usz;
+alias Id = usz;
 
 enum ElemType {
 	ETYPE_NONE,
@@ -54,20 +54,15 @@ struct Elem {
 
 
 // relationships between elements are stored in a tree, it stores just the ids
-def IdTree = vtree::VTree(<Id>) @private;
+alias IdTree = vtree::VTree{Id};
 
 // elements themselves are kept in a cache
 const uint MAX_ELEMENTS = 256;
-def ElemCache = cache::Cache(<Id, Elem, MAX_ELEMENTS>) @private;
+alias ElemCache = cache::Cache{Id, Elem, MAX_ELEMENTS};
 
-def CmdQueue = fifo::Fifo(<Cmd>);
+alias CmdQueue = fifo::Fifo{Cmd};
 
-fault UgError {
-	INVALID_SIZE,
-	EVENT_UNSUPPORTED,
-	UNEXPECTED_ELEMENT,
-	WRONG_ELEMENT_TYPE,
-}
+faultdef INVALID_SIZE, EVENT_UNSUPPORTED, UNEXPECTED_ELEMENT, WRONG_ELEMENT_TYPE;
 
 const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
 
@@ -128,7 +123,7 @@ struct Ctx {
 }
 
 // return a pointer to the parent of the current active div
-fn Elem*! Ctx.get_parent(&ctx)
+fn Elem*? Ctx.get_parent(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	return ctx.cache.search(parent_id);
@@ -140,7 +135,7 @@ const uint GOLDEN_RATIO = 0x9E3779B9;
 
 // generate an id combining the hashes of the parent id and the label
 // with the Cantor pairing function
-macro Id! Ctx.gen_id(&ctx, String label)
+macro Id? Ctx.gen_id(&ctx, String label)
 {
 	Id id1 = ctx.tree.get(ctx.active_div)!;
 	Id id2 = label.hash();
@@ -153,7 +148,7 @@ macro Id! Ctx.gen_id(&ctx, String label)
 
 // get or push an element from the cache, return a pointer to it
 // resets all flags except is_new which is set accordingly
-fn Elem*! Ctx.get_elem(&ctx, Id id)
+fn Elem*? Ctx.get_elem(&ctx, Id id)
 {
 	Elem empty_elem;
 	bool is_new;
@@ -170,10 +165,10 @@ fn Elem*! Ctx.get_elem(&ctx, Id id)
 // THIS HAS TO BE A MACRO SINCE IT RETURNS A POINTER TO A TEMPORARY VALUE
 macro Elem* Ctx.find_elem(&ctx, Id id)
 {
-	Elem*! elem;
+	Elem*? elem;
 	elem = ctx.cache.search(id);
 	if (catch elem) {
-		return &&Elem{};
+		return &&(Elem){};
 	}
 	return elem;
 }
@@ -194,7 +189,7 @@ macro Ctx.get_elem_by_tree_idx(&ctx, isz idx) @private
 	return ctx.cache.search(id);
 }
 
-fn void! Ctx.init(&ctx)
+fn void? Ctx.init(&ctx)
 {
 	ctx.tree.init(MAX_ELEMENTS)!;
 	defer catch { (void)ctx.tree.free(); }
@@ -208,9 +203,9 @@ fn void! Ctx.init(&ctx)
 	ctx.active_div = 0;
 
 	// TODO: add style config
-	ctx.style.margin  = Rect{2, 2, 2, 2};
-	ctx.style.border  = Rect{2, 2, 2, 2};
-	ctx.style.padding = Rect{1, 1, 1, 1};
+	ctx.style.margin  = {2, 2, 2, 2};
+	ctx.style.border  = {2, 2, 2, 2};
+	ctx.style.padding = {1, 1, 1, 1};
 	ctx.style.radius  = 5;
 	ctx.style.bgcolor = 0x282828ffu.to_rgba();
 	ctx.style.fgcolor = 0xfbf1c7ffu.to_rgba();
@@ -226,7 +221,7 @@ fn void Ctx.free(&ctx)
 	(void)ctx.sprite_atlas.free();
 }
 
-fn void! Ctx.frame_begin(&ctx)
+fn void? Ctx.frame_begin(&ctx)
 {
 
 	// 2. Get the root element from the cache and update it
@@ -268,7 +263,7 @@ fn void! Ctx.frame_begin(&ctx)
 	// TODO: add a background color taken from a theme or config
 }
 
-fn void! Ctx.frame_end(&ctx)
+fn void? Ctx.frame_end(&ctx)
 {
 	Elem* root = ctx.get_elem_by_tree_idx(0)!;
 	root.div.layout = LAYOUT_ROW;

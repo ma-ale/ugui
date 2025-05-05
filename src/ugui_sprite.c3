@@ -1,5 +1,6 @@
 module ugui;
 
+import std::core::mem::allocator;
 import std::collections::map;
 import std::io;
 import mqoi;
@@ -20,7 +21,7 @@ struct Sprite {
 	ushort w, h;
 }
 
-def SpriteMap = map::HashMap(<Id, Sprite>);
+alias SpriteMap = map::HashMap{Id, Sprite};
 
 struct SpriteAtlas {
 	Id id;
@@ -34,20 +35,20 @@ struct ElemSprite {
 }
 
 // name: some examples are "icons" or "images"
-fn void! SpriteAtlas.init(&this, String name, AtlasType type, ushort width, ushort height)
+fn void? SpriteAtlas.init(&this, String name, AtlasType type, ushort width, ushort height)
 {
 	// FIXME: for now only R8G8B8A8 format is supported
 	if (type != ATLAS_R8G8B8A8) {
-		return UgAtlasError.INVALID_TYPE?;
+		return INVALID_TYPE?;
 	}
 
 	this.id = name.hash();
 	this.atlas.new(this.id, AtlasType.ATLAS_R8G8B8A8, width, height)!;
-	this.sprites.new_init(capacity: SRITES_PER_ATLAS);
+	this.sprites.init(allocator::heap(), capacity: SRITES_PER_ATLAS);
 	this.should_update = false;
 }
 
-fn void! SpriteAtlas.free(&this)
+fn void? SpriteAtlas.free(&this)
 {
 	this.atlas.free();
 	this.sprites.free();
@@ -55,7 +56,7 @@ fn void! SpriteAtlas.free(&this)
 
 // FIXME: this should throw an error when a different pixel format than the atlas' is used
 //        or convert from the source's pixel format to the atlas'
-fn Sprite*! SpriteAtlas.insert(&this, String name, SpriteType type, char[] pixels, ushort w, ushort h, ushort stride)
+fn Sprite*? SpriteAtlas.insert(&this, String name, SpriteType type, char[] pixels, ushort w, ushort h, ushort stride)
 {
 	Sprite s;
 	s.id = name.hash();
@@ -70,18 +71,21 @@ fn Sprite*! SpriteAtlas.insert(&this, String name, SpriteType type, char[] pixel
 	return this.sprites.get_ref(s.id);
 }
 
-fn Sprite*! SpriteAtlas.get(&this, String name)
+fn Sprite*? SpriteAtlas.get(&this, String name)
 {
 	Id id = name.hash();
 	return this.sprites.get_ref(id);
 }
 
-fn Sprite*! SpriteAtlas.get_by_id(&this, Id id)
+fn Sprite*? SpriteAtlas.get_by_id(&this, Id id)
 {
 	return this.sprites.get_ref(id);
 }
 
-fn void! Ctx.sprite_atlas_create(&ctx, String name, AtlasType type, ushort w, ushort h)
+macro Rect Sprite.rect(s) => {0,0,s.w,s.h};
+macro Rect Sprite.uv(s) => {s.u,s.v,s.w,s.h};
+
+fn void? Ctx.sprite_atlas_create(&ctx, String name, AtlasType type, ushort w, ushort h)
 {
 	ctx.sprite_atlas.init(name, type, w, h)!;
 }
@@ -91,12 +95,12 @@ fn Id Ctx.get_sprite_atlas_id(&ctx, String name)
 	return name.hash();
 }
 
-fn void! Ctx.import_sprite_memory(&ctx, String name, char[] pixels, ushort w, ushort h, ushort stride, SpriteType type = SPRITE_NORMAL)
+fn void? Ctx.import_sprite_memory(&ctx, String name, char[] pixels, ushort w, ushort h, ushort stride, SpriteType type = SPRITE_NORMAL)
 {
 	ctx.sprite_atlas.insert(name, type, pixels, w, h, stride)!;
 }
 
-fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType type = SPRITE_NORMAL)
+fn void? Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType type = SPRITE_NORMAL)
 {
 	mqoi::Desc image_desc;
 	uint w, h;
@@ -108,7 +112,7 @@ fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType t
 		mqoi::desc_push(&image_desc, file.read_byte()!);
 	}
 	if (mqoi::desc_verify(&image_desc, &w, &h) != 0) {
-		return IoError.FILE_NOT_VALID?;
+		return io::FILE_NOT_VALID?;
 	}
 
 	mqoi::Dec dec;
@@ -123,7 +127,7 @@ fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType t
 		mqoi::dec_push(&dec, file.read_byte()!);
 
 		while ((px = mqoi::dec_pop(&dec)) != null) {
-			pixels[idx..idx+3] = px.value;
+			pixels[idx..idx+3] = px.value[..];
 			idx += 4;
 		}
 	}
@@ -131,7 +135,7 @@ fn void! Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType t
 	ctx.sprite_atlas.insert(name, type, pixels, (ushort)w, (ushort)h, (ushort)w)!;
 }
 
-fn void! Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
+fn void? Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -143,7 +147,7 @@ fn void! Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_SPRITE;
 	} else if (elem.type != ETYPE_SPRITE) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
@@ -163,11 +167,9 @@ fn void! Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
 	return ctx.push_sprite(elem.bounds, uv, tex_id)!;
 }
 
-fn void! Ctx.draw_sprite_raw(&ctx, String name, Rect bounds)
+fn void? Ctx.draw_sprite_raw(&ctx, String name, Rect bounds)
 {
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
-	Rect uv = { sprite.u, sprite.v, sprite.w, sprite.h };
-	//Rect bounds = Rect{ 0, 0, sprite.w, sprite.h }.off(off);
 	Id tex_id = ctx.sprite_atlas.id;
-	return ctx.push_sprite(bounds, uv, tex_id, type: sprite.type)!;
+	return ctx.push_sprite(bounds, sprite.uv(), tex_id, type: sprite.type)!;
 }

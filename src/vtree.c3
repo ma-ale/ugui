@@ -1,4 +1,4 @@
-module vtree(<ElemType>);
+module vtree{ElemType};
 
 import std::core::mem;
 import std::io;
@@ -9,13 +9,7 @@ struct VTree {
 	isz[] refs, ordered_refs;
 }
 
-fault VTreeError {
-	CANNOT_SHRINK,
-	INVALID_REFERENCE,
-	TREE_FULL,
-	REFERENCE_NOT_PRESENT,
-	INVALID_ARGUMENT,
-}
+faultdef CANNOT_SHRINK, INVALID_REFERENCE, TREE_FULL, REFERENCE_NOT_PRESENT, INVALID_ARGUMENT;
 
 macro VTree.ref_is_valid(&tree, isz ref) { return (ref >= 0 && ref < tree.refs.len); }
 macro VTree.ref_is_present(&tree, isz ref) { return tree.refs[ref] >= 0; }
@@ -27,11 +21,11 @@ macro @zero()
 	$if $assignable(0, ElemType):
 		return 0;
 	$else
-		return ElemType{};
+		return {};
 	$endif
 }
 
-fn void! VTree.init(&tree, usz size)
+fn void? VTree.init(&tree, usz size)
 {
 	tree.vector = mem::new_array(ElemType, size);
 	defer catch { (void)mem::free(tree.vector); }
@@ -74,7 +68,7 @@ fn void VTree.pack(&tree)
 			tree.vector[free_spot] = tree.vector[i];
 			tree.refs[free_spot]   = tree.refs[i];
 
-			tree.vector[i] = @zero();
+			tree.vector[i] = {};
 			tree.refs[i]   = -1;
 
 			// and move all references
@@ -90,18 +84,18 @@ fn void VTree.pack(&tree)
 	}
 }
 
-fn void! VTree.resize(&tree, usz newsize)
+fn void? VTree.resize(&tree, usz newsize)
 {
 	// return error when shrinking with too many elements
 	if (newsize < tree.elements) {
-		return VTreeError.CANNOT_SHRINK?;
+		return CANNOT_SHRINK?;
 	}
 
 	// pack the vector when shrinking to avoid data loss
 	if ((int)newsize < tree.size()) {
 		// FIXME: packing destroys all references to elements of vec
 		//        so shrinking may cause dangling pointers
-		return VTreeError.CANNOT_SHRINK?;
+		return CANNOT_SHRINK?;
 	}
 
 	usz old_size = tree.size();
@@ -122,22 +116,22 @@ fn void! VTree.resize(&tree, usz newsize)
 }
 
 // add an element to the tree, return it's ref
-fn isz! VTree.add(&tree, ElemType elem, isz parent)
+fn isz? VTree.add(&tree, ElemType elem, isz parent)
 {
 	// invalid parent
 	if (!tree.ref_is_valid(parent)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	// no space left
 	if (tree.elements >= tree.size()) {
-		return VTreeError.TREE_FULL?;
+		return TREE_FULL?;
 	}
 
 	// check if the parent exists
 	// if there are no elements in the tree the first add will set the root
 	if (!tree.ref_is_present(parent) && tree.elements != 0) {
-		return VTreeError.REFERENCE_NOT_PRESENT?;
+		return REFERENCE_NOT_PRESENT?;
 	}
 
 	// get the first free spot
@@ -149,7 +143,7 @@ fn isz! VTree.add(&tree, ElemType elem, isz parent)
 		}
 	}
 	if (free_spot < 0) {
-		return VTreeError.TREE_FULL?;
+		return TREE_FULL?;
 	}
 
 	// finally add the element
@@ -162,10 +156,10 @@ fn isz! VTree.add(&tree, ElemType elem, isz parent)
 
 // prune the tree starting from the ref
 // returns the number of pruned elements
-fn usz! VTree.prune(&tree, isz ref)
+fn usz? VTree.prune(&tree, isz ref)
 {
 	if (!tree.ref_is_valid(ref)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	if (!tree.ref_is_present(ref)) {
@@ -196,10 +190,10 @@ fn usz VTree.nuke(&tree)
 }
 
 // find the size of the subtree starting from ref
-fn usz! VTree.subtree_size(&tree, isz ref)
+fn usz? VTree.subtree_size(&tree, isz ref)
 {
 	if (!tree.ref_is_valid(ref)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	if (!tree.ref_is_present(ref)) {
@@ -218,20 +212,20 @@ fn usz! VTree.subtree_size(&tree, isz ref)
 }
 
 // iterate through the first level children, use a cursor like strtok_r
-fn isz! VTree.children_it(&tree, isz parent, isz *cursor)
+fn isz? VTree.children_it(&tree, isz parent, isz *cursor)
 {
 	if (cursor == null) {
-		return VTreeError.INVALID_ARGUMENT?;
+		return INVALID_ARGUMENT?;
 	}
 
 	// if the cursor is out of bounds then we are done for sure
 	if (!tree.ref_is_valid(*cursor)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	// same for the parent, if it's invalid it can't have children
 	if (!tree.ref_is_valid(parent) || !tree.ref_is_present(parent)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	// find the first child, update the cursor and return the ref
@@ -256,10 +250,10 @@ fn isz! VTree.children_it(&tree, isz parent, isz *cursor)
  *         /   \    [6]
  *       [4]   [5]
  */
-fn isz! VTree.level_order_it(&tree, isz ref, isz *cursor)
+fn isz? VTree.level_order_it(&tree, isz ref, isz *cursor)
 {
 	if (cursor == null) {
-		return VTreeError.INVALID_ARGUMENT?;
+		return INVALID_ARGUMENT?;
 	}
 
 	isz[] queue = tree.ordered_refs;
@@ -303,27 +297,27 @@ fn isz! VTree.level_order_it(&tree, isz ref, isz *cursor)
 	return -1;
 }
 
-fn isz! VTree.parentof(&tree, isz ref)
+fn isz? VTree.parentof(&tree, isz ref)
 {
 	if (!tree.ref_is_valid(ref)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	if (!tree.ref_is_present(ref)) {
-		return VTreeError.REFERENCE_NOT_PRESENT?;
+		return REFERENCE_NOT_PRESENT?;
 	}
 
 	return tree.refs[ref];
 }
 
-fn ElemType! VTree.get(&tree, isz ref)
+fn ElemType? VTree.get(&tree, isz ref)
 {
 	if (!tree.ref_is_valid(ref)) {
-		return VTreeError.INVALID_REFERENCE?;
+		return INVALID_REFERENCE?;
 	}
 
 	if (!tree.ref_is_present(ref)) {
-		return VTreeError.REFERENCE_NOT_PRESENT?;
+		return REFERENCE_NOT_PRESENT?;
 	}
 
 	return tree.vector[ref];

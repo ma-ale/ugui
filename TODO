@@ -13,6 +13,8 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Clip element bounds to parent div, specifically text
 [ ] Resizeable divs
 [ ] Implement a z index and sort command buffer based on that
+    [ ] Ctx.set_z_index()
+    [ ] Sort command buffer on insertion
 [ ] Standardize element handling, for example all buttons do almost the same thing, so write a lot of boiler plate and reuse it
 [x] The id combination in gen_id() uses an intger division, which is costly, use another combination function that is non-linear and doesn't use division
 [ ] Animations, somehow
@@ -33,12 +35,19 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] Subdivide modules into ugui::ug for exported functions and ugui::core for
     internal use functions (used to create widgets)
 [ ] The render loop RAPES the gpu, valve pls fix
+[ ] The way the element structures are implemented wastes a lot of memory since
+    each struct Elem, struct Cmd, etc. is as big as the largest element. It would
+    be better to use a different allcation strategy.
+[ ] Add a way to handle time events like double clicks
 
 ## Layout
 
 [ ] Text reflow
 [x] Flexbox
 [ ] Center elements to the row/column
+[ ] Text wrapping
+[ ] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
+    instead of the curren multi-frame approach.
 
 ## Input
 
@@ -51,15 +60,16 @@ to maintain focus until mouse release (fix scroll bars)
 ## Commands
 
 [x] rect commads should have:
-_ border width
-_ border radius
+	- border width
+	- border radius
 [x] add a command to update an atlas
 [ ] New window command, useful for popups
 
-## Atlases
+## Atlas
 
 [ ] Add an interface to create, destroy, update and get atlases based on their ids
 [ ] Implement multiple font atlases
+[ ] Pixel format conversion
 
 ## Fonts
 
@@ -79,3 +89,21 @@ _ border radius
 [ ] Icon Buttons
 [x] Switch
 [x] Checkbox
+[ ] Selectable text box
+
+## Main / exaple
+
+[ ] Create maps from ids to textures and images instead of hardcoding them
+
+
+## API
+
+[ ] Introduce a Layout structure that specifies the positioning of elements inside
+    a Div element. This would allow specifying alignment, maximum and minimum sizing
+    margins between children, etc.
+    This is different from style which is applied per-element.
+[ ] Remove Ids for element that don't need them. Such elements are button, toggles,
+    and all elements which do not have internal data that has to be cached and/or
+    queried by the user for later use. This allows for smaller caches and in general
+    reduces some load, since most of the stuff is recomputed for every frame.
+

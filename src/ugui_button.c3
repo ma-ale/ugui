@@ -10,7 +10,7 @@ struct ElemButton {
 // draw a button, return the events on that button
 // FIXME: "state" should be renamed "active" to toggle between an usable button and
 //        an inactive (greyed-out) button
-fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
+fn ElemEvents? Ctx.button(&ctx, String label, Rect size, bool state = false)
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -22,14 +22,14 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_BUTTON;
 	} else if (elem.type != ETYPE_BUTTON) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 
 	elem.bounds = ctx.position_element(parent, size, true);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
-	if (elem.bounds.is_null()) { return ElemEvents{}; }
+	if (elem.bounds.is_null()) { return {}; }
 
 	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
@@ -45,7 +45,7 @@ fn ElemEvents! Ctx.button(&ctx, String label, Rect size, bool state = false)
 	return elem.events;
 }
 
-fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.max,short.max}, bool state = false)
+fn ElemEvents? Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,short.max}, bool state = false)
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -60,11 +60,11 @@ fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.m
 
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	Rect text_size = ctx.get_text_bounds(label)!;
-	Rect btn_size = text_size.add(Rect{0,0,10,10});
+	Rect btn_size = text_size.add({0,0,10,10});
 
 	// 2. Layout
 	elem.bounds = ctx.position_element(parent, btn_size, true);
-	if (elem.bounds.is_null()) { return ElemEvents{}; }
+	if (elem.bounds.is_null()) { return {}; }
 
 	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
@@ -86,9 +86,50 @@ fn ElemEvents! Ctx.button_label(&ctx, String label, Rect size = Rect{0,0,short.m
 	return elem.events;
 }
 
+fn ElemEvents? Ctx.button_icon(&ctx, String label, String icon, String on_icon = "", bool state = false)
+{
+	Id id = ctx.gen_id(label)!;
+
+	Elem *parent = ctx.get_parent()!;
+	Elem *elem = ctx.get_elem(id)!;
+	// add it to the tree
+	ctx.tree.add(id, ctx.active_div)!;
+
+	if (elem.flags.is_new) {
+		elem.type = ETYPE_BUTTON;
+	} else if (elem.type != ETYPE_BUTTON) {
+		return WRONG_ELEMENT_TYPE?;
+	}
+
+	Sprite* def_sprite = ctx.sprite_atlas.get(icon)!;
+	Sprite* on_sprite = ctx.sprite_atlas.get(on_icon) ?? &&(Sprite){};
+	Rect max_size = def_sprite.rect().max(on_sprite.rect());
+
+	elem.bounds = ctx.position_element(parent, max_size, true);
+
+	// if the bounds are null the element is outside the div view,
+	//  no interaction should occur so just return
+	if (elem.bounds.is_null()) { return {}; }
+
+	Color col = 0x0000ffffu.to_rgba();
+	elem.events = ctx.get_elem_events(elem);
+
+	Id tex_id = ctx.sprite_atlas.id;
+	if (state && on_icon != "") {
+		ctx.push_sprite(elem.bounds, on_sprite.uv(), tex_id, type: on_sprite.type)!;
+	} else {
+		ctx.push_sprite(elem.bounds, def_sprite.uv(), tex_id, type: def_sprite.type)!;
+	}
+
+	// Draw the button
+	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
+
+	return elem.events;
+}
+
 // FIXME: this should be inside the style
 const ushort DEFAULT_CHECKBOX_SIZE = 16;
-fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* state, String tick_sprite = {})
+fn void? Ctx.checkbox(&ctx, String label, String description, Point off, bool* state, String tick_sprite = {})
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -102,7 +143,7 @@ fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_BUTTON;
 	} else if (elem.type != ETYPE_BUTTON) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 
 	Rect size = {off.x, off.y, DEFAULT_CHECKBOX_SIZE, DEFAULT_CHECKBOX_SIZE};
@@ -116,7 +157,7 @@ fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 	if (elem.events.mouse_hover && elem.events.mouse_release) *state = !(*state);
 
 	Color col;
-	if (tick_sprite != String{}) {
+	if (tick_sprite != {}) {
 		col = ctx.style.bgcolor;
 		ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
 		if (*state) {
@@ -135,7 +176,7 @@ fn void! Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 
 // FIXME: this should be inside the style
 const short DEFAULT_SWITCH_SIZE = 16;
-fn void! Ctx.toggle(&ctx, String label, String description, Point off, bool* state)
+fn void? Ctx.toggle(&ctx, String label, String description, Point off, bool* state)
 {
 	Id id = ctx.gen_id(label)!;
 
@@ -149,7 +190,7 @@ fn void! Ctx.toggle(&ctx, String label, String description, Point off, bool* sta
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_BUTTON;
 	} else if (elem.type != ETYPE_BUTTON) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 
 	Rect size = {off.x, off.y, DEFAULT_SWITCH_SIZE*2, DEFAULT_SWITCH_SIZE};
@@ -171,6 +212,6 @@ fn void! Ctx.toggle(&ctx, String label, String description, Point off, bool* sta
 	// Draw the button
 	// FIXME: THIS IS SHIT
 	ctx.push_rect(elem.bounds, ctx.style.bgcolor, do_border: true, do_radius: true)!;
-	Rect t = elem.bounds.add(Rect{*state ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
+	Rect t = elem.bounds.add({*state ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
 	ctx.push_rect(t, col, do_border: false, do_radius: true)!;
 }

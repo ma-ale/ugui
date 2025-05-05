@@ -7,7 +7,7 @@ import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
 
-def Times = ringbuffer::RingBuffer(<time::NanoDuration, 128>);
+alias Times = ringbuffer::RingBuffer{time::NanoDuration[128]};
 
 fn void Times.print_stats(&times)
 {
@@ -40,7 +40,7 @@ fn TimeStats Times.get_stats(&times)
 	}
 	avg = (NanoDuration)((ulong)avg/128.0);
 
-	return TimeStats{.min = min, .max = max, .avg = avg};
+	return {.min = min, .max = max, .avg = avg};
 }
 
 
@@ -115,12 +115,12 @@ void main()
 
 macro rl::Color ugui::Color.conv(color)
 {
-	return rl::Color{.r = color.r, .g = color.g, .b = color.b, .a = color.a};
+	return {.r = color.r, .g = color.g, .b = color.b, .a = color.a};
 }
 
 macro rl::Rectangle Rect.conv(rect)
 {
-	return rl::Rectangle{.x = rect.x, .y = rect.y, .width = rect.w, .height = rect.h};
+	return {.x = rect.x, .y = rect.y, .width = rect.w, .height = rect.h};
 }
 
 fn int main(String[] args)
@@ -169,11 +169,13 @@ fn int main(String[] args)
 		mod.lctrl = rl::isKeyDown(rl::KEY_LEFT_CONTROL);
 		ui.input_mod_keys(mod);
 
+		/*
 		for (rl::KeyboardKey key; (key = (KeyboardKey)rl::getKeyPressed()) != 0;) {
 			ZString kname = rl::getKeyName(key);
 			if (kname == null) continue;
 			ui.input_text_unicode(kname.str_view());
 		}
+		*/
 
 
 		/* Start Input Handling */
@@ -203,29 +205,29 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) break;
 
-		ui.div_begin("main", Rect{.w=-100})!!;
-		{|
+		ui.div_begin("main", {.w=-100})!!;
+		{
 			ui.layout_set_column()!!;
-			if (ui.button("button0", Rect{0,0,30,30}, toggle)!!.mouse_press) {
+			if (ui.button("button0", {0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button1", Rect{0,0,30,30})!!.mouse_press) {
+			if (ui.button("button1", {0,0,30,30})!!.mouse_press) {
 				io::printn("press button1");
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button2", Rect{0,0,30,30})!!.mouse_release) {
+			if (ui.button("button2", {0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
 
 			ui.layout_set_row()!!;
 			ui.layout_next_row()!!;
 			static float rf, gf, bf, af;
-			ui.slider_ver("slider_r", Rect{0,0,30,100}, &rf)!!;
-			ui.slider_ver("slider_g", Rect{0,0,30,100}, &gf)!!;
-			ui.slider_ver("slider_b", Rect{0,0,30,100}, &bf)!!;
-			ui.slider_ver("slider_a", Rect{0,0,30,100}, &af)!!;
+			ui.slider_ver("slider_r", {0,0,30,100}, &rf)!!;
+			ui.slider_ver("slider_g", {0,0,30,100}, &gf)!!;
+			ui.slider_ver("slider_b", {0,0,30,100}, &bf)!!;
+			ui.slider_ver("slider_a", {0,0,30,100}, &af)!!;
 
 			ui.layout_next_column()!!;
 			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
@@ -235,8 +237,8 @@ fn int main(String[] args)
 
 			ui.layout_next_row()!!;
 			static bool check;
-			ui.checkbox("check1", "", Point{}, &check, "tick")!!;
-			ui.toggle("toggle1", "", Point{}, &toggle)!!;
+			ui.checkbox("check1", "", {}, &check, "tick")!!;
+			ui.toggle("toggle1", "", {}, &toggle)!!;
 
 /*
 			ui.layout_set_column()!!;
@@ -248,33 +250,33 @@ fn int main(String[] args)
 			ui.layout_next_row()!!;
 			ui.button_label(" E ")!!;
 */
-		|};
+		};
 		ui.draw_sprite("sprite1", "tux")!!;
 		ui.div_end()!!;
 
 		ui.div_begin("second", ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
-		{|
+		{
 			ui.layout_set_column()!!;
 			static float slider2 = 0.5;
-			if (ui.slider_ver("slider", Rect{0,0,30,100}, &slider2)!!.update) {
+			if (ui.slider_ver("slider", {0,0,30,100}, &slider2)!!.update) {
 				io::printfn("other slider: %f", slider2);
 			}
-			ui.button("button0", Rect{0,0,50,50})!!;
-			ui.button("button1", Rect{0,0,50,50})!!;
-			ui.button("button2", Rect{0,0,50,50})!!;
-			ui.button("button3", Rect{0,0,50,50})!!;
+			ui.button("button0", {0,0,50,50})!!;
+			ui.button("button1", {0,0,50,50})!!;
+			ui.button("button2", {0,0,50,50})!!;
+			ui.button("button3", {0,0,50,50})!!;
 			if (toggle) {
-				ui.button("button4", Rect{0,0,50,50})!!;
-				ui.button("button5", Rect{0,0,50,50})!!;
-				ui.button("button6", Rect{0,0,50,50})!!;
-				ui.button("button7", Rect{0,0,50,50})!!;
+				ui.button("button4", {0,0,50,50})!!;
+				ui.button("button5", {0,0,50,50})!!;
+				ui.button("button6", {0,0,50,50})!!;
+				ui.button("button7", {0,0,50,50})!!;
 			}
 			ui.layout_next_column()!!;
 			ui.layout_set_row()!!;
 			static float f1, f2;
-			ui.slider_hor("hs1", Rect{0,0,100,30}, &f1)!!;
-			ui.slider_hor("hs2", Rect{0,0,100,30}, &f2)!!;
-		|};
+			ui.slider_hor("hs1", {0,0,100,30}, &f1)!!;
+			ui.slider_hor("hs2", {0,0,100,30}, &f2)!!;
+		};
 		ui.div_end()!!;
 
 		// Timings counter
@@ -282,12 +284,12 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", Rect{0, ui.height-100, -300, 100})!!;
-		{|
+		ui.div_begin("fps", {0, ui.height-100, -300, 100})!!;
+		{
 			ui.layout_set_column()!!;
 			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 			ui.text_unbounded("ui text input", (String)ui.input.keyboard.text[..])!!;
-		|};
+		};
 		ui.div_end()!!;
 
 		ui.frame_end()!!;
@@ -341,15 +343,15 @@ fn int main(String[] args)
 					rl::endShaderMode();
 				} else if (cmd.sprite.texture_id == sprite_id) {
 					// FIXME: THIS CODE IS SHIT, REAL DOO DOO
-					{|
+					{
 					if (cmd.sprite.type == SpriteType.SPRITE_MSDF) {
 						rl::beginShaderMode(msdf_shader);
 						defer rl::endShaderMode();
-						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), rl::Vector2{0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
+						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), {0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
 					} else {
-						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), rl::Vector2{0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
+						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), {0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
 					}
-					|};
+					};
 				} else {
 					io::printfn("unknown texture id: %d", cmd.sprite.texture_id);
 				}

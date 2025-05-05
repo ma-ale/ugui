@@ -6,7 +6,7 @@ struct ElemText {
 	char* str;
 }
 
-fn void! Ctx.text_unbounded(&ctx, String label, String text)
+fn void? Ctx.text_unbounded(&ctx, String label, String text)
 {
 	Id id = ctx.gen_id(label)!;
 

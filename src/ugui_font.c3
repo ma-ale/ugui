@@ -4,13 +4,15 @@ import schrift;
 import grapheme;
 import std::collections::map;
 import std::core::mem;
+import std::core::mem::allocator;
 import std::io;
 import std::ascii;
 
 
 // unicode code point, different type for a different hash
-def Codepoint = uint;
+alias Codepoint = uint;
 
+//macro uint Codepoint.hash(self) => ((uint)self).hash();
 
 /* width and height of a glyph contain the kering advance
  * (u,v)
@@ -40,14 +42,9 @@ struct Glyph {
 }
 
 const uint FONT_CACHED = 255;
-def GlyphTable = map::HashMap(<Codepoint, Glyph>) @private;
+alias GlyphTable = map::HashMap{Codepoint, Glyph};
 
-fault UgFontError {
-	TTF_LOAD_FAILED,
-	MISSING_GLYPH,
-	BAD_GLYPH_METRICS,
-	RENDER_ERROR,
-}
+faultdef TTF_LOAD_FAILED, MISSING_GLYPH, BAD_GLYPH_METRICS, RENDER_ERROR;
 
 struct Font {
 	schrift::Sft sft;
@@ -61,14 +58,14 @@ struct Font {
 	bool should_update; // should send update_atlas command, resets at frame_end()
 }
 
-fn void! Font.load(&font, String name, ZString path, uint height, float scale)
+fn void? Font.load(&font, String name, ZString path, uint height, float scale)
 {
-	font.table.new_init(capacity: FONT_CACHED);
+	font.table.init(allocator::heap(), capacity: FONT_CACHED);
 	font.id = name.hash();
 
 	font.size = height*scale;
 
-	font.sft = schrift::Sft{
+	font.sft = {
 		.xScale = (double)font.size,
 		.yScale = (double)font.size,
 		.flags = schrift::SFT_DOWNWARD_Y,
@@ -77,7 +74,7 @@ fn void! Font.load(&font, String name, ZString path, uint height, float scale)
 	font.sft.font = schrift::loadfile(path);
 	if (font.sft.font == null) {
 		font.table.free();
-		return UgFontError.TTF_LOAD_FAILED?;
+		return TTF_LOAD_FAILED?;
 	}
 
 	schrift::SftLMetrics lmetrics;
@@ -98,13 +95,13 @@ fn void! Font.load(&font, String name, ZString path, uint height, float scale)
 	}
 }
 
-fn Glyph*! Font.get_glyph(&font, Codepoint code)
+fn Glyph*? Font.get_glyph(&font, Codepoint code)
 {
-	Glyph*! gp;
+	Glyph*? gp;
 	gp = font.table.get_ref(code);
 
 	if (catch excuse = gp) {
-		if (excuse != SearchResult.MISSING) {
+		if (excuse != NOT_FOUND) {
 			return excuse?;
 		}
 	} else {
@@ -117,12 +114,12 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code)
 	schrift::SftGlyph gid;
 	schrift::SftGMetrics gmtx;
 
-	if (schrift::lookup(&font.sft, code, &gid) < 0) {
-		return UgFontError.MISSING_GLYPH?;
+	if (schrift::lookup(&font.sft, (SftUChar)code, &gid) < 0) {
+		return MISSING_GLYPH?;
 	}
 
 	if (schrift::gmetrics(&font.sft, gid, &gmtx) < 0) {
-		return UgFontError.BAD_GLYPH_METRICS?;
+		return BAD_GLYPH_METRICS?;
 	}
 
 	schrift::SftImage img = {
@@ -132,7 +129,7 @@ fn Glyph*! Font.get_glyph(&font, Codepoint code)
 	char[] pixels = mem::new_array(char, (usz)img.width * img.height);
 	img.pixels = pixels;
 	if (schrift::render(&font.sft, gid, img) < 0) {
-		return UgFontError.RENDER_ERROR?;
+		return RENDER_ERROR?;
 	}
 
 	glyph.code = code;
@@ -163,7 +160,7 @@ fn void Font.free(&font)
 	schrift::freefont(font.sft.font);
 }
 
-fn void! Ctx.load_font(&ctx, String name, ZString path, uint height, float scale = 1.0)
+fn void? Ctx.load_font(&ctx, String name, ZString path, uint height, float scale = 1.0)
 {
 	return ctx.font.load(name, path, height, scale);
 }
@@ -174,7 +171,7 @@ fn void! Ctx.load_font(&ctx, String name, ZString path, uint height, float scale
 fn Codepoint str_to_codepoint(char[] str, usz* off)
 {
 	Codepoint cp;
-	isz b = grapheme::decode_utf8(str, str.len, &cp);
+	isz b = grapheme::decode_utf8(str, str.len, (uint*)&cp);
 	if (b == 0 || b > str.len) {
 		return 0;
 	}
@@ -182,7 +179,7 @@ fn Codepoint str_to_codepoint(char[] str, usz* off)
 	return cp;
 }
 
-fn Rect! Ctx.get_text_bounds(&ctx, String text)
+fn Rect? Ctx.get_text_bounds(&ctx, String text)
 {
 	Rect text_bounds;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
@@ -219,7 +216,7 @@ fn Point Ctx.center_text(&ctx, Rect text_bounds, Rect bounds)
 	short dw = bounds.w - text_bounds.w;
 	short dh = bounds.h - text_bounds.h;
 
-	return Point{.x = dw/2, .y = dh/2};
+	return {.x = dw/2, .y = dh/2};
 }
 
 // TODO: check if the font is present in the context

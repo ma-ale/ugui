@@ -1,8 +1,8 @@
 module schrift;
 
-def SftFont = void*;
-def SftUChar = uint;
-def SftGlyph = uint;
+alias SftFont  = void*;
+alias SftUChar = uint;
+alias SftGlyph = uint;
 
 const int SFT_DOWNWARD_Y = 0x01;
 

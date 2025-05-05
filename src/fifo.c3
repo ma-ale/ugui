@@ -1,11 +1,8 @@
-module fifo(<Type>);
+module fifo{Type};
 
 import std::core::mem;
 
-fault FifoErr {
-	FULL,
-	EMPTY,
-}
+faultdef FULL, EMPTY;
 
 // TODO: specify the allocator
 
@@ -15,7 +12,7 @@ struct Fifo {
 	usz count;
 }
 
-fn void! Fifo.init(&fifo, usz size)
+fn void? Fifo.init(&fifo, usz size)
 {
 	fifo.arr = mem::new_array(Type, size);
 	fifo.out = 0;
@@ -27,20 +24,20 @@ fn void Fifo.free(&fifo)
 	(void)mem::free(fifo.arr);
 }
 
-fn void! Fifo.enqueue(&fifo, Type *elem)
+fn void? Fifo.enqueue(&fifo, Type *elem)
 {
 	if (fifo.count >= fifo.arr.len) {
-		return FifoErr.FULL?;
+		return FULL?;
 	}
 	usz in = (fifo.out + fifo.count) % fifo.arr.len;
 	fifo.arr[in] = *elem;
 	fifo.count++;
 }
 
-fn Type*! Fifo.dequeue(&fifo)
+fn Type*? Fifo.dequeue(&fifo)
 {
 	if (fifo.count == 0) {
-		return FifoErr.EMPTY?;
+		return EMPTY?;
 	}
 	Type *ret = &fifo.arr[fifo.out];
 	fifo.count--;

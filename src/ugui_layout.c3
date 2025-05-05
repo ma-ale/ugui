@@ -7,71 +7,71 @@ enum Layout {
 	LAYOUT_ABSOLUTE,
 }
 
-fn void! Ctx.layout_set_row(&ctx)
+fn void? Ctx.layout_set_row(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
 		// what?
-		return UgError.UNEXPECTED_ELEMENT?;
+		return UNEXPECTED_ELEMENT?;
 	}
 
 	parent.div.layout = LAYOUT_ROW;
 }
 
-fn void! Ctx.layout_set_column(&ctx)
+fn void? Ctx.layout_set_column(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
 		// what?
-		return UgError.UNEXPECTED_ELEMENT?;
+		return UNEXPECTED_ELEMENT?;
 	}
 
 	parent.div.layout = LAYOUT_COLUMN;
 }
 
-fn void! Ctx.layout_set_floating(&ctx)
+fn void? Ctx.layout_set_floating(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
 		// what?
-		return UgError.UNEXPECTED_ELEMENT?;
+		return UNEXPECTED_ELEMENT?;
 	}
 
 	parent.div.layout = LAYOUT_FLOATING;
 }
 
-fn void! Ctx.layout_next_row(&ctx)
+fn void? Ctx.layout_next_row(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
-		return UgError.UNEXPECTED_ELEMENT?;
+		return UNEXPECTED_ELEMENT?;
 	}
 
-	parent.div.origin_r = Point{
+	parent.div.origin_r = {
 		.x = parent.bounds.x,
 		.y = parent.div.children_bounds.bottom_right().y,
 	};
 	parent.div.origin_c = parent.div.origin_r;
 }
 
-fn void! Ctx.layout_next_column(&ctx)
+fn void? Ctx.layout_next_column(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
 	Elem *parent = ctx.cache.search(parent_id)!;
 
 	if (parent.type != ETYPE_DIV) {
-		return UgError.UNEXPECTED_ELEMENT?;
+		return UNEXPECTED_ELEMENT?;
 	}
 
-	parent.div.origin_c = Point{
+	parent.div.origin_c = {
 		.x = parent.div.children_bounds.bottom_right().x,
 		.y = parent.bounds.y,
 	};
@@ -124,7 +124,7 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	case LAYOUT_ABSOLUTE: // absolute position, this is a no-op, return the rect
 		return rect;
 	default: // error
-		return Rect{};
+		return {};
 	}
 
 	// 2. Compute the parent's view
@@ -166,11 +166,11 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	child_occupied  = child_occupied.grow(rect.size());
 
 	// 4. Update the parent's origin
-	div.origin_r = Point{
+	div.origin_r = {
 		.x = child_occupied.bottom_right().x,
 		.y = origin.y,
 	};
-	div.origin_c = Point{
+	div.origin_c = {
 		.x = origin.x,
 		.y = child_occupied.bottom_right().y,
 	};
@@ -191,6 +191,6 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, bool style = false)
 	if (child_placement.collides(parent_view)) {
 		return child_placement.off(parent.get_view_off().neg());
 	} else {
-		return Rect{};
+		return {};
 	}
 }

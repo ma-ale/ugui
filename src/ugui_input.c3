@@ -45,10 +45,10 @@ const ModKeys KMOD_CTRL  = {.lctrl  = true, .rctrl  = true};
 const ModKeys KMOD_SHIFT = {.lshift = true, .rshift = true};
 const ModKeys KMOD_ALT   = {.lalt   = true, .ralt   = true};
 const ModKeys KMOD_GUI   = {.lgui   = true, .rgui   = true};
-const ModKeys KMOD_NONE  = ModKeys{};
+const ModKeys KMOD_NONE  = {};
 const ModKeys KMOD_ANY   = (ModKeys)(ModKeys.inner.max);
 
-const MouseButtons BTN_NONE   = MouseButtons{};
+const MouseButtons BTN_NONE   = {};
 const MouseButtons BTN_ANY    = (MouseButtons)(MouseButtons.inner.max);
 const MouseButtons BTN_LEFT   = {.btn_left   = true};
 const MouseButtons BTN_MIDDLE = {.btn_middle = true};
@@ -72,10 +72,10 @@ fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String keys)
 }
 
 // Window size was changed
-fn void! Ctx.input_window_size(&ctx, short width, short height)
+fn void? Ctx.input_window_size(&ctx, short width, short height)
 {
 	if (width <= 0 || height <= 0) {
-		return UgError.INVALID_SIZE?;
+		return INVALID_SIZE?;
 	}
 	ctx.input.events.resize = ctx.width != width || ctx.height != height;
 	ctx.width = width;

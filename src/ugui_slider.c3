@@ -16,7 +16,7 @@ struct ElemSlider {
 <*
 @require value != null
 *>
-fn ElemEvents! Ctx.slider_hor(&ctx,
+fn ElemEvents? Ctx.slider_hor(&ctx,
     String label,
     Rect size,
     float* value,
@@ -35,7 +35,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx,
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_SLIDER;
 	} else if (elem.type != ETYPE_SLIDER) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 
 	// 2. Layout
@@ -79,7 +79,7 @@ fn ElemEvents! Ctx.slider_hor(&ctx,
  * | |
  * +-+
  */
-fn ElemEvents! Ctx.slider_ver(&ctx,
+fn ElemEvents? Ctx.slider_ver(&ctx,
     String label,
     Rect size,
     float* value,
@@ -98,7 +98,7 @@ fn ElemEvents! Ctx.slider_ver(&ctx,
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_SLIDER;
 	} else if (elem.type != ETYPE_SLIDER) {
-		return UgError.WRONG_ELEMENT_TYPE?;
+		return WRONG_ELEMENT_TYPE?;
 	}
 
 	// 2. Layout

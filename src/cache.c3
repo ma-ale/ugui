@@ -1,4 +1,4 @@
-module cache(<Key, Value, SIZE>);
+module cache{Key, Value, SIZE};
 
 /* LRU Cache
  * The cache uses a pool (array) to store all the elements, each element has
@@ -14,12 +14,13 @@ module cache(<Key, Value, SIZE>);
 //        happens at the same time
 
 import std::core::mem;
+import std::core::mem::allocator;
 import std::collections::bitset;
 import std::collections::map;
 
-def BitArr = bitset::BitSet(<SIZE>) @private;
-def IdTable = map::HashMap(<Key, usz>) @private;
-def IdTableEntry = map::Entry(<Key, usz>) @private;
+alias BitArr = bitset::BitSet{SIZE};
+alias IdTable = map::HashMap{Key, usz};
+alias IdTableEntry = map::Entry{Key, usz};
 
 const usz CACHE_NCYCLES = (usz)(SIZE * 2.0/3.0);
 
@@ -42,9 +43,9 @@ macro Cache.cycle(&cache) @private {
 	}
 }
 
-fn void! Cache.init(&cache)
+fn void? Cache.init(&cache)
 {
-	cache.table.new_init(capacity: SIZE);
+	cache.table.init(allocator::heap(), capacity: SIZE);
 	// FIXME: this shit is SLOW
 	foreach (idx, bit : cache.used) { cache.used[idx] = false; }
 	foreach (idx, bit : cache.present) { cache.present[idx] = false; }
@@ -57,7 +58,7 @@ fn void Cache.free(&cache)
 	(void)mem::free(cache.pool);
 }
 
-fn Value*! Cache.search(&cache, Key id)
+fn Value*? Cache.search(&cache, Key id)
 {
 	// get_entry() faults on miss
 	IdTableEntry* entry = cache.table.get_entry(id)!;
@@ -65,14 +66,14 @@ fn Value*! Cache.search(&cache, Key id)
 	/* MISS, wrong key */
 	if (entry.key != id) {
 		cache.table.remove(id)!;
-		return SearchResult.MISSING?;
+		return NOT_FOUND?;
 	}
 
 	/* MISS, the data is not valid (not present) */
 	if (!cache.present[entry.value]) {
 		// if the data is not present but it is still in the table, remove it
 		cache.table.remove(id)!;
-		return SearchResult.MISSING?;
+		return NOT_FOUND?;
 	}
 
 	/* HIT, set as recently used */
@@ -82,7 +83,7 @@ fn Value*! Cache.search(&cache, Key id)
 
 fn void Cache.remove(&cache, Key id)
 {
-	IdTableEntry*! entry = cache.table.get_entry(id);
+	IdTableEntry*? entry = cache.table.get_entry(id);
 	if (catch entry) {
 		return;
 	}
@@ -105,7 +106,7 @@ fn usz Cache.get_free_spot(&cache) @private
 	return 0;
 }
 
-fn Value*! Cache.insert_at(&cache, Value *g, Key id, usz index) @private
+fn Value*? Cache.insert_at(&cache, Value *g, Key id, usz index) @private
 {
 	// TODO: verify index, g and id
 	Value* spot;
@@ -122,17 +123,17 @@ fn Value*! Cache.insert_at(&cache, Value *g, Key id, usz index) @private
 }
 
 // Insert an element in the cache, returns the index
-fn Value*! Cache.insert_new(&cache, Value* g, Key id)
+fn Value*? Cache.insert_new(&cache, Value* g, Key id)
 {
 	usz index = cache.get_free_spot();
 	return cache.insert_at(g, id, index);
 }
 
-fn Value*! Cache.get_or_insert(&cache, Value* g, Key id, bool *is_new = null)
+fn Value*? Cache.get_or_insert(&cache, Value* g, Key id, bool *is_new = null)
 {
-	Value*! c = cache.search(id);
+	Value*? c = cache.search(id);
 	if (catch e = c) {
-		if (e != SearchResult.MISSING) {
+		if (e != NOT_FOUND) {
 			return e?;
 		} else {
 			// if the element is new (inserted) set the is_new flag
