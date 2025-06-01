@@ -2,7 +2,7 @@
   "langrev": "1",
   "warnings": ["no-unused"],
   "dependency-search-paths": ["lib", "../../Programs/Source/c3-vendor/libraries", "../sdl3.c3l"],
-  "dependencies": ["raylib55", "schrift", "grapheme", "mqoi", "sdl3"],
+  "dependencies": ["raylib55", "sdl3", "ugui"],
   "features": [],
   "authors": ["Alessandro Mauri <ale@shitposting.expert>"],
   "version": "0.1.0",

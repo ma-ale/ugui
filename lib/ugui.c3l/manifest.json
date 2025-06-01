@@ -1,0 +1,11 @@
+{
+  "provides" : "ugui",
+  "sources" : [ "src/**" ],
+  "targets" : {
+    "linux-x64" : {
+      "link-args" : [],
+      "dependencies" : ["schrift", "grapheme", "mqoi"],
+      "linked-libraries" : []
+    }
+  }
+}
