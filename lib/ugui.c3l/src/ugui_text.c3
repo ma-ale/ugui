@@ -26,5 +26,5 @@ fn void? Ctx.text_unbounded(&ctx, String label, String text)
 	elem.bounds = ctx.position_element(parent, text_size, true);
 	if (elem.bounds.is_null()) { return; }
 
-	ctx.push_string(elem.bounds, text)!;
+	ctx.push_string(elem.bounds, text, parent.div.z_index)!;
 }

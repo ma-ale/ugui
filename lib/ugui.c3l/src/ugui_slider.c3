@@ -61,8 +61,8 @@ fn ElemEvents? Ctx.slider_hor(&ctx,
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(elem.bounds, bgcolor)!;
-	ctx.push_rect(elem.slider.handle, handlecolor)!;
+	ctx.push_rect(elem.bounds, bgcolor, parent.div.z_index)!;
+	ctx.push_rect(elem.slider.handle, handlecolor, parent.div.z_index)!;
 
 	return elem.events;
 }
@@ -124,8 +124,8 @@ fn ElemEvents? Ctx.slider_ver(&ctx,
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(elem.bounds, bgcolor)!;
-	ctx.push_rect(elem.slider.handle, handlecolor)!;
+	ctx.push_rect(elem.bounds, bgcolor, parent.div.z_index)!;
+	ctx.push_rect(elem.slider.handle, handlecolor, parent.div.z_index)!;
 
 	return elem.events;
 }

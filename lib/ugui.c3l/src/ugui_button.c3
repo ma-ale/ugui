@@ -40,7 +40,7 @@ fn ElemEvents? Ctx.button(&ctx, String label, Rect size, bool state = false)
 	}
 
 	// Draw the button
-	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
 
 	return elem.events;
 }
@@ -80,8 +80,8 @@ fn ElemEvents? Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,s
 	Point off = ctx.center_text(text_size, elem.bounds);
 	text_size.x += off.x;
 	text_size.y += off.y;
-	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
-	ctx.push_string(text_size, label)!;
+	ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
+	ctx.push_string(text_size, label, parent.div.z_index)!;
 
 	return elem.events;
 }
@@ -116,13 +116,13 @@ fn ElemEvents? Ctx.button_icon(&ctx, String label, String icon, String on_icon =
 
 	Id tex_id = ctx.sprite_atlas.id;
 	if (state && on_icon != "") {
-		ctx.push_sprite(elem.bounds, on_sprite.uv(), tex_id, type: on_sprite.type)!;
+		ctx.push_sprite(elem.bounds, on_sprite.uv(), tex_id, parent.div.z_index, type: on_sprite.type)!;
 	} else {
-		ctx.push_sprite(elem.bounds, def_sprite.uv(), tex_id, type: def_sprite.type)!;
+		ctx.push_sprite(elem.bounds, def_sprite.uv(), tex_id, parent.div.z_index, type: def_sprite.type)!;
 	}
 
 	// Draw the button
-	ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
 
 	return elem.events;
 }
@@ -159,7 +159,7 @@ fn void? Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 	Color col;
 	if (tick_sprite != {}) {
 		col = ctx.style.bgcolor;
-		ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
+		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
 		if (*state) {
 			ctx.draw_sprite_raw(tick_sprite, elem.bounds)!;
 		}
@@ -170,7 +170,7 @@ fn void? Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 			col = 0xff00ffffu.to_rgba();
 		}
 		// Draw the button
-		ctx.push_rect(elem.bounds, col, do_border: true, do_radius: true)!;
+		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
 	}
 }
 
@@ -211,7 +211,7 @@ fn void? Ctx.toggle(&ctx, String label, String description, Point off, bool* sta
 	}
 	// Draw the button
 	// FIXME: THIS IS SHIT
-	ctx.push_rect(elem.bounds, ctx.style.bgcolor, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, ctx.style.bgcolor, parent.div.z_index, do_border: true, do_radius: true)!;
 	Rect t = elem.bounds.add({*state ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
-	ctx.push_rect(t, col, do_border: false, do_radius: true)!;
+	ctx.push_rect(t, col, parent.div.z_index, do_border: false, do_radius: true)!;
 }

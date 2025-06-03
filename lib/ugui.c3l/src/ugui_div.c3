@@ -18,6 +18,7 @@ struct ElemDiv {
 		bool on;
 		float value;
 	}
+	int z_index;
 	Rect children_bounds; // current frame children bounds
 	Rect pcb; // previous frame children bounds
 	Point origin_r, origin_c;
@@ -46,6 +47,8 @@ fn void? Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	}
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
+	elem.div.z_index = parent.div.z_index + 1;
+	io::printn(elem.div.z_index);
 
 	// 2. layout the element
 	Rect wanted_size = {
@@ -59,7 +62,7 @@ fn void? Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 
 	// update the ctx scissor
 	ctx.div_scissor = elem.bounds;
-	ctx.push_scissor(elem.bounds)!;
+	ctx.push_scissor(elem.bounds, elem.div.z_index)!;
 
 	// 4. Fill the div fields
 	elem.div.origin_c = {
@@ -71,7 +74,7 @@ fn void? Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 
 	// Add the background to the draw stack
 	bool do_border = parent.div.layout == LAYOUT_FLOATING;
-	ctx.push_rect(elem.bounds, ctx.style.bgcolor, do_border: do_border)!;
+	ctx.push_rect(elem.bounds, ctx.style.bgcolor, elem.div.z_index, do_border: do_border)!;
 
 	elem.events = ctx.get_elem_events(elem);
 

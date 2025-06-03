@@ -244,6 +244,7 @@ fn void? Ctx.frame_begin(&ctx)
 		},
 		.div = {
 			.layout = LAYOUT_ROW,
+			.z_index = 0,
 			.children_bounds = {
 				.w = ctx.width,
 				.h = ctx.height,
@@ -262,6 +263,8 @@ fn void? Ctx.frame_begin(&ctx)
 	// The root element does not push anything to the stack
 	// TODO: add a background color taken from a theme or config
 }
+
+const int DEBUG = 1;
 
 fn void? Ctx.frame_end(&ctx)
 {
@@ -285,10 +288,12 @@ fn void? Ctx.frame_end(&ctx)
 		ctx.sprite_atlas.should_update = false;
 	}
 
-$if 1:
+// debug
+$if DEBUG == 1:
 	// draw mouse position
 	Cmd cmd = {
 		.type = CMD_RECT,
+		.z_index = int.max, // hopefully over everything else
 		.rect.rect = {
 			.x = ctx.input.mouse.pos.x - 2,
 			.y = ctx.input.mouse.pos.y - 2,
@@ -298,6 +303,12 @@ $if 1:
 		.rect.color = 0xff00ffffu.to_rgba()
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
+
+	// dump the command buffer
+	io::printn("Command Buffer Dump:");
+	foreach(idx, c: ctx.cmd_queue) {
+		io::printfn("\t [%d] = {%s}", idx, c);
+	}
 $endif
 }
 

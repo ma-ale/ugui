@@ -1,6 +1,7 @@
 module ugui;
 
 import std::ascii;
+import std::io;
 
 // command type
 enum CmdType {
@@ -37,14 +38,21 @@ struct CmdScissor {
 }
 
 // command structure
-struct Cmd {
+struct Cmd (Printable) {
 	CmdType type;
+	int z_index; 
 	union {
 		CmdRect rect;
 		CmdUpdateAtlas update_atlas;
 		CmdSprite sprite;
 		CmdScissor scissor;
 	}
+}
+
+// implement the Printable interface
+fn usz? Cmd.to_format(Cmd* cmd, Formatter *f) @dynamic
+{
+	return f.printf("Cmd{ type: %s, z_index: %d }", cmd.type, cmd.z_index);
 }
 
 macro bool cull_rect(Rect rect, Rect clip = {0,0,short.max,short.max})
@@ -54,8 +62,9 @@ macro bool cull_rect(Rect rect, Rect clip = {0,0,short.max,short.max})
 }
 
 // FIXME: this whole thing could be done at compile time, maybe
-macro Ctx.push_cmd(&ctx, Cmd *cmd)
+macro Ctx.push_cmd(&ctx, Cmd *cmd, int z_index)
 {
+	cmd.z_index = z_index;
 	Rect rect;
 	switch (cmd.type) {
 	case CMD_RECT: rect = cmd.rect.rect;
@@ -66,9 +75,18 @@ macro Ctx.push_cmd(&ctx, Cmd *cmd)
 	return ctx.cmd_queue.enqueue(cmd);
 }
 
+fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
+{
+	Cmd sc = {
+		.type = CMD_SCISSOR,
+		.scissor.rect = rect.intersection(ctx.div_scissor),
+	};
+	ctx.push_cmd(&sc, z_index)!;
+}
+
 // FIXME: is this really the best solution?
 // "rect" is the bounding box of the element, which includes the border and the padding (so not just the content)
-fn void? Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, bool do_padding = false, bool do_radius = false)
+fn void? Ctx.push_rect(&ctx, Rect rect, Color color, int z_index, bool do_border = false, bool do_padding = false, bool do_radius = false)
 {
 	Rect border = ctx.style.border;
 	Rect padding = ctx.style.padding;
@@ -82,7 +100,7 @@ fn void? Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 			.rect.color = border_color,
 			.rect.radius = do_radius ? radius : 0,
 		};
-		ctx.push_cmd(&cmd)!;
+		ctx.push_cmd(&cmd, z_index)!;
 	}
 
 	Cmd cmd = {
@@ -97,11 +115,11 @@ fn void? Ctx.push_rect(&ctx, Rect rect, Color color, bool do_border = false, boo
 		.rect.radius = do_radius ? radius : 0,
 	};
 	if (cull_rect(cmd.rect.rect, ctx.div_scissor)) return;
-	ctx.push_cmd(&cmd)!;
+	ctx.push_cmd(&cmd, z_index)!;
 }
 
 // TODO: add texture id
-fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
+fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_index, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
 {
 	Cmd cmd = {
 		.type = CMD_SPRITE,
@@ -111,16 +129,16 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, Color h
 		.sprite.texture_id = texture_id,
 		.sprite.hue = hue,
 	};
-	ctx.push_cmd(&cmd)!;
+	ctx.push_cmd(&cmd, z_index)!;
 }
 
-fn void? Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu.to_rgba())
+fn void? Ctx.push_string(&ctx, Rect bounds, String text, int z_index, Color hue = 0xffffffffu.to_rgba())
 {
 	if (text.len == 0) {
 		return;
 	}
 
-	ctx.push_scissor(bounds)!;
+	ctx.push_scissor(bounds, z_index)!;
 
 	short baseline = (short)ctx.font.ascender;
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
@@ -152,7 +170,7 @@ fn void? Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu
 				.h = gp.h,
 			};
 			// push the sprite only if it collides with the bounds
-			if (!cull_rect(gb, bounds)) ctx.push_sprite(gb, gt, texture_id, hue)!;
+			if (!cull_rect(gb, bounds)) ctx.push_sprite(gb, gt, texture_id, z_index, hue)!;
 			line_len += gp.adv;
 		} else if (cp == '\n'){
 			orig.y += line_height + line_gap;
@@ -163,7 +181,7 @@ fn void? Ctx.push_string(&ctx, Rect bounds, String text, Color hue = 0xffffffffu
 	}
 
 	// FIXME: we never get here if an error was thrown before
-	ctx.push_scissor({})!;
+	ctx.push_scissor({}, z_index)!;
 }
 
 fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
@@ -178,14 +196,7 @@ fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
 			.bpp = (ushort)atlas.type.bpp(),
 			},
 		};
-	ctx.push_cmd(&up)!;
+	// update the atlases before everything else
+	ctx.push_cmd(&up, -1)!;
 }
 
-fn void? Ctx.push_scissor(&ctx, Rect rect)
-{
-	Cmd sc = {
-		.type = CMD_SCISSOR,
-		.scissor.rect = rect.intersection(ctx.div_scissor),
-	};
-	ctx.push_cmd(&sc)!;
-}

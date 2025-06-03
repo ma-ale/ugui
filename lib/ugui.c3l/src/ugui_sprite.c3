@@ -164,12 +164,13 @@ fn void? Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
 
 	Id tex_id = ctx.sprite_atlas.id;
 
-	return ctx.push_sprite(elem.bounds, uv, tex_id)!;
+	return ctx.push_sprite(elem.bounds, uv, tex_id, parent.div.z_index)!;
 }
 
 fn void? Ctx.draw_sprite_raw(&ctx, String name, Rect bounds)
 {
+	Elem *parent = ctx.get_parent()!;
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
 	Id tex_id = ctx.sprite_atlas.id;
-	return ctx.push_sprite(bounds, sprite.uv(), tex_id, type: sprite.type)!;
+	return ctx.push_sprite(bounds, sprite.uv(), tex_id, parent.div.z_index, type: sprite.type)!;
 }
