@@ -49,6 +49,12 @@ struct Cmd (Printable) {
 	}
 }
 
+fn int Cmd.compare_to(Cmd a, Cmd b)
+{
+	if (a.z_index == b.z_index) return 0;
+	return a.z_index > b.z_index ? 1 : -1;
+}
+
 // implement the Printable interface
 fn usz? Cmd.to_format(Cmd* cmd, Formatter *f) @dynamic
 {

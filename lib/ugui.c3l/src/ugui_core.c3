@@ -293,7 +293,7 @@ $if DEBUG == 1:
 	// draw mouse position
 	Cmd cmd = {
 		.type = CMD_RECT,
-		.z_index = int.max, // hopefully over everything else
+		.z_index = int.max-1, // hopefully over everything else
 		.rect.rect = {
 			.x = ctx.input.mouse.pos.x - 2,
 			.y = ctx.input.mouse.pos.y - 2,
@@ -304,11 +304,16 @@ $if DEBUG == 1:
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
 
-	// dump the command buffer
-	io::printn("Command Buffer Dump:");
-	foreach(idx, c: ctx.cmd_queue) {
-		io::printfn("\t [%d] = {%s}", idx, c);
-	}
+// dump the command buffer
+//	io::printn("Command Buffer Dump:");
+//	foreach(idx, c: ctx.cmd_queue) {
+//		io::printfn("\t [%d] = {%s}", idx, c);
+//	}
+	ctx.cmd_queue.sort()!;
+//	io::printn("Sorted Command Buffer Dump:");
+//	foreach(idx, c: ctx.cmd_queue) {
+//		io::printfn("\t [%d] = {%s}", idx, c);
+//	}
 $endif
 }
 

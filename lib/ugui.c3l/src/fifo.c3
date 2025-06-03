@@ -1,8 +1,10 @@
+module fifo::faults;
+faultdef FULL, EMPTY;
+
 module fifo{Type};
 
 import std::core::mem;
-
-faultdef FULL, EMPTY;
+import std::sort;
 
 // TODO: specify the allocator
 
@@ -27,7 +29,7 @@ fn void Fifo.free(&fifo)
 fn void? Fifo.enqueue(&fifo, Type *elem)
 {
 	if (fifo.count >= fifo.arr.len) {
-		return FULL?;
+		return fifo::faults::FULL?;
 	}
 	usz in = (fifo.out + fifo.count) % fifo.arr.len;
 	fifo.arr[in] = *elem;
@@ -37,7 +39,7 @@ fn void? Fifo.enqueue(&fifo, Type *elem)
 fn Type*? Fifo.dequeue(&fifo)
 {
 	if (fifo.count == 0) {
-		return EMPTY?;
+		return fifo::faults::EMPTY?;
 	}
 	Type *ret = &fifo.arr[fifo.out];
 	fifo.count--;
@@ -63,4 +65,27 @@ macro Type* Fifo.get_ref(&fifo, usz i) @operator(&[])
 macro usz Fifo.len(&fifo) @operator(len)
 {
 	return fifo.count;
+}
+
+fn void? Fifo.sort(&fifo)
+{
+	Type[] arr = mem::new_array(Type, fifo.count);
+	defer mem::free(arr);
+
+	foreach(i, c: fifo) {
+		arr[i] = c;
+	}
+
+	// doesn't keep ordering
+	//sort::quicksort(arr);
+
+	// seems to keep the right order but we will never know...
+	// also since most things are already ordered the time is closer to O(n) than to O(n^2)
+	sort::insertionsort(arr);
+
+	fifo.count = 0;
+	fifo.out = 0;
+	foreach (&c: arr) {
+		fifo.enqueue(c)!;
+	}
 }

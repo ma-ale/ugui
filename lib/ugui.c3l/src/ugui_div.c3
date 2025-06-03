@@ -48,7 +48,6 @@ fn void? Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, boo
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
 	elem.div.z_index = parent.div.z_index + 1;
-	io::printn(elem.div.z_index);
 
 	// 2. layout the element
 	Rect wanted_size = {
