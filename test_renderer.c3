@@ -18,7 +18,6 @@ fn int main()
 
 	for (int i = 0; i < 10; i++) {
 
-		ren.draw_rect(100,100,100,100,0xff00ff00,"");
 
 		GPUCommandBuffer* cmdbuf = sdl::acquire_gpu_command_buffer(ren.gpu);
 		GPUTexture* swapchain_texture;
@@ -47,6 +46,9 @@ fn int main()
 			unreachable("render pass creation went wrong: %s", sdl::get_error());
 		}
 
+		// rect 1
+		ren.draw_rect(100,100,100,100,0xff00ff00,"");
+
 		GPUGraphicsPipeline* p = ren.pipelines.get_from_name("rect shader").pipeline;
 		if (p == null) {
 			unreachable("no pipeline");
@@ -61,6 +63,21 @@ fn int main()
 		sdl::push_gpu_vertex_uniform_data(cmdbuf, 1, &v, Viewsize.sizeof);
 
 		sdl::draw_gpu_indexed_primitives(pass, 6, 1, 0, 0, 0);
+
+/*
+		// rect 2
+		ren.draw_rect(0,0,50,50,0xffff0000,"");
+
+		sdl::bind_gpu_graphics_pipeline(pass, p);
+		sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = ren.quad_buffer.vert_buf, .offset = 0}}, 1);
+		sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = ren.quad_buffer.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
+		Viewsize w = {.w = 640, .h = 480};
+		w.ox = 25*i;
+		//w.oy = 25*i;
+		sdl::push_gpu_vertex_uniform_data(cmdbuf, 1, &w, Viewsize.sizeof);
+
+		sdl::draw_gpu_indexed_primitives(pass, 6, 1, 0, 0, 0);
+*/
 
 		sdl::end_gpu_render_pass(pass);
 		sdl::submit_gpu_command_buffer(cmdbuf);
