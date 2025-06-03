@@ -51,10 +51,10 @@ struct Renderer {
 // how each vertex is represented in the gpu
 struct Vertex @packed {
 	struct pos {
-		float x, y;
+		short x, y;
 	}
 	struct uv {
-		float u, v;
+		short u, v;
 	}
 	struct col { // FIXME: this is shit
 		union {
@@ -321,13 +321,13 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 				{ // at location zero there is the position of the vertex
 					.location = 0,
 					.buffer_slot = 0, // only one buffer so always slot zero
-					.format = GPU_VERTEXELEMENTFORMAT_FLOAT2,
+					.format = GPU_VERTEXELEMENTFORMAT_SHORT2,
 					.offset = Vertex.pos.offsetof,
 				},
 				{ // at location one there are the uv coordinates
 					.location = 1,
 					.buffer_slot = 0,
-					.format = GPU_VERTEXELEMENTFORMAT_FLOAT2,
+					.format = GPU_VERTEXELEMENTFORMAT_SHORT2,
 					.offset = Vertex.uv.offsetof,
 				},
 				{ // at location two there is the color
@@ -500,12 +500,6 @@ fn void Renderer.update_texture(&self, String name, char[] pixels, ushort width,
 }
 
 
-macro void Vertex.norm(&p, float w, float h)
-{
-	p.pos.x = p.pos.x * 2.0 / w - 1.0;
-	p.pos.y = -(p.pos.y * 2.0 / h - 1.0);
-}
-
 // an highly inefficient way to draw a single quad, no batching, per-quad upload
 fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color, String shader_name)
 {
@@ -541,15 +535,11 @@ fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color
 	 * +-------------+
 	 * v2            v3
 	 */	
-	quad.vertices.v1 = {.pos = {.x = x, .y = y}, .col.u = color};
-	quad.vertices.v2 = {.pos = {.x = x, .y = (float)y+h}, .col.u = color};
-	quad.vertices.v3 = {.pos = {.x = (float)x+w, .y = (float)y+h}, .col.u = color};
-	quad.vertices.v4 = {.pos = {.x = (float)x+w, .y = y}, .col.u = color};
+	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .col.u = color};
+	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .col.u = color};
+	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .col.u = color};
+	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .col.u = color};
 	
-	quad.vertices.v1.norm(640.0, 480.0);
-	quad.vertices.v2.norm(640.0, 480.0);
-	quad.vertices.v3.norm(640.0, 480.0);
-	quad.vertices.v4.norm(640.0, 480.0);
 
 	// triangle 1
 	quad.indices.i1 = 0; // v1

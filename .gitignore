@@ -5,3 +5,4 @@ build/*
 perf.data*
 *.rdc
 test_renderer
+resources/shaders/compiled/**
