@@ -44,3 +44,23 @@ fn Type*? Fifo.dequeue(&fifo)
 	fifo.out = (fifo.out + 1) % fifo.arr.len;
 	return ret;
 }
+
+macro Type Fifo.get(&fifo, usz i) @operator([])
+{
+	return fifo.arr[(fifo.out + i) % fifo.arr.len];
+}
+
+fn void Fifo.set(&fifo, usz i, Type val) @operator([]=)
+{
+	fifo.arr[(fifo.out + i) % fifo.arr.len] = val;
+}
+
+macro Type* Fifo.get_ref(&fifo, usz i) @operator(&[])
+{
+	return &fifo.arr[(fifo.out + i) % fifo.arr.len];
+}
+
+macro usz Fifo.len(&fifo) @operator(len)
+{
+	return fifo.count;
+}
