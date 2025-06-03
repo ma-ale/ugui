@@ -101,27 +101,23 @@ $endif
 
 	// init subsystems
 	if (!sdl::init(INIT_VIDEO)) {
-		io::eprintfn("sdl error: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("sdl error: %s", sdl::get_error());
 	}
 
 	// create the window
 	self.win = sdl::create_window(title, 640, 480, WINDOW_RESIZABLE|WINDOW_VULKAN);
 	if (self.win == null) {
-		io::eprintfn("sdl error: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("sdl error: %s", sdl::get_error());
 	}
 
 	// get the gpu device handle
 	self.gpu = sdl::create_gpu_device(GPU_SHADERFORMAT_SPIRV, true, "vulkan");
 	if (self.gpu == null) {
-		io::eprintfn("failed to create gpu device: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to create gpu device: %s", sdl::get_error());
 	}
 
 	if (!sdl::claim_window_for_gpu_device(self.gpu, self.win)) {
-		io::eprintfn("failed to claim window for use with gpu: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to claim window for use with gpu: %s", sdl::get_error());
 	}
 
 	// initialize the quad buffer
@@ -129,16 +125,14 @@ $endif
 		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_VERTEX, .size = Quad.vertices.sizeof}
 	);
 	if (self.quad_buffer.vert_buf == null) {
-		io::eprintfn("failed to initialize quad buffer (vertex): %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to initialize quad buffer (vertex): %s", sdl::get_error());
 	}
 
 	self.quad_buffer.idx_buf = sdl::create_gpu_buffer(self.gpu,
 		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_INDEX, .size = Quad.indices.sizeof}
 	);
 	if (self.quad_buffer.idx_buf == null) {
-		io::eprintfn("failed to initialize quad buffer (index): %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to initialize quad buffer (index): %s", sdl::get_error());
 	}
 
 	self.quad_buffer.initialized = true;
@@ -189,8 +183,7 @@ fn void Renderer.load_spirv_shader_from_mem(&self, String name, char[] vert_code
 
 		s.vert = sdl::create_gpu_shader(self.gpu, &shader_info);
 		if (s.vert == null) {
-			io::eprintfn("failed to create gpu vertex shader: %s", sdl::get_error());
-			libc::exit(1);
+			unreachable("failed to create gpu vertex shader: %s", sdl::get_error());
 		}
 	}
 
@@ -211,8 +204,7 @@ fn void Renderer.load_spirv_shader_from_mem(&self, String name, char[] vert_code
 
 		s.frag = sdl::create_gpu_shader(self.gpu, &shader_info);
 		if (s.frag == null) {
-			io::eprintfn("failed to create gpu fragment shader: %s", sdl::get_error());
-			libc::exit(1);
+			unreachable("failed to create gpu fragment shader: %s", sdl::get_error());
 		}
 	}
 
@@ -230,21 +222,16 @@ fn void Renderer.load_spirv_shader_from_file(&self, String name, String vert_pat
 	char[] frag_code;
 
 	// create vertex shader
-	if (vert_path != "") {
-		vert_code = mem::new_array(char, file::get_size(vert_path)!!+1);
-		file::load_buffer(vert_path, vert_code)!!;
-	}
+	vert_code = mem::new_array(char, file::get_size(vert_path)!!+1);
+	file::load_buffer(vert_path, vert_code)!!;
+	defer mem::free(vert_code);
 
 	// create fragment shader
-	if (frag_path != "") {
-		frag_code = mem::new_array(char, file::get_size(frag_path)!!+1);
-		file::load_buffer(frag_path, frag_code)!!;
-	}
+	frag_code = mem::new_array(char, file::get_size(frag_path)!!+1);
+	file::load_buffer(frag_path, frag_code)!!;
+	defer mem::free(frag_code);
 
 	self.load_spirv_shader_from_mem(name, vert_code, frag_code, textures, uniforms);
-
-	if (vert_code.ptr) mem::free(vert_code);
-	if (frag_code.ptr) mem::free(frag_code);
 }
 
 fn Shader* ShaderList.get_from_name(&self, String name)
@@ -296,8 +283,7 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 {
 	Shader *s = self.shaders.get_from_name(shader_name);
 	if (s == null) {
-		io::eprintfn("error in creating pipeline: no shader named %s", shader_name);
-		libc::exit(1);
+		unreachable("error in creating pipeline: no shader named %s", shader_name);
 	}
 
 	GPUGraphicsPipelineCreateInfo ci = {
@@ -375,8 +361,7 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 	};
 
 	if (p.pipeline == null) {
-		io::eprintfn("failed to create pipeline (shaders: %s, type: %s): %s", shader_name, type.nameof, sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to create pipeline (shaders: %s, type: %s): %s", shader_name, type.nameof, sdl::get_error());
 	}
 
 	self.pipelines.push(p);
@@ -408,8 +393,7 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 
 	GPUTexture* texture = sdl::create_gpu_texture(self.gpu, &tci);
 	if (texture == null) {
-		io::eprintfn("failed to create texture (name: %s, type: %s): %s", name, type.nameof, sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to create texture (name: %s, type: %s): %s", name, type.nameof, sdl::get_error());
 	}
 
 	// the sampler description, how the texture should be sampled
@@ -425,8 +409,7 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 
 	GPUSampler* sampler = sdl::create_gpu_sampler(self.gpu, &sci);
 	if (sampler == null) {
-		io::eprintfn("failed to create sampler (texture name: %s, type: %s): %s", name, type.nameof, sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to create sampler (texture name: %s, type: %s): %s", name, type.nameof, sdl::get_error());
 	}
 
 	Texture t = {
@@ -444,41 +427,35 @@ fn void Renderer.update_texture(&self, String name, char[] pixels, ushort width,
 {
 	Texture* t = self.textures.get_from_name(name);
 	if (t == null || t.texture == null) {
-		io::eprintf("failed updating texture: no texture named %s", name);
-		libc::exit(1);
+		unreachable("failed updating texture: no texture named %s", name);
 	}
 	GPUTexture* texture = t.texture;
 
 	// FIXME: do a better job at validating the copy
 	if (x > t.width || y > t.height) {
-		io::eprintf("failed updating texture: attempting to copy outside of the texture region", name);
-		libc::exit(1);
+		unreachable("failed updating texture: attempting to copy outside of the texture region", name);
 	}
 
 	// upload image data
 	GPUCommandBuffer* cmdbuf = sdl::acquire_gpu_command_buffer(self.gpu);
 	if (cmdbuf == null) {
-		io::eprintfn("failed to upload texture data at acquiring command buffer: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to upload texture data at acquiring command buffer: %s", sdl::get_error());
 	}
 	GPUCopyPass* copypass = sdl::begin_gpu_copy_pass(cmdbuf);
 	if (copypass == null) {
-		io::eprintfn("failed to upload texture data at beginning copy pass: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to upload texture data at beginning copy pass: %s", sdl::get_error());
 	}
 
 	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
 		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = pixels.len}
 	);
 	if (buf == null) {
-		io::eprintfn("failed to upload texture data at creating the transfer buffer: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to upload texture data at creating the transfer buffer: %s", sdl::get_error());
 	}
 
 	char* gpu_mem = (char*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
 	if (gpu_mem == null) {
-		io::eprintfn("failed to upload texture data at mapping the transfer buffer: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to upload texture data at mapping the transfer buffer: %s", sdl::get_error());
 	}
 	// copy the data to the driver's memory
 	gpu_mem[:pixels.len] = pixels[..];
@@ -493,8 +470,7 @@ fn void Renderer.update_texture(&self, String name, char[] pixels, ushort width,
 
 	sdl::end_gpu_copy_pass(copypass);
 	if (!sdl::submit_gpu_command_buffer(cmdbuf)) {
-		io::eprintfn("failed to upload texture data at command buffer submission: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to upload texture data at command buffer submission: %s", sdl::get_error());
 	}
 	sdl::release_gpu_transfer_buffer(self.gpu, buf);
 }
@@ -505,22 +481,19 @@ fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color
 {
 	// upload the quad data to the gpu
 	if (self.quad_buffer.initialized == false) {
-		io::eprintfn("quad buffer not initialized");
-		libc::exit(1);
+		unreachable("quad buffer not initialized");
 	}
 
 	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
 		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
 	);
 	if (buf == null) {
-		io::eprintfn("failed to create gpu transfer buffer: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
 	}
 
 	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
 	if (quad == null) {
-		io::eprintfn("failed to map gpu transfer buffer: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
 	}
 
 	/* v1            v4
@@ -554,8 +527,7 @@ fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color
 
 	GPUCommandBuffer* cmd = sdl::acquire_gpu_command_buffer(self.gpu);
 	if (cmd == null) {
-		io::eprintfn("failed to upload quad at acquiring command buffer: %s", sdl::get_error());
-		libc::exit(1);
+		unreachable("failed to upload quad at acquiring command buffer: %s", sdl::get_error());
 	}
 	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
 
