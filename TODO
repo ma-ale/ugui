@@ -60,8 +60,8 @@ to maintain focus until mouse release (fix scroll bars)
 ## Commands
 
 [x] rect commads should have:
-	- border width
-	- border radius
+    - border width
+    - border radius
 [x] add a command to update an atlas
 [ ] New window command, useful for popups
 
@@ -107,3 +107,11 @@ to maintain focus until mouse release (fix scroll bars)
     queried by the user for later use. This allows for smaller caches and in general
     reduces some load, since most of the stuff is recomputed for every frame.
 
+## SDL3 Renderer
+
+- smart batching
+- maybe use instancing since we are always drawing the same geometry. With instancing every
+  different quad could have its coulour, border and radius with much better performance than
+  issuing a draw call for every quad (and uploading it)
+  https://rastertek.com/dx11win10tut48.html
+  https://www.braynzarsoft.net/viewtutorial/q16390-33-instancing-with-indexed-primitives

@@ -28,11 +28,13 @@ struct Texture {
 	uint id;
 }
 
-// gpu buffer that contains a single quad
+// The GPU buffers that contain quad info, the size is determined by MAX_QUAD_BATCH
+const int MAX_QUAD_BATCH = 16;
 struct QuadBuffer {
 	sdl::GPUBuffer* vert_buf;
 	sdl::GPUBuffer* idx_buf;
 	bool initialized;
+	int count;
 }
 
 alias ShaderList = List{Shader};
@@ -93,6 +95,8 @@ $if DEBUG == 0:
 		sdl::set_hint(sdl::HINT_VIDEO_DRIVER, "wayland");
 	}
 $else
+	// in debug mode set the video driver to X11 because renderdoc/
+	// doesn't support debugging in wayland yet. 
 	sdl::set_hint(sdl::HINT_VIDEO_DRIVER, "x11");
 $endif
 
@@ -120,16 +124,18 @@ $endif
 		unreachable("failed to claim window for use with gpu: %s", sdl::get_error());
 	}
 
+	//
 	// initialize the quad buffer
+	// ==========================
 	self.quad_buffer.vert_buf = sdl::create_gpu_buffer(self.gpu,
-		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_VERTEX, .size = Quad.vertices.sizeof}
+		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_VERTEX, .size = Quad.vertices.sizeof * MAX_QUAD_BATCH}
 	);
 	if (self.quad_buffer.vert_buf == null) {
 		unreachable("failed to initialize quad buffer (vertex): %s", sdl::get_error());
 	}
 
 	self.quad_buffer.idx_buf = sdl::create_gpu_buffer(self.gpu,
-		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_INDEX, .size = Quad.indices.sizeof}
+		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_INDEX, .size = Quad.indices.sizeof * MAX_QUAD_BATCH}
 	);
 	if (self.quad_buffer.idx_buf == null) {
 		unreachable("failed to initialize quad buffer (index): %s", sdl::get_error());
@@ -476,9 +482,13 @@ fn void Renderer.update_texture(&self, String name, char[] pixels, ushort width,
 }
 
 
-// an highly inefficient way to draw a single quad, no batching, per-quad upload
-fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color, String shader_name)
+// Push a quad into the quad buffer, return true on success and false on failure
+fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color)
 {
+	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
+		return false;
+	}
+
 	// upload the quad data to the gpu
 	if (self.quad_buffer.initialized == false) {
 		unreachable("quad buffer not initialized");
@@ -512,13 +522,11 @@ fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color
 	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .col.u = color};
 	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .col.u = color};
 	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .col.u = color};
-	
-
-	// triangle 1
+	// triangle 1 indices
 	quad.indices.i1 = 0; // v1
 	quad.indices.i2 = 1; // v2
 	quad.indices.i3 = 3; // v4
-	// triangle 2
+	// triangle 2 indices
 	quad.indices.i4 = 1; // v2
 	quad.indices.i5 = 2; // v3
 	quad.indices.i6 = 3; // v4
@@ -532,15 +540,16 @@ fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color
 	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
 
 	// upload vertices
+	QuadBuffer* qb = &self.quad_buffer;
 	sdl::upload_to_gpu_buffer(cpy, 
 		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.vertices.offsetof},
-		&&(GPUBufferRegion){.buffer = self.quad_buffer.vert_buf, .offset = 0, .size = Quad.vertices.sizeof},
+		&&(GPUBufferRegion){.buffer = qb.vert_buf, .offset = qb.count * Quad.vertices.sizeof, .size = Quad.vertices.sizeof},
 		false
 	);
 	// upload indices
 	sdl::upload_to_gpu_buffer(cpy, 
 		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.indices.offsetof},
-		&&(GPUBufferRegion){.buffer = self.quad_buffer.idx_buf, .offset = 0, .size = Quad.indices.sizeof},
+		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = qb.count * Quad.indices.sizeof, .size = Quad.indices.sizeof},
 		false
 	);
 
@@ -551,40 +560,43 @@ fn void Renderer.draw_rect(&self, short x, short y, short w, short h, uint color
 	sdl::release_gpu_transfer_buffer(self.gpu, buf);
 	sdl::wait_for_gpu_idle(self.gpu);
 
-/*
-	// now finally draw the quad
-	// if we are not in a render pass then we can't render shit
-	if (self.render_cmd == null) {
-		unreachable("start rendering first before trying to render a quad");
-	}
+	qb.count++;
 
-	// FIXME: this could be done at the start of rendering
-	GPUTexture* t;
-	if (!sdl::wait_and_acquire_gpu_swapchain_texture(self.render_cmd, self.win, &t, null, null)) {
-		unreachable("failed to acquire swapchain texture: %s", sdl::get_error());
-	} 
-
-	// TODO: begin render pass
-	
-	Pipeline* p = self.pipelines.get_from_name(shader_name);
-	if (p == null) {
-		unreachable("no pipeline named: %s", shader_name);
-	}
-
-	// bind the data
-	sdl::bind_gpu_graphics_pipeline(self.render_pass, pipeline);
-	sdl::bind_gpu_vertex_buffer(self.render_pass, 0, 
-		&&(GPUBufferBinding){.buffer = self.quad_buffer.vert_buf, .offset = 0}, 1
-	);
-	sdl::bind_gpu_index_buffer(self.render_pass, 0, 
-		&&(GPUBufferBinding){.buffer = self.quad_buffer.idx_buf, .offset = 0}, 1
-	);
-
-	sdl::draw_gpu_indexed_primitives(self.render_pass, 6, 1, 0, 0, 0);
-*/
+	return true;
 }
 
-// TODO: fn Renderer.draw_quad, it has to use a vertex buffer and an index buffer
+// draw all quads in the quad buffer, since uniforms are per-drawcall it makes no sense
+// to draw them one a the time
+fn void Renderer.draw_quads(&self, GPURenderPass* pass)
+{
+	QuadBuffer* qb = &self.quad_buffer;
+	sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = 0}}, 1);
+	sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
+
+	// we need instancing to not do this
+	for (int i = 0; i < qb.count; i++) {
+		sdl::draw_gpu_indexed_primitives(pass, 6, 1, i*6, i*4, 0);
+	}
+
+	qb.count = 0;
+}
+
 // TODO: fn Renderer.draw_sprite, same as draw_quad but also bind the texture
 // TODO: fn Renderer.begin_render
 // TODO: fn Renderer.end_render
+
+/// === NOTES ===
+/* 1. The uniform data is per-render pass. So you can do:
+ *      - push uniform
+ *      - draw 1
+ *      - draw 2
+ *    But not:
+ *      - push uniform
+ *      - draw
+ *      - push new uniform
+ *      - draw
+ *    And not even:
+ *      - draw
+ *      - push uniform
+ *      - draw
+ */

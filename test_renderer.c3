@@ -47,7 +47,11 @@ fn int main()
 		}
 
 		// rect 1
-		ren.draw_rect(100,100,100,100,0xff00ff00,"");
+		ren.push_quad(100,100,100,100,0xff00ff00);
+		// rect 2
+		ren.push_quad(0,0,20,20,0xff0000ff);
+		// rect 3
+		ren.push_quad(200,300,50,50,0xffff0000);
 
 		GPUGraphicsPipeline* p = ren.pipelines.get_from_name("rect shader").pipeline;
 		if (p == null) {
@@ -55,29 +59,14 @@ fn int main()
 		}
 
 		sdl::bind_gpu_graphics_pipeline(pass, p);
-		sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = ren.quad_buffer.vert_buf, .offset = 0}}, 1);
-		sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = ren.quad_buffer.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
+
 		Viewsize v = {.w = 640, .h = 480};
 		v.ox = 50*i;
 		v.oy = 50*i;
+	
 		sdl::push_gpu_vertex_uniform_data(cmdbuf, 1, &v, Viewsize.sizeof);
 
-		sdl::draw_gpu_indexed_primitives(pass, 6, 1, 0, 0, 0);
-
-/*
-		// rect 2
-		ren.draw_rect(0,0,50,50,0xffff0000,"");
-
-		sdl::bind_gpu_graphics_pipeline(pass, p);
-		sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = ren.quad_buffer.vert_buf, .offset = 0}}, 1);
-		sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = ren.quad_buffer.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
-		Viewsize w = {.w = 640, .h = 480};
-		w.ox = 25*i;
-		//w.oy = 25*i;
-		sdl::push_gpu_vertex_uniform_data(cmdbuf, 1, &w, Viewsize.sizeof);
-
-		sdl::draw_gpu_indexed_primitives(pass, 6, 1, 0, 0, 0);
-*/
+		ren.draw_quads(pass);
 
 		sdl::end_gpu_render_pass(pass);
 		sdl::submit_gpu_command_buffer(cmdbuf);
