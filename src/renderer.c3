@@ -29,12 +29,13 @@ struct Texture {
 }
 
 // The GPU buffers that contain quad info, the size is determined by MAX_QUAD_BATCH
-const int MAX_QUAD_BATCH = 16;
+const int MAX_QUAD_BATCH = 128;
 struct QuadBuffer {
 	sdl::GPUBuffer* vert_buf;
 	sdl::GPUBuffer* idx_buf;
 	bool initialized;
 	int count;
+	int off; // the offset to draw from
 }
 
 alias ShaderList = List{Shader};
@@ -373,14 +374,15 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 	self.pipelines.push(p);
 }
 
+// NOTE: with TEXTUREUSAGE_SAMPLER the texture format cannot be intger _UINT so it has to be nermalized
 enum TextureType : (GPUTextureFormat format) {
-	FULL_COLOR = GPU_TEXTUREFORMAT_R8G8B8A8_UINT,
-	JUST_ALPHA = GPU_TEXTUREFORMAT_R8_UINT
+	FULL_COLOR = GPU_TEXTUREFORMAT_R8G8B8A8_UNORM,
+	JUST_ALPHA = GPU_TEXTUREFORMAT_R8_UNORM
 } 
 
 // create a new gpu texture from a pixel buffer, the format has to be specified
 // the new texture s given an id and pushed into a texture list
-fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels, ushort width, ushort height)
+fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels, uint width, uint height)
 {
 	uint id = name.hash();
 	
@@ -393,7 +395,7 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 		.width = width,
 		.height = height,
 		.layer_count_or_depth = 1,
-		.num_levels = 0, // no mip maps
+		.num_levels = 1, // no mip maps so just one level
 		// .sample_count not used since the texture is not a render target
 	};
 
@@ -429,7 +431,7 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 	self.update_texture(name, pixels, width, height);
 }
 
-fn void Renderer.update_texture(&self, String name, char[] pixels, ushort width, ushort height, ushort x = 0, ushort y = 0)
+fn void Renderer.update_texture(&self, String name, char[] pixels, uint width, uint height, uint x = 0, uint y = 0)
 {
 	Texture* t = self.textures.get_from_name(name);
 	if (t == null || t.texture == null) {
@@ -481,6 +483,87 @@ fn void Renderer.update_texture(&self, String name, char[] pixels, ushort width,
 	sdl::release_gpu_transfer_buffer(self.gpu, buf);
 }
 
+
+fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v) {
+	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
+		return false;
+	}
+
+	// upload the quad data to the gpu
+	if (self.quad_buffer.initialized == false) {
+		unreachable("quad buffer not initialized");
+	}
+
+	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
+		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
+	);
+	if (buf == null) {
+		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+	}
+
+	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
+	if (quad == null) {
+		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
+	}
+
+	/* v1            v4
+	 * +-------------+
+	 * |           _/|
+	 * |         _/  |
+	 * |   1   _/    |
+	 * |     _/      |
+	 * |   _/        |
+	 * | _/     2    |
+	 * |/            |
+	 * +-------------+
+	 * v2            v3
+	 */	
+	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .uv = {.u = u, .v = v}};
+	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .uv = {.u = u, .v = v+h}};
+	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .uv = {.u = u+w, .v = v+h}};
+	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .uv = {.u = u+w, .v = v}};
+	// triangle 1 indices
+	quad.indices.i1 = 0; // v1
+	quad.indices.i2 = 1; // v2
+	quad.indices.i3 = 3; // v4
+	// triangle 2 indices
+	quad.indices.i4 = 1; // v2
+	quad.indices.i5 = 2; // v3
+	quad.indices.i6 = 3; // v4
+
+	sdl::unmap_gpu_transfer_buffer(self.gpu, buf);
+
+	GPUCommandBuffer* cmd = sdl::acquire_gpu_command_buffer(self.gpu);
+	if (cmd == null) {
+		unreachable("failed to upload quad at acquiring command buffer: %s", sdl::get_error());
+	}
+	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
+
+	// upload vertices
+	QuadBuffer* qb = &self.quad_buffer;
+	sdl::upload_to_gpu_buffer(cpy, 
+		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.vertices.offsetof},
+		&&(GPUBufferRegion){.buffer = qb.vert_buf, .offset = qb.count * Quad.vertices.sizeof, .size = Quad.vertices.sizeof},
+		false
+	);
+	// upload indices
+	sdl::upload_to_gpu_buffer(cpy, 
+		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.indices.offsetof},
+		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = qb.count * Quad.indices.sizeof, .size = Quad.indices.sizeof},
+		false
+	);
+
+	sdl::end_gpu_copy_pass(cpy);
+	if (!sdl::submit_gpu_command_buffer(cmd)) {
+		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
+	}
+	sdl::release_gpu_transfer_buffer(self.gpu, buf);
+	//sdl::wait_for_gpu_idle(self.gpu);
+
+	qb.count++;
+
+	return true;
+}
 
 // Push a quad into the quad buffer, return true on success and false on failure
 fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color)
@@ -558,7 +641,7 @@ fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color
 		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
 	}
 	sdl::release_gpu_transfer_buffer(self.gpu, buf);
-	sdl::wait_for_gpu_idle(self.gpu);
+	//sdl::wait_for_gpu_idle(self.gpu);
 
 	qb.count++;
 
@@ -570,16 +653,26 @@ fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color
 fn void Renderer.draw_quads(&self, GPURenderPass* pass)
 {
 	QuadBuffer* qb = &self.quad_buffer;
-	sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = 0}}, 1);
-	sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
+
+	if (qb.off == qb.count) return;
+
+	sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = qb.off*Quad.vertices.sizeof}}, 1);
+	sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = qb.off*Quad.indices.sizeof}, GPU_INDEXELEMENTSIZE_16BIT);
 
 	// we need instancing to not do this
-	for (int i = 0; i < qb.count; i++) {
+	for (int i = 0; i < qb.count - qb.off; i++) {
 		sdl::draw_gpu_indexed_primitives(pass, 6, 1, i*6, i*4, 0);
 	}
 
-	qb.count = 0;
+	qb.off = qb.count;
 }
+
+fn void Renderer.reset_quads(&self)
+{
+	self.quad_buffer.count = 0;
+	self.quad_buffer.off = 0;
+}
+
 
 // TODO: fn Renderer.draw_sprite, same as draw_quad but also bind the texture
 // TODO: fn Renderer.begin_render
@@ -599,4 +692,8 @@ fn void Renderer.draw_quads(&self, GPURenderPass* pass)
  *      - draw
  *      - push uniform
  *      - draw
+ * 
+ * 2. The GPU buffers are read per-command-buffer and not per
+ *    render pass. So I cannot override an element in the buffer
+ *    before submitting the command buffer. 
  */
