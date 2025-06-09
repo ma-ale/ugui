@@ -1,4 +1,5 @@
 all: thirdparty/mini-qoi/mqoi.a
+	mkdir -p linux-x64
 	cp thirdparty/mini-qoi/mqoi.a linux-x64/libmqoi.a
 
 thirdparty/mini-qoi/mqoi.a:
