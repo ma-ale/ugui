@@ -1,7 +1,3 @@
-[submodule "lib/raylib.c3l"]
-	path = lib/raylib.c3l
-	url = https://github.com/NexushasTaken/raylib.c3l
-	ignore = dirty
 [submodule "lib/grapheme.c3l/thirdparty/libgrapheme"]
 	path = lib/grapheme.c3l/thirdparty/libgrapheme
 	url = git://git.suckless.org/libgrapheme
