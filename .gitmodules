@@ -18,3 +18,7 @@
 	path = lib/sdl3.c3l
 	url = https://git.alemauri.eu/alema/sdl3.c3l
 	ignore = dirty
+[submodule "lib/vendor"]
+	path = lib/vendor
+	url = https://github.com/c3lang/vendor
+	ignore = dirty
