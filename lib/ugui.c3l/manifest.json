@@ -4,7 +4,7 @@
   "targets" : {
     "linux-x64" : {
       "link-args" : [],
-      "dependencies" : ["schrift", "grapheme", "mqoi"],
+      "dependencies" : ["schrift", "grapheme"],
       "linked-libraries" : []
     }
   }
