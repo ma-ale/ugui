@@ -1,7 +1,7 @@
 {
   "langrev": "1",
   "warnings": ["no-unused"],
-  "dependency-search-paths": ["lib", "../../Programs/Source/c3-vendor/libraries", "../sdl3.c3l"],
+  "dependency-search-paths": ["lib", "../../Programs/Source/c3-vendor/libraries"],
   "dependencies": ["raylib55", "sdl3", "ugui"],
   "features": [],
   "authors": ["Alessandro Mauri <ale@shitposting.expert>"],

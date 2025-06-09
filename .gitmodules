@@ -14,3 +14,7 @@
 	path = lib/schrift.c3l/thirdparty/libschrift
 	url = https://github.com/tomolt/libschrift
 	ignore = dirty
+[submodule "lib/sdl3.c3l"]
+	path = lib/sdl3.c3l
+	url = https://git.alemauri.eu/alema/sdl3.c3l
+	ignore = dirty
