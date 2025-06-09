@@ -3,7 +3,7 @@ module ugui;
 import std::core::mem::allocator;
 import std::collections::map;
 import std::io;
-import mqoi;
+import std::compression::qoi;
 
 const usz SRITES_PER_ATLAS = 64;
 
@@ -102,37 +102,12 @@ fn void? Ctx.import_sprite_memory(&ctx, String name, char[] pixels, ushort w, us
 
 fn void? Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType type = SPRITE_NORMAL)
 {
-	mqoi::Desc image_desc;
-	uint w, h;
+	QOIDesc desc;
 
-	File file = file::open(path, "rb")!;
-	defer (void) file.close();
-
-	while (!mqoi::desc_done(&image_desc)) {
-		mqoi::desc_push(&image_desc, file.read_byte()!);
-	}
-	if (mqoi::desc_verify(&image_desc, &w, &h) != 0) {
-		return io::FILE_NOT_VALID?;
-	}
-
-	mqoi::Dec dec;
-	mqoi::Rgba* px;
-
-	usz idx;
-	char[] pixels = mem::new_array(char, (usz)w*h*4);
+	char[] pixels = qoi::read(allocator::heap(), path, &desc, QOIChannels.RGBA)!;
 	defer mem::free(pixels);
 
-	mqoi::dec_init(&dec, w*h);
-	while (!mqoi::dec_done(&dec)) {
-		mqoi::dec_push(&dec, file.read_byte()!);
-
-		while ((px = mqoi::dec_pop(&dec)) != null) {
-			pixels[idx..idx+3] = px.value[..];
-			idx += 4;
-		}
-	}
-
-	ctx.sprite_atlas.insert(name, type, pixels, (ushort)w, (ushort)h, (ushort)w)!;
+	ctx.sprite_atlas.insert(name, type, pixels, (ushort)desc.width, (ushort)desc.height, (ushort)desc.width)!;
 }
 
 fn void? Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})

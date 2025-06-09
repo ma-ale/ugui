@@ -2,10 +2,6 @@
 	path = lib/grapheme.c3l/thirdparty/libgrapheme
 	url = git://git.suckless.org/libgrapheme
 	ignore = dirty
-[submodule "lib/mini-qoi.c3l/thirdparty/mini-qoi"]
-	path = lib/mini-qoi.c3l/thirdparty/mini-qoi
-	url = https://github.com/shraiwi/mini-qoi
-	ignore = dirty
 [submodule "lib/schrift.c3l/thirdparty/libschrift"]
 	path = lib/schrift.c3l/thirdparty/libschrift
 	url = https://github.com/tomolt/libschrift
