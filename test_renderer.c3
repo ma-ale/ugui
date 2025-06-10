@@ -62,7 +62,7 @@ fn int main()
 		}
 
 		// rect 1
-		ren.push_quad(100,100,100,100,0xff00ff00);
+		ren.push_quad(100,100,100,100,0xff00ff00, 20);
 		// rect 2
 		ren.push_quad(0,0,20,20,0xff0000ff);
 		// rect 3

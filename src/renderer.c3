@@ -566,7 +566,7 @@ fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u,
 }
 
 // Push a quad into the quad buffer, return true on success and false on failure
-fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color)
+fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color, ushort radius = 0)
 {
 	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
 		return false;
@@ -600,11 +600,14 @@ fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color
 	 * |/            |
 	 * +-------------+
 	 * v2            v3
-	 */	
-	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .col.u = color};
-	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .col.u = color};
-	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .col.u = color};
-	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .col.u = color};
+	 */
+	// the wanted radius is pushed into the uv coordinates, the vertex shader then extracts the absolute value
+	// and passes it to the fragment shader, then it uses the sign to give the fragment shader local coordinates
+	// into the quad.
+	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .uv = {.u = -radius, .v = +radius}, .col.u = color};
+	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .uv = {.u = -radius, .v = -radius}, .col.u = color};
+	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .uv = {.u = +radius, .v = -radius}, .col.u = color};
+	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .uv = {.u = +radius, .v = +radius}, .col.u = color};
 	// triangle 1 indices
 	quad.indices.i1 = 0; // v1
 	quad.indices.i2 = 1; // v2
