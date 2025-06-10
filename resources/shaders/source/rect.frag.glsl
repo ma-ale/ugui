@@ -1,5 +1,9 @@
 #version 450
 
+layout(set = 3, binding = 0) uniform Viewport {
+    ivec2 view;
+};
+
 layout(location = 0) in vec4 color;
 layout(location = 1) in vec2 local_position;
 layout(location = 2) in vec2 global_position;

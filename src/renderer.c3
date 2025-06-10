@@ -1,35 +1,57 @@
+module idlist{Type};
+
+// extends the List type to search elements that have a type.id property
+// TODO: check that type has an id
+
+import std::collections::list;
+
+alias IdList = List{Type};
+
+macro Type* IdList.get_from_name(&self, String name)
+{
+	return self.get_from_id(name.hash());
+}
+
+macro Type* IdList.get_from_id(&self, id)
+{
+	foreach(&s: self) {
+		if (s.id == id) {
+			return s;
+		}
+	}
+	return null;
+}
+
 module sdlrenderer::ren;
 
 // 2D renderer for ugui, based on SDL3 using the new GPU API
-// TODO: use unreachable() instead of the combo eprintfn();exit(1); since it does the same thing
-//       but also adds a helpful stack trace
 
 import std::io;
 import std::core::mem;
 import sdl3::sdl;
-import libc;
-import std::collections::list;
+import idlist;
+import ugui;
 
 struct Shader {
 	sdl::GPUShader* frag;
 	sdl::GPUShader* vert;
-	uint id;
+	ugui::Id id;
 }
 
 struct Pipeline {
 	sdl::GPUGraphicsPipeline* pipeline;
-	uint id;
+	ugui::Id id;
 }
 
 struct Texture {
 	sdl::GPUTexture* texture;
 	sdl::GPUSampler* sampler;
 	ushort width, height;
-	uint id;
+	ugui::Id id;
 }
 
 // The GPU buffers that contain quad info, the size is determined by MAX_QUAD_BATCH
-const int MAX_QUAD_BATCH = 128;
+const int MAX_QUAD_BATCH = 256;
 struct QuadBuffer {
 	sdl::GPUBuffer* vert_buf;
 	sdl::GPUBuffer* idx_buf;
@@ -38,17 +60,24 @@ struct QuadBuffer {
 	int off; // the offset to draw from
 }
 
-alias ShaderList = List{Shader};
-alias PipelineList = List{Pipeline};
-alias TextureList = List{Texture};
+alias ShaderList   = IdList{Shader};
+alias PipelineList = IdList{Pipeline};
+alias TextureList  = IdList{Texture};
 
 struct Renderer {
 	sdl::Window* win;
 	sdl::GPUDevice* gpu;
+	sdl::GPURenderPass* render_pass;
+	sdl::GPUTexture* swapchain_texture;
+	sdl::GPUCommandBuffer* render_cmdbuf;
+
 	QuadBuffer quad_buffer;
 	ShaderList shaders;
 	PipelineList pipelines;
 	TextureList textures;
+
+	Id sprite_atlas_id;
+	Id font_atlas_id;
 }
 
 // how each vertex is represented in the gpu
@@ -77,9 +106,13 @@ struct Quad @packed {
 	}
 }
 
+struct ViewsizeUniform @align(16) {
+	int w, h;
+}
+
 const int DEBUG = 1;
 
-fn void Renderer.init(&self, ZString title)
+fn void Renderer.init(&self, ZString title, uint width, uint height)
 {
 	// set wayland hint automagically
 $if DEBUG == 0:
@@ -96,13 +129,11 @@ $if DEBUG == 0:
 		sdl::set_hint(sdl::HINT_VIDEO_DRIVER, "wayland");
 	}
 $else
-	// in debug mode set the video driver to X11 because renderdoc/
+	// in debug mode set the video driver to X11 because renderdoc
 	// doesn't support debugging in wayland yet. 
 	sdl::set_hint(sdl::HINT_VIDEO_DRIVER, "x11");
-$endif
-
-
 	sdl::set_hint(sdl::HINT_RENDER_GPU_DEBUG, "1");
+$endif
 
 	// init subsystems
 	if (!sdl::init(INIT_VIDEO)) {
@@ -110,7 +141,7 @@ $endif
 	}
 
 	// create the window
-	self.win = sdl::create_window(title, 640, 480, WINDOW_RESIZABLE|WINDOW_VULKAN);
+	self.win = sdl::create_window(title, width, height, WINDOW_RESIZABLE|WINDOW_VULKAN);
 	if (self.win == null) {
 		unreachable("sdl error: %s", sdl::get_error());
 	}
@@ -164,6 +195,19 @@ fn void Renderer.free(&self)
 	sdl::quit();
 }
 
+fn void Renderer.resize_window(&self, uint width, uint height)
+{
+	sdl::set_window_size(self.win, width, height);
+}
+
+fn void Renderer.get_window_size(&self, int* width, int* height)
+{
+	sdl::get_window_size_in_pixels(self.win, width, height);
+}
+
+
+// Both the vertex shader and fragment shader have an implicit uniform buffer at binding 0 that
+// contains the viewport size. It is populated automatically at every begin_render() call
 fn void Renderer.load_spirv_shader_from_mem(&self, String name, char[] vert_code, char[] frag_code, uint textures, uint uniforms)
 {
 	Shader s;
@@ -183,7 +227,7 @@ fn void Renderer.load_spirv_shader_from_mem(&self, String name, char[] vert_code
 			.format = GPU_SHADERFORMAT_SPIRV,
 			.stage = GPU_SHADERSTAGE_VERTEX,
 			.num_samplers = 0,
-			.num_uniform_buffers = uniforms,
+			.num_uniform_buffers = 1+uniforms,
 			.num_storage_buffers = 0,
 			.num_storage_textures = 0
 		};
@@ -204,7 +248,7 @@ fn void Renderer.load_spirv_shader_from_mem(&self, String name, char[] vert_code
 			.format = GPU_SHADERFORMAT_SPIRV,
 			.stage = GPU_SHADERSTAGE_FRAGMENT,
 			.num_samplers = textures,
-			.num_uniform_buffers = 0,
+			.num_uniform_buffers = 1,
 			.num_storage_buffers = 0,
 			.num_storage_textures = 0
 		};
@@ -240,40 +284,6 @@ fn void Renderer.load_spirv_shader_from_file(&self, String name, String vert_pat
 
 	self.load_spirv_shader_from_mem(name, vert_code, frag_code, textures, uniforms);
 }
-
-fn Shader* ShaderList.get_from_name(&self, String name)
-{
-	uint id = name.hash();
-	foreach(&s: self) {
-		if (s.id == id) {
-			return s;
-		}
-	}
-	return null;
-}
-
-fn Pipeline* PipelineList.get_from_name(&self, String name)
-{
-	uint id = name.hash();
-	foreach(&p: self) {
-		if (p.id == id) {
-			return p;
-		}
-	}
-	return null;
-}
-
-fn Texture* TextureList.get_from_name(&self, String name)
-{
-	uint id = name.hash();
-	foreach(&t: self) {
-		if (t.id == id) {
-			return t;
-		}
-	}
-	return null;
-}
-
 
 // this describes what we want to draw, since for drawing different things we have to change
 // the GPUPrimitiveType and GPURasterizerState for the pipeline.
@@ -380,12 +390,29 @@ enum TextureType : (GPUTextureFormat format) {
 	JUST_ALPHA = GPU_TEXTUREFORMAT_R8_UNORM
 } 
 
+macro void Renderer.new_texture(&self, name_or_id, TextureType type, char[] pixels, uint width, uint height)
+{
+	$switch $typeof(name_or_id):
+	$case usz: return self.new_texture_by_id(id, type, pixels, width, height);
+	$case String: return self.new_texture_by_id(name_or_id.hash(), type, pixels, width, height);
+	$default: unreachable("texture must have a name (String) or an id (usz)");
+	$endswitch
+}
+
+macro void Renderer.update_texture(&self, name_or_id, char[] pixels, uint width, uint height, uint x = 0, uint y = 0)
+{
+	$switch $typeof(name_or_id):
+	$case usz: return self.update_texture_by_id(name_or_id, pixels, width, height, x, y);
+	$case String: return self.update_texture_by_id(name_or_id.hash(), pixels, width, height, x, y);
+	$default: unreachable("texture must have a name (String) or an id (usz)");
+	$endswitch
+}
+
+
 // create a new gpu texture from a pixel buffer, the format has to be specified
 // the new texture s given an id and pushed into a texture list
-fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels, uint width, uint height)
-{
-	uint id = name.hash();
-	
+fn void Renderer.new_texture_by_id(&self, Id id, TextureType type, char[] pixels, uint width, uint height)
+{	
 	// the texture description
 	GPUTextureCreateInfo tci = {
 		.type = GPU_TEXTURETYPE_2D,
@@ -401,7 +428,7 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 
 	GPUTexture* texture = sdl::create_gpu_texture(self.gpu, &tci);
 	if (texture == null) {
-		unreachable("failed to create texture (name: %s, type: %s): %s", name, type.nameof, sdl::get_error());
+		unreachable("failed to create texture (id: %s, type: %s): %s", id, type.nameof, sdl::get_error());
 	}
 
 	// the sampler description, how the texture should be sampled
@@ -417,7 +444,7 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 
 	GPUSampler* sampler = sdl::create_gpu_sampler(self.gpu, &sci);
 	if (sampler == null) {
-		unreachable("failed to create sampler (texture name: %s, type: %s): %s", name, type.nameof, sdl::get_error());
+		unreachable("failed to create sampler (texture id: %s, type: %s): %s", id, type.nameof, sdl::get_error());
 	}
 
 	Texture t = {
@@ -428,20 +455,20 @@ fn void Renderer.new_texture(&self, String name, TextureType type, char[] pixels
 	self.textures.push(t);
 
 	// upload the texture data
-	self.update_texture(name, pixels, width, height);
+	self.update_texture_by_id(id, pixels, width, height, 0, 0);
 }
 
-fn void Renderer.update_texture(&self, String name, char[] pixels, uint width, uint height, uint x = 0, uint y = 0)
+fn void Renderer.update_texture_by_id(&self, Id id, char[] pixels, uint width, uint height, uint x, uint y)
 {
-	Texture* t = self.textures.get_from_name(name);
+	Texture* t = self.textures.get_from_id(id);
 	if (t == null || t.texture == null) {
-		unreachable("failed updating texture: no texture named %s", name);
+		unreachable("failed updating texture: no texture with id %s", id);
 	}
 	GPUTexture* texture = t.texture;
 
 	// FIXME: do a better job at validating the copy
 	if (x > t.width || y > t.height) {
-		unreachable("failed updating texture: attempting to copy outside of the texture region", name);
+		unreachable("failed updating texture: attempting to copy outside of the texture region");
 	}
 
 	// upload image data
@@ -484,28 +511,9 @@ fn void Renderer.update_texture(&self, String name, char[] pixels, uint width, u
 }
 
 
-fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v) {
-	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
-		return false;
-	}
-
-	// upload the quad data to the gpu
-	if (self.quad_buffer.initialized == false) {
-		unreachable("quad buffer not initialized");
-	}
-
-	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
-		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
-	);
-	if (buf == null) {
-		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
-	}
-
-	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
-	if (quad == null) {
-		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
-	}
-
+fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v)
+{
+	Quad quad;
 	/* v1            v4
 	 * +-------------+
 	 * |           _/|
@@ -531,64 +539,13 @@ fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u,
 	quad.indices.i5 = 2; // v3
 	quad.indices.i6 = 3; // v4
 
-	sdl::unmap_gpu_transfer_buffer(self.gpu, buf);
-
-	GPUCommandBuffer* cmd = sdl::acquire_gpu_command_buffer(self.gpu);
-	if (cmd == null) {
-		unreachable("failed to upload quad at acquiring command buffer: %s", sdl::get_error());
-	}
-	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
-
-	// upload vertices
-	QuadBuffer* qb = &self.quad_buffer;
-	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.vertices.offsetof},
-		&&(GPUBufferRegion){.buffer = qb.vert_buf, .offset = qb.count * Quad.vertices.sizeof, .size = Quad.vertices.sizeof},
-		false
-	);
-	// upload indices
-	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.indices.offsetof},
-		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = qb.count * Quad.indices.sizeof, .size = Quad.indices.sizeof},
-		false
-	);
-
-	sdl::end_gpu_copy_pass(cpy);
-	if (!sdl::submit_gpu_command_buffer(cmd)) {
-		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
-	}
-	sdl::release_gpu_transfer_buffer(self.gpu, buf);
-	//sdl::wait_for_gpu_idle(self.gpu);
-
-	qb.count++;
-
-	return true;
+	return self.upload_quad(&quad);
 }
 
 // Push a quad into the quad buffer, return true on success and false on failure
 fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color, ushort radius = 0)
 {
-	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
-		return false;
-	}
-
-	// upload the quad data to the gpu
-	if (self.quad_buffer.initialized == false) {
-		unreachable("quad buffer not initialized");
-	}
-
-	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
-		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
-	);
-	if (buf == null) {
-		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
-	}
-
-	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
-	if (quad == null) {
-		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
-	}
-
+	Quad quad;
 	/* v1            v4
 	 * +-------------+
 	 * |           _/|
@@ -616,6 +573,34 @@ fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color
 	quad.indices.i4 = 1; // v2
 	quad.indices.i5 = 2; // v3
 	quad.indices.i6 = 3; // v4
+
+	return self.upload_quad(&quad);
+}
+
+fn bool Renderer.upload_quad(&self, Quad* source_quad)
+{
+	if (self.quad_buffer.count >= MAX_QUAD_BATCH || source_quad == null) {
+		return false;
+	}
+
+	// upload the quad data to the gpu
+	if (self.quad_buffer.initialized == false) {
+		unreachable("quad buffer not initialized");
+	}
+
+	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
+		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
+	);
+	if (buf == null) {
+		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+	}
+
+	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
+	if (quad == null) {
+		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
+	}
+
+	*quad = *source_quad;
 
 	sdl::unmap_gpu_transfer_buffer(self.gpu, buf);
 
@@ -653,18 +638,18 @@ fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color
 
 // draw all quads in the quad buffer, since uniforms are per-drawcall it makes no sense
 // to draw them one a the time
-fn void Renderer.draw_quads(&self, GPURenderPass* pass)
+fn void Renderer.draw_quads(&self)
 {
 	QuadBuffer* qb = &self.quad_buffer;
 
 	if (qb.off == qb.count) return;
 
-	sdl::bind_gpu_vertex_buffers(pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = qb.off*Quad.vertices.sizeof}}, 1);
-	sdl::bind_gpu_index_buffer(pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = qb.off*Quad.indices.sizeof}, GPU_INDEXELEMENTSIZE_16BIT);
+	sdl::bind_gpu_vertex_buffers(self.render_pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = qb.off*Quad.vertices.sizeof}}, 1);
+	sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = qb.off*Quad.indices.sizeof}, GPU_INDEXELEMENTSIZE_16BIT);
 
 	// we need instancing to not do this
 	for (int i = 0; i < qb.count - qb.off; i++) {
-		sdl::draw_gpu_indexed_primitives(pass, 6, 1, i*6, i*4, 0);
+		sdl::draw_gpu_indexed_primitives(self.render_pass, 6, 1, i*6, i*4, 0);
 	}
 
 	qb.off = qb.count;
@@ -677,9 +662,107 @@ fn void Renderer.reset_quads(&self)
 }
 
 
-// TODO: fn Renderer.draw_sprite, same as draw_quad but also bind the texture
-// TODO: fn Renderer.begin_render
-// TODO: fn Renderer.end_render
+fn void Renderer.begin_render(&self, bool clear_screen)
+{
+	self.render_cmdbuf = sdl::acquire_gpu_command_buffer(self.gpu);
+	sdl::wait_and_acquire_gpu_swapchain_texture(self.render_cmdbuf, self.win, &self.swapchain_texture, null, null);
+
+	// push the window size as a uniform
+	// TODO: maybe make this configurable and/or add more things
+	ViewsizeUniform v;
+	self.get_window_size(&v.w, &v.h);
+	sdl::push_gpu_vertex_uniform_data(self.render_cmdbuf, 0, &v, ViewsizeUniform.sizeof);
+	sdl::push_gpu_fragment_uniform_data(self.render_cmdbuf, 0, &v, ViewsizeUniform.sizeof);
+
+	if (clear_screen) {
+		GPURenderPass* pass = sdl::begin_gpu_render_pass(self.render_cmdbuf, 
+			&&(GPUColorTargetInfo){
+				.texture = self.swapchain_texture,
+				.mip_level = 0,
+				.layer_or_depth_plane = 0,
+				.clear_color = {.r = 1.0, .g = 0.0, .b = 1.0, .a = 1.0},
+				.load_op = GPU_LOADOP_CLEAR, // clear the screen at the start of the render pass
+				.store_op = GPU_STOREOP_STORE,
+				.resolve_texture = null,
+				.resolve_mip_level = 0,
+				.resolve_layer = 0,
+				.cycle = false,
+				.cycle_resolve_texture = false
+			},
+			1,
+			null // huh
+		);
+		if (pass == null) {
+			unreachable("render pass creation went wrong: %s", sdl::get_error());
+		}
+
+		sdl::end_gpu_render_pass(pass);
+	}
+}
+
+fn void Renderer.end_render(&self)
+{
+	sdl::submit_gpu_command_buffer(self.render_cmdbuf);
+	self.reset_quads();
+}
+
+fn void Renderer.start_render_pass(&self, String pipeline_name)
+{
+	self.render_pass = sdl::begin_gpu_render_pass(self.render_cmdbuf, 
+		&&(GPUColorTargetInfo){
+			.texture = self.swapchain_texture,
+			.mip_level = 0,
+			.layer_or_depth_plane = 0,
+			.clear_color = {.r = 0.0, .g = 0.0, .b = 0.0, .a = 1.0},
+			.load_op = GPU_LOADOP_DONT_CARE,
+			.store_op = GPU_STOREOP_STORE,
+			.resolve_texture = null,
+			.resolve_mip_level = 0,
+			.resolve_layer = 0,
+			.cycle = false,
+			.cycle_resolve_texture = false
+		},
+		1,
+		null // huh
+	);
+
+	if (self.render_pass == null) {
+		unreachable("render pass creation went wrong: %s", sdl::get_error());
+	}
+
+	sdl::GPUGraphicsPipeline* p;
+	p = self.pipelines.get_from_name(pipeline_name).pipeline;
+	if (p == null) {
+		unreachable("no pipeline");
+	}
+
+	sdl::bind_gpu_graphics_pipeline(self.render_pass, p);
+}
+
+fn void Renderer.end_render_pass(&self)
+{
+	sdl::end_gpu_render_pass(self.render_pass);	
+}
+
+fn void Renderer.bind_texture(&self, String texture_name)
+{
+	ren::Texture* tx = self.textures.get_from_name(texture_name);
+	sdl::bind_gpu_fragment_samplers(self.render_pass, 0, 
+		(GPUTextureSamplerBinding[]){{.texture = tx.texture, .sampler = tx.sampler}}, 1
+	);
+}
+
+fn void Renderer.set_scissor(&self, uint x, uint y, uint w, uint h)
+{
+	sdl::set_gpu_scissor(self.render_pass, &&(sdl::Rect){x,y,w,h});
+}
+
+fn void Renderer.reset_scissor(&self)
+{
+	int w, h;
+	sdl::get_window_size(self.win, &w, &h);
+	self.set_scissor(0, 0, w, h);
+}
 
 /// === NOTES ===
 /* 1. The uniform data is per-render pass. So you can do:
@@ -700,3 +783,88 @@ fn void Renderer.reset_quads(&self)
  *    render pass. So I cannot override an element in the buffer
  *    before submitting the command buffer. 
  */
+ /// === END NOTES ===
+
+
+fn void Renderer.render_ugui(&self, CmdQueue* queue)
+{
+	io::printn("---------------------------------------");
+	Cmd* last_command;
+	for (Cmd* cmd; (cmd = queue.dequeue() ?? null) != null;) {
+		if (last_command == null || last_command.type != cmd.type) {
+			self.end_command(last_command);
+			self.begin_command(cmd);
+		}
+
+		switch (cmd.type) {
+		case CMD_RECT:
+			CmdRect r = cmd.rect;
+			self.push_quad(r.rect.x, r.rect.y, r.rect.w, r.rect.h, r.color.to_uint(), r.radius);
+			io::printn(r);
+		case CMD_SPRITE:
+			// TODO: support hue in sprite
+			CmdSprite s = cmd.sprite;
+			self.push_sprite(s.rect.x, s.rect.y, s.rect.w, s.rect.h, s.texture_rect.x, s.texture_rect.y);
+		case CMD_UPDATE_ATLAS:
+			// TODO: verify the correct type
+			CmdUpdateAtlas u = cmd.update_atlas;
+			char[] pixels = u.raw_buffer[..u.width*u.height*u.bpp];
+			self.update_texture(u.id, pixels, u.width, u.height);
+		case CMD_SCISSOR: break; // FIXME: ugui sends a scissor event before any rect event, this cannot be done and needs different handling
+			ugui::Rect s = cmd.scissor.rect;
+			self.set_scissor(s.x, s.y, s.w, s.h);
+		default: unreachable("unknown command: %s", cmd.type);
+		}
+
+		last_command = cmd;
+	}
+	self.end_command(last_command);
+}
+
+fn void Renderer.begin_command(&self, Cmd* cmd)
+{
+	if (cmd == null) return;
+
+	switch (cmd.type) {
+	case CMD_RECT:
+		self.start_render_pass("UGUI_PIPELINE_RECT");
+	case CMD_SPRITE:
+		// TODO: support multiple sprite and font atlases
+		CmdSprite s = cmd.sprite;
+		String pipeline;
+		String texture;
+		if (s.texture_id == self.sprite_atlas_id) {
+			switch (s.type) {
+			case SPRITE_NORMAL: pipeline = "UGUI_PIPELINE_SPRITE";
+			case SPRITE_SDF: pipeline = "UGUI_PIPELINE_SPRITE_SDF";
+			case SPRITE_MSDF: pipeline = "UGUI_PIPELINE_SPRITE_MSDF";
+			case SPRITE_ANIMATED: unreachable("animated sprtes are unsupported for now");
+			default: unreachable("unknown sprite type %s", s.type);
+			}
+			texture = "icons";
+		} else if (s.texture_id == self.font_atlas_id) {
+			pipeline = "UGUI_PIPELINE_FONT";
+			texture = "font1";
+		}
+		self.start_render_pass(pipeline);
+		self.bind_texture(texture);
+	case CMD_UPDATE_ATLAS: break;
+	case CMD_SCISSOR: break;
+	default: unreachable("unknown command: %s", cmd.type);
+	}
+}
+
+fn void Renderer.end_command(&self, Cmd* cmd)
+{
+	if (cmd == null) return;
+
+	switch (cmd.type) {
+		case CMD_RECT: nextcase;
+		case CMD_SPRITE:
+			self.draw_quads();
+			self.end_render_pass();
+		case CMD_UPDATE_ATLAS: break;
+		case CMD_SCISSOR: break;
+		default: unreachable("unknown command: %s", cmd.type);
+	}
+}
