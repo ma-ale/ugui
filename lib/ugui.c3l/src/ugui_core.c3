@@ -206,7 +206,7 @@ fn void? Ctx.init(&ctx)
 	ctx.style.margin  = {2, 2, 2, 2};
 	ctx.style.border  = {2, 2, 2, 2};
 	ctx.style.padding = {1, 1, 1, 1};
-	ctx.style.radius  = 5;
+	ctx.style.radius  = 12;
 	ctx.style.bgcolor = 0x282828ffu.to_rgba();
 	ctx.style.fgcolor = 0xfbf1c7ffu.to_rgba();
 	ctx.style.brcolor = 0xd79921ffu.to_rgba();
@@ -303,18 +303,10 @@ $if DEBUG == 1:
 		.rect.color = 0xff00ffffu.to_rgba()
 	};
 	ctx.cmd_queue.enqueue(&cmd)!;
-
-// dump the command buffer
-//	io::printn("Command Buffer Dump:");
-//	foreach(idx, c: ctx.cmd_queue) {
-//		io::printfn("\t [%d] = {%s}", idx, c);
-//	}
-	ctx.cmd_queue.sort()!;
-//	io::printn("Sorted Command Buffer Dump:");
-//	foreach(idx, c: ctx.cmd_queue) {
-//		io::printfn("\t [%d] = {%s}", idx, c);
-//	}
 $endif
+
+	// sort the command buffer by the z-index
+	ctx.cmd_queue.sort()!;
 }
 
 <*

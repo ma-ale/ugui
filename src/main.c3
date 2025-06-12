@@ -2,10 +2,11 @@ import std::io;
 import vtree;
 import cache;
 import ugui;
-import raylib5::rl;
 import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
+import sdlrenderer::ren;
+import sdl3::sdl;
 
 alias Times = ringbuffer::RingBuffer{time::NanoDuration[128]};
 
@@ -44,84 +45,14 @@ fn TimeStats Times.get_stats(&times)
 }
 
 
-const ZString MSDF_FS = `
-#version 330
+const char[*] MSDF_FS_PATH = "resources/shaders/compiled/msdf.frag.spv";
+const char[*] SPRITE_FS_PATH = "resources/shaders/compiled/sprite.frag.spv";
+const char[*] FONT_FS_PATH = "resources/shaders/compiled/font.frag.spv";
+const char[*] RECT_FS_PATH = "resources/shaders/compiled/rect.frag.spv";
 
-in vec2 fragTexCoord;
-out vec4 fragColor;
-uniform sampler2D texture0;
-uniform vec4 colDiffuse;
+const char[*] SPRITE_VS_PATH = "resources/shaders/compiled/sprite.vert.spv";
+const char[*] RECT_VS_PATH = "resources/shaders/compiled/rect.vert.spv";
 
-const float pxRange = 4.0f;
-
-float screenPxRange() {
-    vec2 unitRange = vec2(pxRange)/vec2(textureSize(texture0, 0));
-    vec2 screenTexSize = vec2(1.0)/fwidth(fragTexCoord);
-    return max(0.5*dot(unitRange, screenTexSize), 1.0);
-}
-
-float median(float r, float g, float b) {
-	return max(min(r, g), min(max(r, g), b));
-}
-
-void main() {
-	vec3 msd = texture(texture0, fragTexCoord).rgb;
-	float sd = median(msd.r, msd.g, msd.b);
-	float screenPxDistance = screenPxRange()*(sd - 0.5);
-	float opacity = clamp(screenPxDistance + 0.5, 0.0, 1.0);
-	fragColor = colDiffuse * opacity;
-}
-`;
-
-const ZString FONT_FS = `
-#version 330
-
-// Input vertex attributes (from vertex shader)
-in vec2 fragTexCoord;
-in vec4 fragColor;
-
-// Input uniform values
-uniform sampler2D texture0;
-uniform vec4 colDiffuse;
-
-// Output fragment color
-out vec4 finalColor;
-
-void main()
-{
-    vec4 alpha = texture(texture0, fragTexCoord);
-    finalColor = colDiffuse*fragColor;
-    finalColor.a *= alpha.r;
-}
-`;
-
-// SDF based rect rendering
-const ZString RECT_FS = `
-#version 330
-
-in vec2 fragTexCoord;
-in vec4 fragColor;
-out vec4 finalColor;
-
-uniform float radius;
-uniform float border;
-uniform vec2  size;
-
-void main()
-{
-
-}
-`;
-
-macro rl::Color ugui::Color.conv(color)
-{
-	return {.r = color.r, .g = color.g, .b = color.b, .a = color.a};
-}
-
-macro rl::Rectangle Rect.conv(rect)
-{
-	return {.x = rect.x, .y = rect.y, .width = rect.w, .height = rect.h};
-}
 
 fn int main(String[] args)
 {
@@ -129,18 +60,57 @@ fn int main(String[] args)
 	ui.init()!!;
 	defer ui.free();
 
-	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
-	ui.sprite_atlas_create("icons", AtlasType.ATLAS_R8G8B8A8, 512, 512)!!;
-	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
-	ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
+	ren::Renderer ren;
+	ren.init("Ugui Test", 640, 480);
+	defer ren.free();
+	ui.input_window_size(640, 480)!!;
 
-	short width = 800;
-	short height = 450;
-	rl::setConfigFlags(rl::FLAG_WINDOW_RESIZABLE);
-	rl::initWindow(width, height, "Ugui Test");
-	ui.input_window_size(width, height)!!;
-	rl::setTargetFPS(60);
-	rl::enableEventWaiting();
+	//
+	// FONT LOADING
+	//
+	{
+		// import font in the ui context
+		ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
+		
+		// create the rendering pipeline
+		ren.font_atlas_id = ui.get_font_id("font1");
+		ren.load_spirv_shader_from_file("UGUI_PIPELINE_FONT", SPRITE_VS_PATH, FONT_FS_PATH, 1, 0);
+		ren.create_pipeline("UGUI_PIPELINE_FONT", SPRITE);
+		
+		// send the atlas to the gpu
+		Atlas* font_atlas = ui.get_font_atlas("font1")!!;
+		ren.new_texture("font1", JUST_ALPHA, font_atlas.buffer, font_atlas.width, font_atlas.height);
+	}
+
+	//
+	// ICON LOADING
+	//
+	{
+		// create the atlas and upload some icons
+		ui.sprite_atlas_create("icons", AtlasType.ATLAS_R8G8B8A8, 512, 512)!!;
+		ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
+		ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
+		
+		// create the rendering pipelines
+		ren.sprite_atlas_id = ui.get_sprite_atlas_id("icons");
+		// normal sprite pipeline
+		ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE", SPRITE_VS_PATH, SPRITE_FS_PATH, 1, 0);
+		ren.create_pipeline("UGUI_PIPELINE_SPRITE", SPRITE);
+		// msdf sprite pipeline
+		ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE_MSDF", SPRITE_VS_PATH, MSDF_FS_PATH, 1, 0);
+		ren.create_pipeline("UGUI_PIPELINE_SPRITE_MSDF", SPRITE);
+	
+		// upload the atlas to the gpu
+		Atlas atlas = ui.sprite_atlas.atlas;
+		ren.new_texture("icons", FULL_COLOR, atlas.buffer, atlas.width, atlas.height);
+	}
+
+	//
+	// RECT PIPELINE
+	//
+	ren.load_spirv_shader_from_file("UGUI_PIPELINE_RECT", RECT_VS_PATH, RECT_FS_PATH, 0, 0);
+	ren.create_pipeline("UGUI_PIPELINE_RECT", RECT);
+
 
 	isz frame;
 	bool toggle = true;
@@ -148,25 +118,49 @@ fn int main(String[] args)
 	Times ui_times;
 	Times draw_times;
 
-	// font stuff
-	rl::Shader font_shader = rl::loadShaderFromMemory(null, FONT_FS);
-	rl::Image font_atlas;
-	rl::Texture2D font_texture;
-	ugui::Id font_id = ui.get_font_id("font1");
 
-	// sprite stuff
-	rl::Shader msdf_shader = rl::loadShaderFromMemory(null, MSDF_FS);
-	rl::Image sprite_atlas;
-	rl::Texture2D sprite_texture;
-	ugui::Id sprite_id = ui.get_sprite_atlas_id("icons");
-
-	// Main loop
-	while (!rl::windowShouldClose()) {
+	//
+	// MAIN LOOP
+	//
+	sdl::Event e;
+	bool quit = false;
+	while (!quit) {
 		clock.mark();
-
+		
+		// FIXME: modkeys input is broken
 		ugui::ModKeys mod;
-		mod.rctrl = rl::isKeyDown(rl::KEY_RIGHT_CONTROL);
-		mod.lctrl = rl::isKeyDown(rl::KEY_LEFT_CONTROL);
+		while (sdl::poll_event(&e)) {
+			switch (e.type) {
+			case EVENT_QUIT: 
+				quit = true;
+			case EVENT_KEY_DOWN:
+				mod.rctrl = !!(e.key.key == K_RCTRL);
+				mod.lctrl = !!(e.key.key == K_LCTRL);
+			case EVENT_WINDOW_RESIZED:
+				ui.input_window_size((short)e.window.data1, (short)e.window.data2)!!;
+			case EVENT_WINDOW_FOCUS_GAINED:
+				ui.input_changefocus(true);
+			case EVENT_WINDOW_FOCUS_LOST:
+				ui.input_changefocus(false);
+			case EVENT_MOUSE_MOTION:
+				ui.input_mouse_abs((short)e.motion.x, (short)e.motion.y);
+			case EVENT_MOUSE_WHEEL:
+				ui.input_mouse_wheel((short)e.wheel.integer_x, (short)e.wheel.integer_y);
+			case EVENT_MOUSE_BUTTON_DOWN: nextcase;
+			case EVENT_MOUSE_BUTTON_UP:
+				sdl::MouseButtonFlags mb = sdl::get_mouse_state(null, null);
+				ugui::MouseButtons b = {
+					.btn_left = !!(mb & BUTTON_LMASK),
+					.btn_right = !!(mb & BUTTON_RMASK),
+					.btn_middle = !!(mb & BUTTON_MMASK),
+					.btn_4 = !!(mb & BUTTON_X1MASK),
+					.btn_5 = !!(mb & BUTTON_X2MASK),
+				};
+				ui.input_mouse_button(b);
+			default:
+				io::eprintfn("unhandled event: %s", e.type);
+			}
+		}
 		ui.input_mod_keys(mod);
 
 		/*
@@ -177,33 +171,20 @@ fn int main(String[] args)
 		}
 		*/
 
-
-		/* Start Input Handling */
-		if (rl::isWindowResized()) {
-			width  = (short)rl::getScreenWidth();
-			height = (short)rl::getScreenHeight();
-			ui.input_window_size(width, height)!!;
-		}
-
-		ui.input_changefocus(rl::isWindowFocused());
-
-		rl::Vector2 mpos = rl::getMousePosition();
-		ui.input_mouse_abs((short)mpos.x, (short)mpos.y);
-		rl::Vector2 mwheel = rl::getMouseWheelMoveV();
-		ui.input_mouse_wheel((short)mwheel.x, (short)mwheel.y);
-
-		ugui::MouseButtons buttons = {
-			.btn_left = rl::isMouseButtonDown(rl::MouseButton.LEFT),
-			.btn_right = rl::isMouseButtonDown(rl::MouseButton.RIGHT),
-			.btn_middle = rl::isMouseButtonDown(rl::MouseButton.MIDDLE),
-		};
-		ui.input_mouse_button(buttons);
 		/* End Input Handling */
 
 		/* Start UI Handling */
 		ui.frame_begin()!!;
 
-		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) break;
+		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
+
+/*
+		ui.div_begin("main", ugui::DIV_FILL)!!;
+		ui.button("button0", {0,0,30,30})!!;
+		ui.draw_sprite("sprite1", "tux")!!;
+		ui.text_unbounded("text1", "Ciao")!!;
+		ui.div_end()!!;
+*/
 
 		ui.div_begin("main", {.w=-100})!!;
 		{
@@ -292,86 +273,24 @@ fn int main(String[] args)
 		};
 		ui.div_end()!!;
 
+
 		ui.frame_end()!!;
 		/* End UI Handling */
 		ui_times.push(clock.mark());
 		//ui_times.print_stats();
 
-		/* Start UI Drawing */
-		rl::beginDrawing();
-		// ClearBackground(BLACK);
 
-		for (Cmd* cmd; (cmd = ui.cmd_queue.dequeue() ?? null) != null;) {
-			switch (cmd.type) {
-			case CmdType.CMD_RECT:
-				Rect r = cmd.rect.rect;
-				float rad = cmd.rect.radius;
-				// for some weird-ass reason the straight forward inverse formula does not work
-				float roundness = r.w > r.h ? (2.1f*rad)/(float)r.h : (2.1f*rad)/(float)r.w;
-				rl::drawRectangleRounded(cmd.rect.rect.conv(), roundness, 0, cmd.rect.color.conv());
-			case CmdType.CMD_UPDATE_ATLAS:
-				if (cmd.update_atlas.id == font_id) {
-					//rl::unload_image(font_atlas);
-					font_atlas.data = cmd.update_atlas.raw_buffer;
-					font_atlas.width = cmd.update_atlas.width;
-					font_atlas.height = cmd.update_atlas.height;
-					font_atlas.mipmaps = 1;
-					font_atlas.format = rl::PixelFormat.UNCOMPRESSED_GRAYSCALE;
-					if (rl::isTextureValid(font_texture)) {
-						rl::unloadTexture(font_texture);
-					}
-					font_texture = rl::loadTextureFromImage(font_atlas);
-				} else if (cmd.update_atlas.id == sprite_id) {
-					sprite_atlas.data = cmd.update_atlas.raw_buffer;
-					sprite_atlas.width = cmd.update_atlas.width;
-					sprite_atlas.height = cmd.update_atlas.height;
-					sprite_atlas.mipmaps = 1;
-					sprite_atlas.format = rl::PixelFormat.UNCOMPRESSED_R8G8B8A8;
-					if (rl::isTextureValid(sprite_texture)) {
-						rl::unloadTexture(sprite_texture);
-					}
-					sprite_texture = rl::loadTextureFromImage(sprite_atlas);
-				}
-			case CmdType.CMD_SPRITE:
-				if (cmd.sprite.texture_id == font_id) {
-					rl::Vector2 position = {
-						.x = cmd.sprite.rect.x,
-						.y = cmd.sprite.rect.y,
-					};
-					rl::beginShaderMode(font_shader);
-					rl::drawTextureRec(font_texture, cmd.sprite.texture_rect.conv(), position, cmd.sprite.hue.conv());
-					rl::endShaderMode();
-				} else if (cmd.sprite.texture_id == sprite_id) {
-					// FIXME: THIS CODE IS SHIT, REAL DOO DOO
-					{
-					if (cmd.sprite.type == SpriteType.SPRITE_MSDF) {
-						rl::beginShaderMode(msdf_shader);
-						defer rl::endShaderMode();
-						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), {0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
-					} else {
-						rl::drawTexturePro(sprite_texture, cmd.sprite.texture_rect.conv(), cmd.sprite.rect.conv(), {0.0f, 0.0f}, 0.0f, cmd.sprite.hue.conv());
-					}
-					};
-				} else {
-					io::printfn("unknown texture id: %d", cmd.sprite.texture_id);
-				}
-			case CmdType.CMD_SCISSOR:
-				if (cmd.scissor.rect.w == 0 && cmd.scissor.rect.h == 0) {
-					rl::endScissorMode();
-				} else {
-					rl::beginScissorMode(cmd.scissor.rect.x, cmd.scissor.rect.y, cmd.scissor.rect.w, cmd.scissor.rect.h);
-				}
-			default:
-				io::printfn("Unknown cmd type: %s", cmd.type);
-			}
-		}
+		/* Start UI Drawing */
+		ren.begin_render(true);
+
+		ren.render_ugui(&ui.cmd_queue);
+		
+		ren.end_render();
+
 		draw_times.push(clock.mark());
 		//draw_times.print_stats();
-		rl::endDrawing();
 		/* End Drawing */
 	}
-
-	rl::closeWindow();
 
 	return 0;
 }

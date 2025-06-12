@@ -55,6 +55,7 @@ const int MAX_QUAD_BATCH = 256;
 struct QuadBuffer {
 	sdl::GPUBuffer* vert_buf;
 	sdl::GPUBuffer* idx_buf;
+	sdl::GPUTransferBuffer* transfer_buffer;
 	bool initialized;
 	int count;
 	int off; // the offset to draw from
@@ -173,6 +174,13 @@ $endif
 		unreachable("failed to initialize quad buffer (index): %s", sdl::get_error());
 	}
 
+	self.quad_buffer.transfer_buffer = sdl::create_gpu_transfer_buffer(self.gpu,
+		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
+	);
+	if (self.quad_buffer.transfer_buffer == null) {
+		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+	}
+
 	self.quad_buffer.initialized = true;
 }
 
@@ -188,6 +196,8 @@ fn void Renderer.free(&self)
 		sdl::release_gpu_graphics_pipeline(self.gpu, p.pipeline);
 	}
 	self.pipelines.free();
+
+	// FIXME: release the quad buffer
 
 	sdl::release_window_from_gpu_device(self.gpu, self.win);
 	sdl::destroy_gpu_device(self.gpu);
@@ -511,7 +521,7 @@ fn void Renderer.update_texture_by_id(&self, Id id, char[] pixels, uint width, u
 }
 
 
-fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v)
+fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v, uint color = 0xffffffff)
 {
 	Quad quad;
 	/* v1            v4
@@ -526,10 +536,10 @@ fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u,
 	 * +-------------+
 	 * v2            v3
 	 */	
-	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .uv = {.u = u, .v = v}};
-	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .uv = {.u = u, .v = v+h}};
-	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .uv = {.u = u+w, .v = v+h}};
-	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .uv = {.u = u+w, .v = v}};
+	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .uv = {.u = u, .v = v},     .col.u = color};
+	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .uv = {.u = u, .v = v+h},   .col.u = color};
+	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .uv = {.u = u+w, .v = v+h}, .col.u = color};
+	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .uv = {.u = u+w, .v = v},   .col.u = color};
 	// triangle 1 indices
 	quad.indices.i1 = 0; // v1
 	quad.indices.i2 = 1; // v2
@@ -582,27 +592,21 @@ fn bool Renderer.upload_quad(&self, Quad* source_quad)
 	if (self.quad_buffer.count >= MAX_QUAD_BATCH || source_quad == null) {
 		return false;
 	}
+	QuadBuffer* qb = &self.quad_buffer;
 
 	// upload the quad data to the gpu
-	if (self.quad_buffer.initialized == false) {
+	if (qb.initialized == false) {
 		unreachable("quad buffer not initialized");
 	}
 
-	GPUTransferBuffer* buf = sdl::create_gpu_transfer_buffer(self.gpu,
-		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
-	);
-	if (buf == null) {
-		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
-	}
-
-	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
+	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, qb.transfer_buffer, true);
 	if (quad == null) {
 		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
 	}
 
 	*quad = *source_quad;
 
-	sdl::unmap_gpu_transfer_buffer(self.gpu, buf);
+	sdl::unmap_gpu_transfer_buffer(self.gpu, qb.transfer_buffer);
 
 	GPUCommandBuffer* cmd = sdl::acquire_gpu_command_buffer(self.gpu);
 	if (cmd == null) {
@@ -611,15 +615,14 @@ fn bool Renderer.upload_quad(&self, Quad* source_quad)
 	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
 
 	// upload vertices
-	QuadBuffer* qb = &self.quad_buffer;
 	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.vertices.offsetof},
+		&&(GPUTransferBufferLocation){.transfer_buffer = qb.transfer_buffer, .offset = Quad.vertices.offsetof},
 		&&(GPUBufferRegion){.buffer = qb.vert_buf, .offset = qb.count * Quad.vertices.sizeof, .size = Quad.vertices.sizeof},
 		false
 	);
 	// upload indices
 	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = buf, .offset = Quad.indices.offsetof},
+		&&(GPUTransferBufferLocation){.transfer_buffer = qb.transfer_buffer, .offset = Quad.indices.offsetof},
 		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = qb.count * Quad.indices.sizeof, .size = Quad.indices.sizeof},
 		false
 	);
@@ -628,8 +631,6 @@ fn bool Renderer.upload_quad(&self, Quad* source_quad)
 	if (!sdl::submit_gpu_command_buffer(cmd)) {
 		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
 	}
-	sdl::release_gpu_transfer_buffer(self.gpu, buf);
-	//sdl::wait_for_gpu_idle(self.gpu);
 
 	qb.count++;
 
@@ -788,7 +789,6 @@ fn void Renderer.reset_scissor(&self)
 
 fn void Renderer.render_ugui(&self, CmdQueue* queue)
 {
-	io::printn("---------------------------------------");
 	Cmd* last_command;
 	for (Cmd* cmd; (cmd = queue.dequeue() ?? null) != null;) {
 		if (last_command == null || last_command.type != cmd.type) {
@@ -800,11 +800,10 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 		case CMD_RECT:
 			CmdRect r = cmd.rect;
 			self.push_quad(r.rect.x, r.rect.y, r.rect.w, r.rect.h, r.color.to_uint(), r.radius);
-			io::printn(r);
 		case CMD_SPRITE:
 			// TODO: support hue in sprite
 			CmdSprite s = cmd.sprite;
-			self.push_sprite(s.rect.x, s.rect.y, s.rect.w, s.rect.h, s.texture_rect.x, s.texture_rect.y);
+			self.push_sprite(s.rect.x, s.rect.y, s.texture_rect.w, s.texture_rect.h, s.texture_rect.x, s.texture_rect.y);
 		case CMD_UPDATE_ATLAS:
 			// TODO: verify the correct type
 			CmdUpdateAtlas u = cmd.update_atlas;
