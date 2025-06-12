@@ -112,6 +112,7 @@ struct ViewsizeUniform @align(16) {
 }
 
 const int DEBUG = 1;
+const bool CYCLE = true;
 
 fn void Renderer.init(&self, ZString title, uint width, uint height)
 {
@@ -498,7 +499,7 @@ fn void Renderer.update_texture_by_id(&self, Id id, char[] pixels, uint width, u
 		unreachable("failed to upload texture data at creating the transfer buffer: %s", sdl::get_error());
 	}
 
-	char* gpu_mem = (char*)sdl::map_gpu_transfer_buffer(self.gpu, buf, false);
+	char* gpu_mem = (char*)sdl::map_gpu_transfer_buffer(self.gpu, buf, CYCLE);
 	if (gpu_mem == null) {
 		unreachable("failed to upload texture data at mapping the transfer buffer: %s", sdl::get_error());
 	}
@@ -599,7 +600,7 @@ fn bool Renderer.upload_quad(&self, Quad* source_quad)
 		unreachable("quad buffer not initialized");
 	}
 
-	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, qb.transfer_buffer, true);
+	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, qb.transfer_buffer, CYCLE);
 	if (quad == null) {
 		unreachable("failed to map gpu transfer buffer: %s", sdl::get_error());
 	}
