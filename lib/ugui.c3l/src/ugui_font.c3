@@ -224,3 +224,13 @@ fn Id Ctx.get_font_id(&ctx, String label)
 {
 	return (Id)label.hash();
 }
+
+fn Atlas*? Ctx.get_font_atlas(&ctx, String name)
+{
+	// TODO: use the font name, for now there is only one font
+	if (name.hash() != ctx.font.id) {
+		return WRONG_ID?;
+	}
+
+	return &ctx.font.atlas;
+}

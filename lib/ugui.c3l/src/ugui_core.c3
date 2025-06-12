@@ -62,7 +62,7 @@ alias ElemCache = cache::Cache{Id, Elem, MAX_ELEMENTS};
 
 alias CmdQueue = fifo::Fifo{Cmd};
 
-faultdef INVALID_SIZE, EVENT_UNSUPPORTED, UNEXPECTED_ELEMENT, WRONG_ELEMENT_TYPE;
+faultdef INVALID_SIZE, EVENT_UNSUPPORTED, UNEXPECTED_ELEMENT, WRONG_ELEMENT_TYPE, WRONG_ID;
 
 const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
 
