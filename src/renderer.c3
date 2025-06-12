@@ -158,6 +158,9 @@ $endif
 		unreachable("failed to claim window for use with gpu: %s", sdl::get_error());
 	}
 
+	// set swapchain parameters, like vsync
+	sdl::set_gpu_swapchain_parameters(self.gpu, self.win, GPU_SWAPCHAINCOMPOSITION_SDR, GPU_PRESENTMODE_IMMEDIATE);
+
 	//
 	// initialize the quad buffer
 	// ==========================
