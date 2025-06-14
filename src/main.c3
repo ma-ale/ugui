@@ -268,6 +268,7 @@ fn int main(String[] args)
 		ui.div_begin("fps", {0, ui.height-100, -300, 100})!!;
 		{
 			ui.layout_set_column()!!;
+			ui.text_unbounded("frame number", string::tformat("frame %d", frame))!!;
 			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 			ui.text_unbounded("ui text input", (String)ui.input.keyboard.text[..])!!;
 		};
@@ -290,6 +291,8 @@ fn int main(String[] args)
 		draw_times.push(clock.mark());
 		//draw_times.print_stats();
 		/* End Drawing */
+
+		frame++;
 	}
 
 	return 0;
