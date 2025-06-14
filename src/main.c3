@@ -61,7 +61,7 @@ fn int main(String[] args)
 	defer ui.free();
 
 	ren::Renderer ren;
-	ren.init("Ugui Test", 640, 480);
+	ren.init("Ugui Test", 640, 480, true);
 	defer ren.free();
 	ui.input_window_size(640, 480)!!;
 

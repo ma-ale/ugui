@@ -51,7 +51,7 @@ struct Texture {
 }
 
 // The GPU buffers that contain quad info, the size is determined by MAX_QUAD_BATCH
-const int MAX_QUAD_BATCH = 256;
+const int MAX_QUAD_BATCH = 2048;
 struct QuadBuffer {
 	sdl::GPUBuffer* vert_buf;
 	sdl::GPUBuffer* idx_buf;
@@ -86,6 +86,8 @@ struct Renderer {
 
 	Id sprite_atlas_id;
 	Id font_atlas_id;
+
+	uint scissor_x, scissor_y, scissor_w, scissor_h; 
 }
 
 // how each vertex is represented in the gpu
@@ -121,7 +123,7 @@ struct ViewsizeUniform @align(16) {
 const int DEBUG = 1;
 const bool CYCLE = true;
 
-fn void Renderer.init(&self, ZString title, uint width, uint height)
+fn void Renderer.init(&self, ZString title, uint width, uint height, bool vsync)
 {
 	// set wayland hint automagically
 $if DEBUG == 0:
@@ -166,7 +168,8 @@ $endif
 	}
 
 	// set swapchain parameters, like vsync
-	sdl::set_gpu_swapchain_parameters(self.gpu, self.win, GPU_SWAPCHAINCOMPOSITION_SDR, GPU_PRESENTMODE_IMMEDIATE);
+	GPUPresentMode present_mode = vsync ? GPU_PRESENTMODE_VSYNC : GPU_PRESENTMODE_IMMEDIATE;
+	sdl::set_gpu_swapchain_parameters(self.gpu, self.win, GPU_SWAPCHAINCOMPOSITION_SDR, present_mode);
 
 	//
 	// initialize the quad buffer
@@ -845,9 +848,15 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 			CmdUpdateAtlas u = cmd.update_atlas;
 			char[] pixels = u.raw_buffer[..u.width*u.height*u.bpp];
 			self.update_texture(u.id, pixels, u.width, u.height);
-		case CMD_SCISSOR: break; // FIXME: ugui sends a scissor event before any rect event, this cannot be done and needs different handling
+		case CMD_SCISSOR:
 			ugui::Rect s = cmd.scissor.rect;
-			self.set_scissor(s.x, s.y, s.w, s.h);
+			if (s.x == 0 && s.y == 0 && s.w == 0 && s.h == 0) {
+				self.get_window_size((int*)&s.w, (int*)&s.h);
+			}
+			self.scissor_x = s.x;
+			self.scissor_y = s.y;
+			self.scissor_w = s.w;
+			self.scissor_h = s.h;
 		default: unreachable("unknown command: %s", cmd.type);
 		}
 
@@ -863,6 +872,7 @@ fn void Renderer.begin_command(&self, Cmd* cmd)
 	switch (cmd.type) {
 	case CMD_RECT:
 		self.start_render_pass("UGUI_PIPELINE_RECT");
+		self.set_scissor(self.scissor_x, self.scissor_y, self.scissor_w, self.scissor_h);
 	case CMD_SPRITE:
 		// TODO: support multiple sprite and font atlases
 		CmdSprite s = cmd.sprite;
@@ -883,6 +893,7 @@ fn void Renderer.begin_command(&self, Cmd* cmd)
 		}
 		self.start_render_pass(pipeline);
 		self.bind_texture(texture);
+		self.set_scissor(self.scissor_x, self.scissor_y, self.scissor_w, self.scissor_h);
 	case CMD_UPDATE_ATLAS: break;
 	case CMD_SCISSOR: break;
 	default: unreachable("unknown command: %s", cmd.type);
