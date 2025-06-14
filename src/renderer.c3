@@ -53,14 +53,18 @@ struct Texture {
 // The GPU buffers that contain quad info, the size is determined by MAX_QUAD_BATCH
 const int MAX_QUAD_BATCH = 2048;
 struct QuadBuffer {
-	sdl::GPUBuffer* vert_buf;
-	sdl::GPUBuffer* idx_buf;
+	sdl::GPUBuffer* vert_buf; // GPU vertex buffer
+	sdl::GPUBuffer* idx_buf;  // GPU index buffer
+	sdl::GPUBuffer* ind_buf;  // GPU indirect render commands buffer
 
+	// driver-side transfer buffers
 	sdl::GPUTransferBuffer* vertex_ts;
 	sdl::GPUTransferBuffer* index_ts;
-
+	sdl::GPUTransferBuffer* indirect_ts;
+	// driver-side transfer buffer mappings
 	Vertex[] vertex_ts_mapped;
 	short[] index_ts_mapped;
+	sdl::GPUIndexedIndirectDrawCommand* indirect_ts_mapped;
 
 	int count;
 	int off; // the offset to draw from
@@ -191,25 +195,45 @@ $endif
 		unreachable("failed to initialize quad buffer (index): %s", sdl::get_error());
 	}
 
+	qb.ind_buf = sdl::create_gpu_buffer(self.gpu,
+		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_INDIRECT, .size = GPUIndexedIndirectDrawCommand.sizeof * MAX_QUAD_BATCH}
+	);
+	if (qb.ind_buf == null) {
+		unreachable("failed to initialize quad buffer (indirect commands): %s", sdl::get_error());
+	}
+
+
 	// allocate the transfer buffers for the vertices and indices
 	qb.vertex_ts = sdl::create_gpu_transfer_buffer(self.gpu,
 		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.vertices.sizeof * MAX_QUAD_BATCH}
 	);
 	if (qb.vertex_ts == null) {
-		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+		unreachable("failed to create gpu vertex transfer buffer: %s", sdl::get_error());
 	}
 
 	qb.index_ts = sdl::create_gpu_transfer_buffer(self.gpu,
 		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.indices.sizeof * MAX_QUAD_BATCH}
 	);
 	if (qb.index_ts == null) {
-		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+		unreachable("failed to create gpu index transfer buffer: %s", sdl::get_error());
 	}
+
+	qb.indirect_ts = sdl::create_gpu_transfer_buffer(self.gpu,
+		&&(GPUTransferBufferCreateInfo){
+			.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD,
+			.size = GPUIndexedIndirectDrawCommand.sizeof * MAX_QUAD_BATCH
+		}
+	);
+	if (qb.indirect_ts == null) {
+		unreachable("failed to create gpu indirect command transfer buffer: %s", sdl::get_error());
+	}
+
 
 	// map the transfer buffers
 	qb.vertex_ts_mapped = ((Vertex*)sdl::map_gpu_transfer_buffer(self.gpu, qb.vertex_ts, false))[:MAX_QUAD_BATCH];
 	qb.index_ts_mapped = ((short*)sdl::map_gpu_transfer_buffer(self.gpu, qb.index_ts, false))[:MAX_QUAD_BATCH];
-	if (qb.vertex_ts_mapped.ptr == null || qb.index_ts_mapped.ptr == null) {
+	qb.indirect_ts_mapped = ((GPUIndexedIndirectDrawCommand*)sdl::map_gpu_transfer_buffer(self.gpu, qb.indirect_ts, false))[:MAX_QUAD_BATCH];
+	if (qb.vertex_ts_mapped.ptr == null || qb.index_ts_mapped.ptr == null || qb.indirect_ts_mapped == null) {
 		unreachable("failed to map vertex or index buffers: %s", sdl::get_error());
 	}
 
@@ -646,6 +670,8 @@ fn bool Renderer.upload_quad(&self, Quad* source_quad)
 	qb.index_ts_mapped[qb.count*6 + 4] = source_quad.indices.i5;
 	qb.index_ts_mapped[qb.count*6 + 5] = source_quad.indices.i6;
 
+	qb.indirect_ts_mapped[qb.count] = {6, 1, qb.count*6, qb.count*4, 0};
+
 	qb.count++;
 
 	return true;
@@ -678,19 +704,29 @@ fn void Renderer.draw_quads(&self)
 		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = qb.off * Quad.indices.sizeof, .size = Quad.indices.sizeof * (long)(qb.count - qb.off)},
 		false
 	);
+	// upload commands
+	sdl::upload_to_gpu_buffer(cpy, 
+		&&(GPUTransferBufferLocation){.transfer_buffer = qb.indirect_ts, .offset = qb.off * GPUIndexedIndirectDrawCommand.sizeof},
+		&&(GPUBufferRegion){.buffer = qb.ind_buf, .offset = qb.off * GPUIndexedIndirectDrawCommand.sizeof, .size = GPUIndexedIndirectDrawCommand.sizeof * (long)(qb.count - qb.off)},
+		false
+	);
 
 	sdl::end_gpu_copy_pass(cpy);
 	if (!sdl::submit_gpu_command_buffer(cmd)) {
 		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
 	}
 
-	sdl::bind_gpu_vertex_buffers(self.render_pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = qb.off*Quad.vertices.sizeof}}, 1);
-	sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = qb.off*Quad.indices.sizeof}, GPU_INDEXELEMENTSIZE_16BIT);
+		//sdl::bind_gpu_vertex_buffers(self.render_pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = qb.off*Quad.vertices.sizeof}}, 1);
+		sdl::bind_gpu_vertex_buffers(self.render_pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = 0}}, 1);
+		//sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = qb.off*Quad.indices.sizeof}, GPU_INDEXELEMENTSIZE_16BIT);
+		sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
 
-	// we need instancing to not do this
-	for (int i = 0; i < qb.count - qb.off; i++) {
-		sdl::draw_gpu_indexed_primitives(self.render_pass, 6, 1, i*6, i*4, 0);
-	}
+	//// we need instancing to not do this
+	//for (int i = 0; i < qb.count - qb.off; i++) {
+	//	sdl::draw_gpu_indexed_primitives(self.render_pass, 6, 1, i*6, i*4, 0);
+	//}
+
+	sdl::draw_gpu_indexed_primitives_indirect(self.render_pass, qb.ind_buf, qb.off * GPUIndexedIndirectDrawCommand.sizeof, qb.count - qb.off);
 
 	qb.off = qb.count;
 }
