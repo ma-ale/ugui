@@ -68,7 +68,7 @@ const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
 
 const uint STACK_STEP = 10;
 const uint MAX_ELEMS  = 128;
-const uint MAX_CMDS   = 256;
+const uint MAX_CMDS   = 2048;
 const uint ROOT_ID    = 1;
 const uint TEXT_MAX   = 64;
 
@@ -197,7 +197,7 @@ fn void? Ctx.init(&ctx)
 	ctx.cache.init()!;
 	defer catch { (void)ctx.cache.free(); }
 
-	ctx.cmd_queue.init(MAX_ELEMENTS)!;
+	ctx.cmd_queue.init(MAX_CMDS)!;
 	defer catch { (void)ctx.cmd_queue.free(); }
 
 	ctx.active_div = 0;

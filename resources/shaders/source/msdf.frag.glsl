@@ -24,7 +24,7 @@ float median(float r, float g, float b) {
 
 void main() {
     ivec2 ts = textureSize(tx, 0);
-    vec2 fts = vec2(float(ts.x), float(ts.y));
+    vec2 fts = vec2(ts);
     vec2 real_uv = uv / fts;
 
 	vec3 msd = texture(tx, real_uv).rgb;
