@@ -113,8 +113,10 @@ fn int main(String[] args)
 
 
 	isz frame;
+	double fps;
 	bool toggle = true;
 	time::Clock clock;
+	time::Clock fps_clock;
 	Times ui_times;
 	Times draw_times;
 
@@ -126,6 +128,7 @@ fn int main(String[] args)
 	bool quit = false;
 	while (!quit) {
 		clock.mark();
+		fps_clock.mark();
 		
 		// FIXME: modkeys input is broken
 		ugui::ModKeys mod;
@@ -268,7 +271,7 @@ fn int main(String[] args)
 		ui.div_begin("fps", {0, ui.height-100, -300, 100})!!;
 		{
 			ui.layout_set_column()!!;
-			ui.text_unbounded("frame number", string::tformat("frame %d", frame))!!;
+			ui.text_unbounded("frame number", string::tformat("frame %d, fps = %.2f", frame, fps))!!;
 			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 			ui.text_unbounded("ui text input", (String)ui.input.keyboard.text[..])!!;
 		};
@@ -292,6 +295,8 @@ fn int main(String[] args)
 		//draw_times.print_stats();
 		/* End Drawing */
 
+
+		fps = 1.0 / fps_clock.mark().to_sec();
 		frame++;
 	}
 
