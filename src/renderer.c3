@@ -53,14 +53,13 @@ struct Texture {
 // The GPU buffers that contain quad info, the size is determined by MAX_QUAD_BATCH
 const int MAX_QUAD_BATCH = 2048;
 struct QuadBuffer {
-	sdl::GPUBuffer* vert_buf;
-	sdl::GPUBuffer* idx_buf;
+	sdl::GPUBuffer* vert_buf; // on-gpu vertex buffer
+	sdl::GPUBuffer* idx_buf;  // on-gpu index buffer
+	sdl::GPUBuffer* attr_buf; // on-gpu quad attribute buffer
 
-	sdl::GPUTransferBuffer* vertex_ts;
-	sdl::GPUTransferBuffer* index_ts;
+	sdl::GPUTransferBuffer* attr_ts;
 
-	Vertex[] vertex_ts_mapped;
-	short[] index_ts_mapped;
+	QuadAttributes[] attr_ts_mapped;
 
 	int count;
 	int off; // the offset to draw from
@@ -90,24 +89,24 @@ struct Renderer {
 	uint scissor_x, scissor_y, scissor_w, scissor_h; 
 }
 
-// how each vertex is represented in the gpu
-struct Vertex @packed {
+// How each vertex is represented in the gpu
+struct Vertex {
+	short x, y;
+}
+
+// Attributes of each quad instance
+struct QuadAttributes {
 	struct pos {
-		short x, y;
+		short x, y, w, h;
 	}
 	struct uv {
 		short u, v;
 	}
-	struct col { // FIXME: this is shit
-		union {
-			char r, g, b, a;
-			char[4] arr;
-			uint u;
-		}
-	}
+	uint color;
 }
 
-struct Quad @packed {
+// A single quad
+struct Quad {
 	struct vertices {
 		Vertex v1,v2,v3,v4;
 	}
@@ -176,40 +175,102 @@ $endif
 	// ==========================
 	QuadBuffer* qb = &self.quad_buffer;
 
+	// since instanced rendering is used, on the gpu there is only one mesh, a single quad.
+
 	// create the vertex and index buffer on the gpu
 	qb.vert_buf = sdl::create_gpu_buffer(self.gpu,
-		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_VERTEX, .size = Quad.vertices.sizeof * MAX_QUAD_BATCH}
+		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_VERTEX, .size = Quad.vertices.sizeof}
 	);
 	if (qb.vert_buf == null) {
 		unreachable("failed to initialize quad buffer (vertex): %s", sdl::get_error());
 	}
 
 	qb.idx_buf = sdl::create_gpu_buffer(self.gpu,
-		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_INDEX, .size = Quad.indices.sizeof * MAX_QUAD_BATCH}
+		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_INDEX, .size = Quad.indices.sizeof}
 	);
 	if (qb.idx_buf == null) {
 		unreachable("failed to initialize quad buffer (index): %s", sdl::get_error());
 	}
 
-	// allocate the transfer buffers for the vertices and indices
-	qb.vertex_ts = sdl::create_gpu_transfer_buffer(self.gpu,
-		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.vertices.sizeof * MAX_QUAD_BATCH}
+	qb.attr_buf = sdl::create_gpu_buffer(self.gpu,
+		&&(GPUBufferCreateInfo){.usage = GPU_BUFFERUSAGE_VERTEX, .size = QuadAttributes.sizeof * MAX_QUAD_BATCH}
 	);
-	if (qb.vertex_ts == null) {
-		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+	if (qb.attr_buf == null) {
+		unreachable("failed to initialize quad buffer (index): %s", sdl::get_error());
 	}
 
-	qb.index_ts = sdl::create_gpu_transfer_buffer(self.gpu,
-		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.indices.sizeof * MAX_QUAD_BATCH}
+
+	// upload the quad mesh
+	GPUTransferBuffer *ts =  sdl::create_gpu_transfer_buffer(self.gpu,
+		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = Quad.sizeof}
 	);
-	if (qb.index_ts == null) {
+	if (ts == null) {
 		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
 	}
+	Quad* quad = (Quad*)sdl::map_gpu_transfer_buffer(self.gpu, ts, false);
 
-	// map the transfer buffers
-	qb.vertex_ts_mapped = ((Vertex*)sdl::map_gpu_transfer_buffer(self.gpu, qb.vertex_ts, false))[:MAX_QUAD_BATCH];
-	qb.index_ts_mapped = ((short*)sdl::map_gpu_transfer_buffer(self.gpu, qb.index_ts, false))[:MAX_QUAD_BATCH];
-	if (qb.vertex_ts_mapped.ptr == null || qb.index_ts_mapped.ptr == null) {
+	/* v1            v4
+	 * +-------------+
+	 * |           _/|
+	 * |         _/  |
+	 * |   1   _/    |
+	 * |     _/      |
+	 * |   _/        |
+	 * | _/     2    |
+	 * |/            |
+	 * +-------------+
+	 * v2            v3
+	 */
+	quad.vertices.v1 = {.x = 0, .y = 0};
+	quad.vertices.v2 = {.x = 0, .y = 1};
+	quad.vertices.v3 = {.x = 1, .y = 1};
+	quad.vertices.v4 = {.x = 1, .y = 0};
+	// triangle 1 indices
+	quad.indices.i1 = 0; // v1
+	quad.indices.i2 = 1; // v2
+	quad.indices.i3 = 3; // v4
+	// triangle 2 indices
+	quad.indices.i4 = 1; // v2
+	quad.indices.i5 = 2; // v3
+	quad.indices.i6 = 3; // v4
+	
+	sdl::unmap_gpu_transfer_buffer(self.gpu, ts);
+
+	GPUCommandBuffer* cmd = sdl::acquire_gpu_command_buffer(self.gpu);
+	if (cmd == null) {
+		unreachable("failed to upload quad at acquiring command buffer: %s", sdl::get_error());
+	}
+	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
+
+	// upload vertices
+	sdl::upload_to_gpu_buffer(cpy, 
+		&&(GPUTransferBufferLocation){.transfer_buffer = ts, .offset = Quad.vertices.offsetof},
+		&&(GPUBufferRegion){.buffer = qb.vert_buf, .offset = 0, .size = Quad.vertices.sizeof},
+		false
+	);
+	// upload indices
+	sdl::upload_to_gpu_buffer(cpy, 
+		&&(GPUTransferBufferLocation){.transfer_buffer = ts, .offset = Quad.indices.offsetof},
+		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = 0, .size = Quad.indices.sizeof},
+		false
+	);
+
+	sdl::end_gpu_copy_pass(cpy);
+	if (!sdl::submit_gpu_command_buffer(cmd)) {
+		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
+	}
+	sdl::release_gpu_transfer_buffer(self.gpu, ts);
+
+
+	// create and map the quad attributes transfer buffer
+	qb.attr_ts = sdl::create_gpu_transfer_buffer(self.gpu,
+		&&(GPUTransferBufferCreateInfo){.usage = GPU_TRANSFERBUFFERUSAGE_UPLOAD, .size = QuadAttributes.sizeof * MAX_QUAD_BATCH}
+	);
+	if (qb.attr_ts == null) {
+		unreachable("failed to create gpu transfer buffer: %s", sdl::get_error());
+	}
+	qb.attr_ts_mapped = ((QuadAttributes*)sdl::map_gpu_transfer_buffer(self.gpu, qb.attr_ts, false))[:MAX_QUAD_BATCH];
+	if (qb.attr_ts_mapped.ptr == null) {
 		unreachable("failed to map vertex or index buffers: %s", sdl::get_error());
 	}
 
@@ -355,35 +416,47 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 		// is represented by two floats, the color as 32 bit rgba and the uv also as intgers. 
 		.vertex_input_state = {
 			// the description of each vertex buffer, for now I use only one buffer
-			.vertex_buffer_descriptions = (GPUVertexBufferDescription[]){{
-				.slot = 0,
-				.pitch = Vertex.sizeof,
-				.input_rate = GPU_VERTEXINPUTRATE_VERTEX,
-				.instance_step_rate = 0,
-			}},
-			.num_vertex_buffers = 1,
-			// the description of each vertex, each vertex has three properties
+			.vertex_buffer_descriptions = (GPUVertexBufferDescription[]){
+				{ // first slot, per-vertex attributes
+					.slot = 0,
+					.pitch = Vertex.sizeof,
+					.input_rate = GPU_VERTEXINPUTRATE_VERTEX,
+				},
+				{ // second slot, per-instance attributes
+					.slot = 1,
+					.pitch = QuadAttributes.sizeof,
+					.input_rate = GPU_VERTEXINPUTRATE_INSTANCE,
+				}
+			},
+			.num_vertex_buffers = 2,
+			// the description of each vertex
 			.vertex_attributes = (GPUVertexAttribute[]){
 				{ // at location zero there is the position of the vertex
 					.location = 0,
-					.buffer_slot = 0, // only one buffer so always slot zero
-					.format = GPU_VERTEXELEMENTFORMAT_SHORT2,
-					.offset = Vertex.pos.offsetof,
+					.buffer_slot = 0, // buffer slot zero so per-vertex
+					.format = GPU_VERTEXELEMENTFORMAT_SHORT2, // x,y
+					.offset = 0,
 				},
-				{ // at location one there are the uv coordinates
+				{ // at location one there is the per-quad position
 					.location = 1,
-					.buffer_slot = 0,
-					.format = GPU_VERTEXELEMENTFORMAT_SHORT2,
-					.offset = Vertex.uv.offsetof,
+					.buffer_slot = 1, // buffer slot one so per-instance
+					.format = GPU_VERTEXELEMENTFORMAT_SHORT4, // x,y,w,h
+					.offset = QuadAttributes.pos.offsetof,
 				},
-				{ // at location two there is the color
+				{ // at location two there are the per-quad uv coordinates
 					.location = 2,
-					.buffer_slot = 0,
-					.format = GPU_VERTEXELEMENTFORMAT_UBYTE4, // 4x8bit unsigned rgba format
-					.offset = Vertex.col.offsetof,
+					.buffer_slot = 1,
+					.format = GPU_VERTEXELEMENTFORMAT_SHORT2,
+					.offset = QuadAttributes.uv.offsetof,
+				},
+				{ // at location three there is the quad color
+					.location = 3,
+					.buffer_slot = 1,
+					.format = GPU_VERTEXELEMENTFORMAT_UBYTE4,
+					.offset = QuadAttributes.color.offsetof,
 				}
 			},
-			.num_vertex_attributes = 3,
+			.num_vertex_attributes = 4,
 		},
 		// the pipeline's primitive type and rasterizer state differs based on what needs to
 		// be drawn
@@ -556,75 +629,32 @@ fn void Renderer.update_texture_by_id(&self, Id id, char[] pixels, uint width, u
 
 fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v, uint color = 0xffffffff)
 {
-	Quad quad;
-	/* v1            v4
-	 * +-------------+
-	 * |           _/|
-	 * |         _/  |
-	 * |   1   _/    |
-	 * |     _/      |
-	 * |   _/        |
-	 * | _/     2    |
-	 * |/            |
-	 * +-------------+
-	 * v2            v3
-	 */	
-	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .uv = {.u = u, .v = v},     .col.u = color};
-	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .uv = {.u = u, .v = v+h},   .col.u = color};
-	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .uv = {.u = u+w, .v = v+h}, .col.u = color};
-	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .uv = {.u = u+w, .v = v},   .col.u = color};
-	// triangle 1 indices
-	quad.indices.i1 = 0; // v1
-	quad.indices.i2 = 1; // v2
-	quad.indices.i3 = 3; // v4
-	// triangle 2 indices
-	quad.indices.i4 = 1; // v2
-	quad.indices.i5 = 2; // v3
-	quad.indices.i6 = 3; // v4
+	QuadAttributes qa = {
+		.pos = {.x = x, .y = y, .w = w, .h = h},
+		.uv = {.u = u, .v = v},
+		.color = color
+	};
 
-	return self.upload_quad(&quad);
+	return self.upload_quad(qa);
 }
 
 // Push a quad into the quad buffer, return true on success and false on failure
 fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color, ushort radius = 0)
 {
-	Quad quad;
-	/* v1            v4
-	 * +-------------+
-	 * |           _/|
-	 * |         _/  |
-	 * |   1   _/    |
-	 * |     _/      |
-	 * |   _/        |
-	 * | _/     2    |
-	 * |/            |
-	 * +-------------+
-	 * v2            v3
-	 */
-	// the wanted radius is pushed into the uv coordinates, the vertex shader then extracts the absolute value
-	// and passes it to the fragment shader, then it uses the sign to give the fragment shader local coordinates
-	// into the quad.
-	quad.vertices.v1 = {.pos = {.x = x,   .y = y},   .uv = {.u = -radius, .v = +radius}, .col.u = color};
-	quad.vertices.v2 = {.pos = {.x = x,   .y = y+h}, .uv = {.u = -radius, .v = -radius}, .col.u = color};
-	quad.vertices.v3 = {.pos = {.x = x+w, .y = y+h}, .uv = {.u = +radius, .v = -radius}, .col.u = color};
-	quad.vertices.v4 = {.pos = {.x = x+w, .y = y},   .uv = {.u = +radius, .v = +radius}, .col.u = color};
-	// triangle 1 indices
-	quad.indices.i1 = 0; // v1
-	quad.indices.i2 = 1; // v2
-	quad.indices.i3 = 3; // v4
-	// triangle 2 indices
-	quad.indices.i4 = 1; // v2
-	quad.indices.i5 = 2; // v3
-	quad.indices.i6 = 3; // v4
+	QuadAttributes qa = {
+		.pos = {.x = x, .y = y, .w = w, .h = h},
+		.uv  = {.u = radius, .v = radius},
+		.color = color
+	};
 
-	return self.upload_quad(&quad);
+	return self.upload_quad(qa);
 }
 
 // this does not upload a quad, but it simply copies the quad data to the correct transfer buffers.
 // Data transfer to the GPU only happens in draw_quads() to save time
-fn bool Renderer.upload_quad(&self, Quad* source_quad)
+fn bool Renderer.upload_quad(&self, QuadAttributes qa)
 {
-	if (self.quad_buffer.count >= MAX_QUAD_BATCH || source_quad == null) {
+	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
 		return false;
 	}
 	QuadBuffer* qb = &self.quad_buffer;
@@ -634,17 +664,7 @@ fn bool Renderer.upload_quad(&self, Quad* source_quad)
 		unreachable("quad buffer not initialized");
 	}
 
-	qb.vertex_ts_mapped[qb.count*4 + 0] = source_quad.vertices.v1;
-	qb.vertex_ts_mapped[qb.count*4 + 1] = source_quad.vertices.v2;
-	qb.vertex_ts_mapped[qb.count*4 + 2] = source_quad.vertices.v3;
-	qb.vertex_ts_mapped[qb.count*4 + 3] = source_quad.vertices.v4;
-
-	qb.index_ts_mapped[qb.count*6 + 0] = source_quad.indices.i1;
-	qb.index_ts_mapped[qb.count*6 + 1] = source_quad.indices.i2;
-	qb.index_ts_mapped[qb.count*6 + 2] = source_quad.indices.i3;
-	qb.index_ts_mapped[qb.count*6 + 3] = source_quad.indices.i4;
-	qb.index_ts_mapped[qb.count*6 + 4] = source_quad.indices.i5;
-	qb.index_ts_mapped[qb.count*6 + 5] = source_quad.indices.i6;
+	qb.attr_ts_mapped[qb.count] = qa;
 
 	qb.count++;
 
@@ -666,16 +686,10 @@ fn void Renderer.draw_quads(&self)
 	}
 	GPUCopyPass* cpy = sdl::begin_gpu_copy_pass(cmd);
 
-	// upload vertices
+	// upload quad attributes
 	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = qb.vertex_ts, .offset = qb.off * Quad.vertices.sizeof},
-		&&(GPUBufferRegion){.buffer = qb.vert_buf, .offset = qb.off * Quad.vertices.sizeof, .size = Quad.vertices.sizeof * (long)(qb.count - qb.off)},
-		false
-	);
-	// upload indices
-	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = qb.index_ts, .offset = qb.off * Quad.indices.sizeof},
-		&&(GPUBufferRegion){.buffer = qb.idx_buf, .offset = qb.off * Quad.indices.sizeof, .size = Quad.indices.sizeof * (long)(qb.count - qb.off)},
+		&&(GPUTransferBufferLocation){.transfer_buffer = qb.attr_ts, .offset = QuadAttributes.sizeof * qb.off},
+		&&(GPUBufferRegion){.buffer = qb.attr_buf, .offset = QuadAttributes.sizeof * qb.off, .size = QuadAttributes.sizeof * (long)(qb.count - qb.off)},
 		false
 	);
 
@@ -684,13 +698,14 @@ fn void Renderer.draw_quads(&self)
 		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
 	}
 
-	sdl::bind_gpu_vertex_buffers(self.render_pass, 0, (GPUBufferBinding[]){{.buffer = qb.vert_buf, .offset = qb.off*Quad.vertices.sizeof}}, 1);
-	sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = qb.off*Quad.indices.sizeof}, GPU_INDEXELEMENTSIZE_16BIT);
+	sdl::bind_gpu_vertex_buffers(self.render_pass, 0,
+		(GPUBufferBinding[]){
+			{.buffer = qb.vert_buf, .offset = 0},
+			{.buffer = qb.attr_buf, .offset = 0},
+		}, 2);
+	sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
 
-	// we need instancing to not do this
-	for (int i = 0; i < qb.count - qb.off; i++) {
-		sdl::draw_gpu_indexed_primitives(self.render_pass, 6, 1, i*6, i*4, 0);
-	}
+	sdl::draw_gpu_indexed_primitives(self.render_pass, 6, qb.count-qb.off, 0, 0, qb.off);
 
 	qb.off = qb.count;
 }

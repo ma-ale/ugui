@@ -12,7 +12,7 @@ layout(set = 2, binding = 0) uniform sampler2D tx;
 void main()
 {
     ivec2 ts = textureSize(tx, 0);
-    vec2 fts = vec2(float(ts.x), float(ts.y));
+    vec2 fts = vec2(ts);
     vec2 real_uv = uv / fts;
     fragColor = texture(tx, real_uv);
 }

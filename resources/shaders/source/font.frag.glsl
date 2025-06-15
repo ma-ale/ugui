@@ -13,7 +13,7 @@ layout(location = 0) out vec4 fragColor;
 void main()
 {
     ivec2 ts = textureSize(tx, 0);
-    vec2 fts = vec2(float(ts.x), float(ts.y));
+    vec2 fts = vec2(ts);
     vec2 real_uv = uv / fts;
 
     vec4 opacity = texture(tx, real_uv);
