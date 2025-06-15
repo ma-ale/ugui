@@ -61,8 +61,8 @@ struct QuadBuffer {
 
 	QuadAttributes[] attr_ts_mapped;
 
+	// how many quads are currently stored
 	int count;
-	int off; // the offset to draw from
 
 	bool initialized;
 }
@@ -635,10 +635,9 @@ fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u,
 		.color = color
 	};
 
-	return self.upload_quad(qa);
+	return self.map_quad(qa);
 }
 
-// Push a quad into the quad buffer, return true on success and false on failure
 fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color, ushort radius = 0)
 {
 	QuadAttributes qa = {
@@ -647,12 +646,12 @@ fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color
 		.color = color
 	};
 
-	return self.upload_quad(qa);
+	return self.map_quad(qa);
 }
 
 // this does not upload a quad, but it simply copies the quad data to the correct transfer buffers.
 // Data transfer to the GPU only happens in draw_quads() to save time
-fn bool Renderer.upload_quad(&self, QuadAttributes qa)
+fn bool Renderer.map_quad(&self, QuadAttributes qa)
 {
 	if (self.quad_buffer.count >= MAX_QUAD_BATCH) {
 		return false;
@@ -671,15 +670,10 @@ fn bool Renderer.upload_quad(&self, QuadAttributes qa)
 	return true;
 }
 
-// draw all quads in the quad buffer, since uniforms are per-drawcall it makes no sense
-// to draw them one a the time
-fn void Renderer.draw_quads(&self)
+fn void Renderer.upload_quads(&self)
 {
 	QuadBuffer* qb = &self.quad_buffer;
 
-	if (qb.off == qb.count) return;
-
-	// upload quads
 	GPUCommandBuffer* cmd = sdl::acquire_gpu_command_buffer(self.gpu);
 	if (cmd == null) {
 		unreachable("failed to upload quad at acquiring command buffer: %s", sdl::get_error());
@@ -688,14 +682,26 @@ fn void Renderer.draw_quads(&self)
 
 	// upload quad attributes
 	sdl::upload_to_gpu_buffer(cpy, 
-		&&(GPUTransferBufferLocation){.transfer_buffer = qb.attr_ts, .offset = QuadAttributes.sizeof * qb.off},
-		&&(GPUBufferRegion){.buffer = qb.attr_buf, .offset = QuadAttributes.sizeof * qb.off, .size = QuadAttributes.sizeof * (long)(qb.count - qb.off)},
+		&&(GPUTransferBufferLocation){.transfer_buffer = qb.attr_ts, .offset = 0},
+		&&(GPUBufferRegion){.buffer = qb.attr_buf, .offset = 0, .size = QuadAttributes.sizeof * qb.count},
 		false
 	);
 
 	sdl::end_gpu_copy_pass(cpy);
 	if (!sdl::submit_gpu_command_buffer(cmd)) {
 		unreachable("failed to upload quads at submit command buffer: %s", sdl::get_error());
+	}
+}
+
+// draw all quads in the quad buffer, since uniforms are per-drawcall it makes no sense
+// to draw them one a the time
+fn void Renderer.draw_quads(&self, uint off, uint count)
+{
+	QuadBuffer* qb = &self.quad_buffer;
+
+	// too many quads to draw
+	if (off >= qb.count || count > qb.count - off) {
+		unreachable("too many quads, have %d, requested %d, offset %d", qb.count, count, off);
 	}
 
 	sdl::bind_gpu_vertex_buffers(self.render_pass, 0,
@@ -705,15 +711,12 @@ fn void Renderer.draw_quads(&self)
 		}, 2);
 	sdl::bind_gpu_index_buffer(self.render_pass, &&(GPUBufferBinding){.buffer = qb.idx_buf, .offset = 0}, GPU_INDEXELEMENTSIZE_16BIT);
 
-	sdl::draw_gpu_indexed_primitives(self.render_pass, 6, qb.count-qb.off, 0, 0, qb.off);
-
-	qb.off = qb.count;
+	sdl::draw_gpu_indexed_primitives(self.render_pass, 6, count, 0, 0, off);
 }
 
 fn void Renderer.reset_quads(&self)
 {
 	self.quad_buffer.count = 0;
-	self.quad_buffer.off = 0;
 }
 
 
@@ -843,21 +846,33 @@ fn void Renderer.reset_scissor(&self)
 
 fn void Renderer.render_ugui(&self, CmdQueue* queue)
 {
+	// upload pass
+	foreach (&c : queue) {
+		if (c.type == CMD_RECT) {
+			CmdRect r = c.rect;
+			self.push_quad(r.rect.x, r.rect.y, r.rect.w, r.rect.h, r.color.to_uint(), r.radius);
+		} else if (c.type == CMD_SPRITE) {
+			CmdSprite s = c.sprite;
+			self.push_sprite(s.rect.x, s.rect.y, s.texture_rect.w, s.texture_rect.h, s.texture_rect.x, s.texture_rect.y, s.hue.to_uint());
+		}
+	}
+	self.upload_quads();
+
 	Cmd* last_command;
+	uint off;
+	uint count;
 	for (Cmd* cmd; (cmd = queue.dequeue() ?? null) != null;) {
 		if (last_command == null || last_command.type != cmd.type) {
-			self.end_command(last_command);
+			self.end_command(last_command, off, count);
 			self.begin_command(cmd);
+			off += count;
+			count = 0;
 		}
 
 		switch (cmd.type) {
-		case CMD_RECT:
-			CmdRect r = cmd.rect;
-			self.push_quad(r.rect.x, r.rect.y, r.rect.w, r.rect.h, r.color.to_uint(), r.radius);
+		case CMD_RECT: nextcase;
 		case CMD_SPRITE:
-			// TODO: support hue in sprite
-			CmdSprite s = cmd.sprite;
-			self.push_sprite(s.rect.x, s.rect.y, s.texture_rect.w, s.texture_rect.h, s.texture_rect.x, s.texture_rect.y);
+			count++;
 		case CMD_UPDATE_ATLAS:
 			// TODO: verify the correct type
 			CmdUpdateAtlas u = cmd.update_atlas;
@@ -877,7 +892,7 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 
 		last_command = cmd;
 	}
-	self.end_command(last_command);
+	self.end_command(last_command, off, count);
 }
 
 fn void Renderer.begin_command(&self, Cmd* cmd)
@@ -915,14 +930,14 @@ fn void Renderer.begin_command(&self, Cmd* cmd)
 	}
 }
 
-fn void Renderer.end_command(&self, Cmd* cmd)
+fn void Renderer.end_command(&self, Cmd* cmd, uint off, uint count)
 {
 	if (cmd == null) return;
 
 	switch (cmd.type) {
 		case CMD_RECT: nextcase;
 		case CMD_SPRITE:
-			self.draw_quads();
+			self.draw_quads(off, count);
 			self.end_render_pass();
 		case CMD_UPDATE_ATLAS: break;
 		case CMD_SCISSOR: break;
