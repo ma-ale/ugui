@@ -181,6 +181,12 @@ fn void Ctx.input_text_unicode(&ctx, char[] text)
 	ctx.input.events.text_input = true;
 }
 
+fn void Ctx.input_char(&ctx, char c)
+{
+	char[1] b = {c};
+	ctx.input_text_utf8(b[..]);
+}
+
 // Mouse Buttons down
 fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys)
 {

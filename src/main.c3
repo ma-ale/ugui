@@ -5,6 +5,7 @@ import ugui;
 import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
+import std::ascii;
 import sdlrenderer::ren;
 import sdl3::sdl;
 
@@ -61,7 +62,7 @@ fn int main(String[] args)
 	defer ui.free();
 
 	ren::Renderer ren;
-	ren.init("Ugui Test", 640, 480, false);
+	ren.init("Ugui Test", 640, 480, true);
 	defer ren.free();
 	ui.input_window_size(640, 480)!!;
 
@@ -117,6 +118,7 @@ fn int main(String[] args)
 	bool toggle = true;
 	time::Clock clock;
 	time::Clock fps_clock;
+	time::Clock sleep_clock;
 	Times ui_times;
 	Times draw_times;
 
@@ -124,21 +126,37 @@ fn int main(String[] args)
 	//
 	// MAIN LOOP
 	//
+	sdl::start_text_input(ren.win);
+
 	sdl::Event e;
 	bool quit = false;
+	ugui::ModKeys mod;
+	ugui::MouseButtons btn;
 	while (!quit) {
 		clock.mark();
 		fps_clock.mark();
+		sleep_clock.mark();
 		
-		// FIXME: modkeys input is broken
-		ugui::ModKeys mod;
-		while (sdl::poll_event(&e)) {
+		do {
 			switch (e.type) {
 			case EVENT_QUIT: 
 				quit = true;
+			case EVENT_KEY_UP: nextcase;
 			case EVENT_KEY_DOWN:
-				mod.rctrl = !!(e.key.key == K_RCTRL);
-				mod.lctrl = !!(e.key.key == K_LCTRL);
+				mod.rctrl = e.key.key == K_RCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.rctrl;
+				mod.lctrl = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
+
+				// pressing ctrl+key or alt+key does not generate a character as such no 
+				// TEXT_INPUT event is generated. When those keys are pressed we have to 
+				// do manual text input, bummer
+				if (e.type == EVENT_KEY_DOWN && (mod.lctrl || mod.rctrl)) {
+					if (ascii::is_alnum_m((uint)e.key.key)) {
+						ui.input_char((char)e.key.key);
+					}
+				}
+
+			case EVENT_TEXT_INPUT:
+				ui.input_text_utf8(e.text.text.str_view());
 			case EVENT_WINDOW_RESIZED:
 				ui.input_window_size((short)e.window.data1, (short)e.window.data2)!!;
 			case EVENT_WINDOW_FOCUS_GAINED:
@@ -152,27 +170,20 @@ fn int main(String[] args)
 			case EVENT_MOUSE_BUTTON_DOWN: nextcase;
 			case EVENT_MOUSE_BUTTON_UP:
 				sdl::MouseButtonFlags mb = sdl::get_mouse_state(null, null);
-				ugui::MouseButtons b = {
+				btn = {
 					.btn_left = !!(mb & BUTTON_LMASK),
 					.btn_right = !!(mb & BUTTON_RMASK),
 					.btn_middle = !!(mb & BUTTON_MMASK),
 					.btn_4 = !!(mb & BUTTON_X1MASK),
 					.btn_5 = !!(mb & BUTTON_X2MASK),
 				};
-				ui.input_mouse_button(b);
+			case EVENT_POLL_SENTINEL: break;
 			default:
 				io::eprintfn("unhandled event: %s", e.type);
 			}
-		}
+		} while(sdl::poll_event(&e));
 		ui.input_mod_keys(mod);
-
-		/*
-		for (rl::KeyboardKey key; (key = (KeyboardKey)rl::getKeyPressed()) != 0;) {
-			ZString kname = rl::getKeyName(key);
-			if (kname == null) continue;
-			ui.input_text_unicode(kname.str_view());
-		}
-		*/
+		ui.input_mouse_button(btn);
 
 		/* End Input Handling */
 
@@ -180,14 +191,6 @@ fn int main(String[] args)
 		ui.frame_begin()!!;
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
-
-/*
-		ui.div_begin("main", ugui::DIV_FILL)!!;
-		ui.button("button0", {0,0,30,30})!!;
-		ui.draw_sprite("sprite1", "tux")!!;
-		ui.text_unbounded("text1", "Ciao")!!;
-		ui.div_end()!!;
-*/
 
 		ui.div_begin("main", {.w=-100})!!;
 		{
@@ -268,12 +271,12 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", {0, ui.height-100, -300, 100})!!;
+		ui.div_begin("fps", {0, ui.height-150, -300, 150})!!;
 		{
 			ui.layout_set_column()!!;
 			ui.text_unbounded("frame number", string::tformat("frame %d, fps = %.2f", frame, fps))!!;
 			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
-			ui.text_unbounded("ui text input", (String)ui.input.keyboard.text[..])!!;
+			ui.text_unbounded("ui text input", string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[..]))!!;
 		};
 		ui.div_end()!!;
 
@@ -295,7 +298,10 @@ fn int main(String[] args)
 		//draw_times.print_stats();
 		/* End Drawing */
 
+		// wait for the next event, timeout after 100ms
 
+		sdl::wait_event_timeout(&e, (int)(100.0-sleep_clock.mark().to_ms()-0.5));
+				
 		fps = 1.0 / fps_clock.mark().to_sec();
 		frame++;
 	}
