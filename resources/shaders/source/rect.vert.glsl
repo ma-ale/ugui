@@ -7,7 +7,7 @@ layout(set = 1, binding = 0) uniform Viewport {
 layout(location = 0) in ivec2 position;
 layout(location = 1) in ivec4 attr; // quad x,y,w,h
 layout(location = 2) in ivec2 uv;   // x,y in the texture
-layout(location = 3) in ivec4 color;
+layout(location = 3) in uvec4 color;
 
 layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec4 out_quad_size;

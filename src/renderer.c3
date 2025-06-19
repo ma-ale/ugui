@@ -86,7 +86,7 @@ struct Renderer {
 	Id sprite_atlas_id;
 	Id font_atlas_id;
 
-	uint scissor_x, scissor_y, scissor_w, scissor_h; 
+	int scissor_x, scissor_y, scissor_w, scissor_h; 
 }
 
 // How each vertex is represented in the gpu
@@ -291,7 +291,18 @@ fn void Renderer.free(&self)
 	}
 	self.pipelines.free();
 
-	// FIXME: release the quad buffer
+	foreach (&t: self.textures) {
+		sdl::release_gpu_texture(self.gpu, t.texture);
+		sdl::release_gpu_sampler(self.gpu, t.sampler);
+	}
+	self.textures.free();
+
+	QuadBuffer* qb = &self.quad_buffer;
+	sdl::unmap_gpu_transfer_buffer(self.gpu, qb.attr_ts);
+	sdl::release_gpu_transfer_buffer(self.gpu, qb.attr_ts);
+	sdl::release_gpu_buffer(self.gpu, qb.vert_buf);
+	sdl::release_gpu_buffer(self.gpu, qb.idx_buf);
+	sdl::release_gpu_buffer(self.gpu, qb.attr_buf);
 
 	sdl::release_window_from_gpu_device(self.gpu, self.win);
 	sdl::destroy_gpu_device(self.gpu);
@@ -377,12 +388,14 @@ fn void Renderer.load_spirv_shader_from_file(&self, String name, String vert_pat
 	char[] frag_code;
 
 	// create vertex shader
-	vert_code = mem::new_array(char, file::get_size(vert_path)!!+1);
+	usz size = file::get_size(vert_path)!!;
+	vert_code = mem::new_array(char, size + size%4);
 	file::load_buffer(vert_path, vert_code)!!;
 	defer mem::free(vert_code);
 
 	// create fragment shader
-	frag_code = mem::new_array(char, file::get_size(frag_path)!!+1);
+	size = file::get_size(frag_path)!!;
+	frag_code = mem::new_array(char, size + size%4);
 	file::load_buffer(frag_path, frag_code)!!;
 	defer mem::free(frag_code);
 
@@ -810,8 +823,11 @@ fn void Renderer.bind_texture(&self, String texture_name)
 	);
 }
 
-fn void Renderer.set_scissor(&self, uint x, uint y, uint w, uint h)
+fn void Renderer.set_scissor(&self, int x, int y, int w, int h)
 {
+	// in vulkan scissor size must be positive, clamp to zero
+	w = max(w, 0);
+	h = max(h, 0);
 	sdl::set_gpu_scissor(self.render_pass, &&(sdl::Rect){x,y,w,h});
 }
 
