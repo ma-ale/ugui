@@ -21,7 +21,7 @@ void main()
     vec2 centerpoint = in_quad_size.xy + in_quad_size.zw * 0.5;
     vec2 half_size = in_quad_size.zw * 0.5;
     float distance = sdf_rr(vec2(gl_FragCoord) - centerpoint, half_size, in_radius);
-    float alpha = 1.0 - smoothstep(0.0, 1.0, distance);
+    float alpha = 1.0 - smoothstep(0.0, 1.5, distance);
 
     fragColor = vec4(in_color.rgb, in_color.a * alpha);
 }
