@@ -1,0 +1,43 @@
+{
+  "Debug": {
+    "build": [
+      {
+        "args": "",
+        "command": "scripts/compile_shaders.sh",
+        "working_dir": ""
+      },
+      {
+        "args": "clean-run -g",
+        "command": "c3c",
+        "working_dir": ""
+      }
+    ],
+    "build_types": [],
+    "clean": [
+      {
+        "args": "",
+        "command": "rm build/ugui",
+        "working_dir": ""
+      }
+    ],
+    "config": {
+      "clear_sys_env": false
+    },
+    "os": [
+      "linux"
+    ],
+    "output_parser": {
+      "config": {
+        "relative_file_paths": true
+      }
+    },
+    "run": [
+      {
+        "args": "",
+        "command": "build/ugui",
+        "name": "Custom Executable",
+        "working_dir": ""
+      }
+    ]
+  }
+}
