@@ -138,7 +138,7 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_i
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
-fn void? Ctx.push_string(&ctx, Rect bounds, String text, int z_index, Color hue = 0xffffffffu.to_rgba())
+fn void? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue = 0xffffffffu.to_rgba())
 {
 	if (text.len == 0) {
 		return;
@@ -158,7 +158,7 @@ fn void? Ctx.push_string(&ctx, Rect bounds, String text, int z_index, Color hue 
 	short line_len;
 	Codepoint cp;
 	usz off, x;
-	while ((cp = str_to_codepoint(text[off..], &x)) != 0) {
+	while (off < text.len && (cp = str_to_codepoint(text[off..], &x)) != 0) {
 		off += x;
 		Glyph* gp;
 		if (!ascii::is_cntrl((char)cp)) {

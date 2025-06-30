@@ -25,7 +25,7 @@ bitstruct MouseButtons : uint {
 
 // FIXME: all of these names were prefixed with key_ idk if this is better,
 //        if it is remove the prefix on MouseButtons as well
-// Modifier Keys, same as SDL
+// Modifier Keys, intended as any key that is not text
 bitstruct ModKeys : uint {
 	bool lshift :  0;
 	bool rshift :  1;
@@ -39,12 +39,20 @@ bitstruct ModKeys : uint {
 	bool caps   :  9;
 	bool mode   : 10;
 	bool scroll : 11;
+	bool bkspc  : 12;
+	bool del    : 13;
+	// arrow keys
+	bool up     : 14;
+	bool down   : 15;
+	bool left   : 16;
+	bool right  : 17;
 }
 
 const ModKeys KMOD_CTRL  = {.lctrl  = true, .rctrl  = true};
 const ModKeys KMOD_SHIFT = {.lshift = true, .rshift = true};
 const ModKeys KMOD_ALT   = {.lalt   = true, .ralt   = true};
 const ModKeys KMOD_GUI   = {.lgui   = true, .rgui   = true};
+const ModKeys KMOD_TXT   = {.bkspc  = true, .del    = true}; // modkeys that act like text input
 const ModKeys KMOD_NONE  = {};
 const ModKeys KMOD_ANY   = (ModKeys)(ModKeys.inner.max);
 
@@ -60,7 +68,7 @@ const ModKeys KEY_ANY = (ModKeys)(ModKeys.inner.max);
 
 fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String keys)
 {
-	bool is_mod = (bool)(ctx.input.keyboard.down & mod);
+	bool is_mod = (bool)(ctx.input.keyboard.modkeys & mod);
 	bool is_keys = true;
 	String haystack = (String)ctx.input.keyboard.text[0..ctx.input.keyboard.text_len];
 	char[2] needle;
@@ -187,9 +195,10 @@ fn void Ctx.input_char(&ctx, char c)
 	ctx.input_text_utf8(b[..]);
 }
 
-// Mouse Buttons down
+// Modifier keys, like control or backspace
+// TODO: make this call repetible to input modkeys one by one
 fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys)
 {
-	ctx.input.keyboard.down = modkeys;
-	ctx.input.events.mod_key = (uint)ctx.input.keyboard.down != 0;
+	ctx.input.keyboard.modkeys = modkeys;
+	ctx.input.events.mod_key = (uint)ctx.input.keyboard.modkeys != 0;
 }

@@ -62,9 +62,9 @@ fn int main(String[] args)
 	defer ui.free();
 
 	ren::Renderer ren;
-	ren.init("Ugui Test", 640, 480, true);
+	ren.init("Ugui Test", 800, 600, true);
 	defer ren.free();
-	ui.input_window_size(640, 480)!!;
+	ui.input_window_size(800, 600)!!;
 
 	//
 	// FONT LOADING
@@ -145,6 +145,7 @@ fn int main(String[] args)
 			case EVENT_KEY_DOWN:
 				mod.rctrl = e.key.key == K_RCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.rctrl;
 				mod.lctrl = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
+				mod.bkspc = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
 
 				// pressing ctrl+key or alt+key does not generate a character as such no 
 				// TEXT_INPUT event is generated. When those keys are pressed we have to 
@@ -154,6 +155,8 @@ fn int main(String[] args)
 						ui.input_char((char)e.key.key);
 					}
 				}
+				
+				if (e.type == EVENT_KEY_DOWN && e.key.key == K_RETURN) ui.input_char('\n');
 
 			case EVENT_TEXT_INPUT:
 				ui.input_text_utf8(e.text.text.str_view());
@@ -226,19 +229,13 @@ fn int main(String[] args)
 			static bool check;
 			ui.checkbox("check1", "", {}, &check, "tick")!!;
 			ui.toggle("toggle1", "", {}, &toggle)!!;
-
-/*
-			ui.layout_set_column()!!;
-			ui.button_label(" A ")!!;
-			ui.button_label(" B ")!!;
-			ui.layout_next_column()!!;
-			ui.button_label(" C ")!!;
-			ui.button_label(" D ")!!;
-			ui.layout_next_row()!!;
-			ui.button_label(" E ")!!;
-*/
 		};
 		ui.draw_sprite("sprite1", "tux")!!;
+		
+		static char[128] text_box = "ciao mamma";
+		static usz text_len = "ciao mamma".len;
+		ui.text_box("text input", {0,0,200,200}, text_box[..], &text_len)!!;
+
 		ui.div_end()!!;
 
 		ui.div_begin("second", ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
@@ -279,7 +276,6 @@ fn int main(String[] args)
 			ui.text_unbounded("ui text input", string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[..]))!!;
 		};
 		ui.div_end()!!;
-
 
 		ui.frame_end()!!;
 		/* End UI Handling */

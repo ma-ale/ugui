@@ -34,6 +34,7 @@ bitstruct ElemEvents : uint {
 	bool mouse_release : 5;
 	bool mouse_hold    : 6;
 	bool update        : 7;
+	bool text_input    : 8;
 }
 
 // element structure
@@ -111,7 +112,7 @@ struct Ctx {
 		struct keyboard {
 			char[TEXT_MAX] text;
 			usz text_len;
-			ModKeys down;
+			ModKeys modkeys;
 		}
 	}
 
@@ -343,6 +344,7 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 		.mouse_press = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
 		.mouse_release = hover && focus && ctx.is_mouse_released(BTN_ANY),
 		.mouse_hold = hover && focus && ctx.is_mouse_down(BTN_ANY),
+		.text_input = focus && (ctx.input.keyboard.text_len || ctx.input.keyboard.modkeys & KMOD_TXT),
 	};
 	return ev;
 }
