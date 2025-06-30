@@ -211,6 +211,34 @@ fn Rect? Ctx.get_text_bounds(&ctx, String text)
 	return text_bounds;
 }
 
+fn Point? Ctx.get_cursor_position(&ctx, String text)
+{
+	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
+	short line_gap = (short)ctx.font.linegap;
+	Glyph* gp;
+
+	// TODO: account for unicode codepoints
+	Point line;
+	Codepoint cp;
+	usz off, x;
+	while ((cp = str_to_codepoint(text[off..], &x)) != 0) {
+		off += x;
+		bool n;
+		if (!ascii::is_cntrl((char)cp)) {
+			gp = ctx.font.get_glyph(cp)!;
+			line.x += gp.adv;
+		} else if (cp == '\n'){
+			line.y += line_height + line_gap;
+			line.x = 0;
+		} else {
+			continue;
+		}
+	}
+
+	return line;
+}
+
+
 fn Point Ctx.center_text(&ctx, Rect text_bounds, Rect bounds)
 {
 	short dw = bounds.w - text_bounds.w;
@@ -234,3 +262,5 @@ fn Atlas*? Ctx.get_font_atlas(&ctx, String name)
 
 	return &ctx.font.atlas;
 }
+
+fn int Font.line_height(&font) => (int)(font.ascender - font.descender + (float)0.5);
