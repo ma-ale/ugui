@@ -29,9 +29,11 @@ struct ElemDiv {
 // if the width or height are negative the width or height will be calculated based on the children size
 // sort similar to a flexbox, and the minimum size is set by the negative of the width or height
 // FIXME: there is a bug if the size.w or size.h == -0
-fn void? Ctx.div_begin(&ctx, String label, Rect size, bool scroll_x = false, bool scroll_y = false)
+macro Ctx.div_begin(&ctx, Rect size, bool scroll_x = false, bool scroll_y = false, ...)
+	=> ctx.div_begin_id(@compute_id($vasplat), size, scroll_x, scroll_y);
+fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem* parent = ctx.get_parent()!;
 	Elem* elem = ctx.get_elem(id)!;
@@ -110,8 +112,8 @@ fn void? Ctx.div_end(&ctx)
 	// vertical overflow
 	elem.div.scroll_y.on = cbc.y > bc.y && elem.div.scroll_y.enabled;
 
-	Id hsid = ctx.gen_id("div_scrollbar_horizontal")!;
-	Id vsid = ctx.gen_id("div_scrollbar_vertical")!;
+	Id hsid = ctx.gen_id("div_scrollbar_horizontal".hash())!;
+	Id vsid = ctx.gen_id("div_scrollbar_vertical".hash())!;
 	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid || ctx.is_hovered(ctx.find_elem(vsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid || ctx.is_hovered(ctx.find_elem(hsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 
@@ -128,7 +130,7 @@ fn void? Ctx.div_end(&ctx)
 		};
 		Layout prev_l = elem.div.layout;
 		elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_ver("div_scrollbar_vertical", vslider, &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
+		ctx.slider_ver_id(vsid, vslider, &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
 		elem.div.layout = prev_l;
 	}
 
@@ -145,7 +147,7 @@ fn void? Ctx.div_end(&ctx)
 		};
 		Layout prev_l = elem.div.layout;
 		elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_hor("div_scrollbar_horizontal", hslider, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
+		ctx.slider_hor_id(hsid, hslider, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
 		elem.div.layout = prev_l;
 	}
 

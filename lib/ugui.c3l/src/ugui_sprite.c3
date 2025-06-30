@@ -110,9 +110,12 @@ fn void? Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType t
 	ctx.sprite_atlas.insert(name, type, pixels, (ushort)desc.width, (ushort)desc.height, (ushort)desc.width)!;
 }
 
-fn void? Ctx.draw_sprite(&ctx, String label, String name, Point off = {0,0})
+
+macro Ctx.draw_sprite(&ctx, String name, Point off = {0,0}, ...)
+	=> ctx.draw_sprite_id(@compute_id($vasplat), name, off);
+fn void? Ctx.draw_sprite_id(&ctx, Id id, String name, Point off)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;

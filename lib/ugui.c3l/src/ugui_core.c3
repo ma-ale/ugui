@@ -136,15 +136,24 @@ const uint GOLDEN_RATIO = 0x9E3779B9;
 
 // generate an id combining the hashes of the parent id and the label
 // with the Cantor pairing function
-macro Id? Ctx.gen_id(&ctx, String label)
+fn Id? Ctx.gen_id(&ctx, Id id2)
 {
 	Id id1 = ctx.tree.get(ctx.active_div)!;
-	Id id2 = label.hash();
 	// Mix the two IDs non-linearly
 	Id mixed = id1 ^ id2.rotate_left(13);
 	mixed ^= id1.rotate_left(7);
 	mixed += GOLDEN_RATIO;
 	return mixed;
+}
+
+// compute the id from arguments and the line of the call
+macro Id @compute_id(...)
+{
+	Id id = (Id)$$LINE.hash() ^ (Id)@str_hash($$FILE);
+	$for var $i = 0; $i < $vacount; $i++:
+		id ^= (Id)$vaconst[$i].hash();
+	$endfor
+	return id;
 }
 
 // get or push an element from the cache, return a pointer to it

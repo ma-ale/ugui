@@ -195,71 +195,71 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
-		ui.div_begin("main", {.w=-100})!!;
+		ui.div_begin({.w=-100})!!;
 		{
 			ui.layout_set_column()!!;
-			if (ui.button("button0", {0,0,30,30}, toggle)!!.mouse_press) {
+			if (ui.button({0,0,30,30}, toggle)!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button1", {0,0,30,30})!!.mouse_press) {
+			if (ui.button({0,0,30,30})!!.mouse_press) {
 				io::printn("press button1");
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button("button2", {0,0,30,30})!!.mouse_release) {
+			if (ui.button({0,0,30,30})!!.mouse_release) {
 				io::printn("release button2");
 			}
 
 			ui.layout_set_row()!!;
 			ui.layout_next_row()!!;
 			static float rf, gf, bf, af;
-			ui.slider_ver("slider_r", {0,0,30,100}, &rf)!!;
-			ui.slider_ver("slider_g", {0,0,30,100}, &gf)!!;
-			ui.slider_ver("slider_b", {0,0,30,100}, &bf)!!;
-			ui.slider_ver("slider_a", {0,0,30,100}, &af)!!;
+			ui.slider_ver({0,0,30,100}, &rf)!!;
+			ui.slider_ver({0,0,30,100}, &gf)!!;
+			ui.slider_ver({0,0,30,100}, &bf)!!;
+			ui.slider_ver({0,0,30,100}, &af)!!;
 
 			ui.layout_next_column()!!;
-			ui.text_unbounded("text1", "Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
+			ui.text_unbounded("Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
 
 			ui.layout_next_column()!!;
 			ui.button_label("Continua!")!!;
 
 			ui.layout_next_row()!!;
 			static bool check;
-			ui.checkbox("check1", "", {}, &check, "tick")!!;
-			ui.toggle("toggle1", "", {}, &toggle)!!;
+			ui.checkbox("", {}, &check, "tick")!!;
+			ui.toggle("", {}, &toggle)!!;
 		};
-		ui.draw_sprite("sprite1", "tux")!!;
+		ui.draw_sprite("tux")!!;
 		
 		static char[128] text_box = "ciao mamma";
 		static usz text_len = "ciao mamma".len;
-		ui.text_box("text input", {0,0,200,200}, text_box[..], &text_len)!!;
+		ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
 
 		ui.div_end()!!;
 
-		ui.div_begin("second", ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
+		ui.div_begin(ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
 		{
 			ui.layout_set_column()!!;
 			static float slider2 = 0.5;
-			if (ui.slider_ver("slider", {0,0,30,100}, &slider2)!!.update) {
+			if (ui.slider_ver({0,0,30,100}, &slider2)!!.update) {
 				io::printfn("other slider: %f", slider2);
 			}
-			ui.button("button0", {0,0,50,50})!!;
-			ui.button("button1", {0,0,50,50})!!;
-			ui.button("button2", {0,0,50,50})!!;
-			ui.button("button3", {0,0,50,50})!!;
+			ui.button({0,0,50,50})!!;
+			ui.button({0,0,50,50})!!;
+			ui.button({0,0,50,50})!!;
+			ui.button({0,0,50,50})!!;
 			if (toggle) {
-				ui.button("button4", {0,0,50,50})!!;
-				ui.button("button5", {0,0,50,50})!!;
-				ui.button("button6", {0,0,50,50})!!;
-				ui.button("button7", {0,0,50,50})!!;
+				ui.button({0,0,50,50})!!;
+				ui.button({0,0,50,50})!!;
+				ui.button({0,0,50,50})!!;
+				ui.button({0,0,50,50})!!;
 			}
 			ui.layout_next_column()!!;
 			ui.layout_set_row()!!;
 			static float f1, f2;
-			ui.slider_hor("hs1", {0,0,100,30}, &f1)!!;
-			ui.slider_hor("hs2", {0,0,100,30}, &f2)!!;
+			ui.slider_hor({0,0,100,30}, &f1)!!;
+			ui.slider_hor({0,0,100,30}, &f2)!!;
 		};
 		ui.div_end()!!;
 
@@ -268,12 +268,12 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
-		ui.div_begin("fps", {0, ui.height-150, -300, 150})!!;
+		ui.div_begin({0, ui.height-150, -300, 150})!!;
 		{
 			ui.layout_set_column()!!;
-			ui.text_unbounded("frame number", string::tformat("frame %d, fps = %.2f", frame, fps))!!;
-			ui.text_unbounded("draw times", string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
-			ui.text_unbounded("ui text input", string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[..]))!!;
+			ui.text_unbounded(string::tformat("frame %d, fps = %.2f", frame, fps))!!;
+			ui.text_unbounded(string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
+			ui.text_unbounded(string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[..]))!!;
 		};
 		ui.div_end()!!;
 

@@ -8,23 +8,31 @@ struct ElemSlider {
 	Rect handle;
 }
 
+
 /*       handle
  * +----+-----+---------------------+
  * |    |#####|                     |
  * +----+-----+---------------------+
  */
+macro Ctx.slider_hor(&ctx,
+    Rect size,
+    float* value,
+    float hpercent = 0.25,
+    Color bgcolor = 0x0000ffffu.to_rgba(),
+    Color handlecolor = 0x0ff000ffu.to_rgba(), ...)
+	=> ctx.slider_hor_id(@compute_id($vasplat), size, value, hpercent, bgcolor, handlecolor);
 <*
 @require value != null
 *>
-fn ElemEvents? Ctx.slider_hor(&ctx,
-    String label,
+fn ElemEvents? Ctx.slider_hor_id(&ctx,
+    Id id,
     Rect size,
     float* value,
     float hpercent = 0.25,
     Color bgcolor = 0x0000ffffu.to_rgba(),
     Color handlecolor = 0x0ff000ffu.to_rgba())
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -67,27 +75,35 @@ fn ElemEvents? Ctx.slider_hor(&ctx,
 	return elem.events;
 }
 
+
 /*
- * +-+
- * | |
- * | |
- * +-+
- * |#| handle
- * |#|
- * +-+
- * | |
- * | |
- * +-+
+ * +--+
+ * |  |
+ * |  |
+ * +--+
+ * |##| handle
+ * |##|
+ * +--+
+ * |  |
+ * |  |
+ * +--+
  */
-fn ElemEvents? Ctx.slider_ver(&ctx,
-    String label,
+macro Ctx.slider_ver(&ctx,
+    Rect size,
+    float* value,
+    float hpercent = 0.25,
+    Color bgcolor = 0x0000ffffu.to_rgba(),
+    Color handlecolor = 0x0ff000ffu.to_rgba(), ...)
+	=> ctx.slider_ver_id(@compute_id($vasplat), size, value, hpercent, bgcolor, handlecolor);
+fn ElemEvents? Ctx.slider_ver_id(&ctx,
+    Id id,
     Rect size,
     float* value,
     float hpercent = 0.25,
     Color bgcolor = 0x0000ffffu.to_rgba(),
     Color handlecolor = 0x0ff000ffu.to_rgba())
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;

@@ -7,12 +7,13 @@ struct ElemButton {
 	int filler;
 }
 
+
 // draw a button, return the events on that button
-// FIXME: "state" should be renamed "active" to toggle between an usable button and
-//        an inactive (greyed-out) button
-fn ElemEvents? Ctx.button(&ctx, String label, Rect size, bool state = false)
+macro Ctx.button(&ctx, Rect size, bool state = false, ...)
+	=> ctx.button_id(@compute_id($vasplat), size, state);
+fn ElemEvents? Ctx.button_id(&ctx, Id id, Rect size, bool active)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -33,7 +34,7 @@ fn ElemEvents? Ctx.button(&ctx, String label, Rect size, bool state = false)
 
 	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
-	if (state) {
+	if (active) {
 		col = 0xff0000ffu.to_rgba();
 	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
 		col = 0xff00ffffu.to_rgba();
@@ -45,9 +46,11 @@ fn ElemEvents? Ctx.button(&ctx, String label, Rect size, bool state = false)
 	return elem.events;
 }
 
-fn ElemEvents? Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,short.max}, bool state = false)
+macro Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,short.max}, bool active = false, ...)
+	=> ctx.button_label_id(@compute_id($vasplat), label, size, active);
+fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool active)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -68,7 +71,7 @@ fn ElemEvents? Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,s
 
 	Color col = 0x0000ffffu.to_rgba();
 	elem.events = ctx.get_elem_events(elem);
-	if (state) {
+	if (active) {
 		col = 0xff0000ffu.to_rgba();
 	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
 		col = 0xff00ffffu.to_rgba();
@@ -86,9 +89,11 @@ fn ElemEvents? Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,s
 	return elem.events;
 }
 
-fn ElemEvents? Ctx.button_icon(&ctx, String label, String icon, String on_icon = "", bool state = false)
+macro Ctx.button_icon(&ctx, String icon, String on_icon = "", bool active = false, ...)
+	=> ctx.button_icon_id(@compute_id($vasplat), icon, on_icon, active);
+fn ElemEvents? Ctx.button_icon_id(&ctx, Id id, String icon, String on_icon, bool active)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -115,7 +120,7 @@ fn ElemEvents? Ctx.button_icon(&ctx, String label, String icon, String on_icon =
 	elem.events = ctx.get_elem_events(elem);
 
 	Id tex_id = ctx.sprite_atlas.id;
-	if (state && on_icon != "") {
+	if (active && on_icon != "") {
 		ctx.push_sprite(elem.bounds, on_sprite.uv(), tex_id, parent.div.z_index, type: on_sprite.type)!;
 	} else {
 		ctx.push_sprite(elem.bounds, def_sprite.uv(), tex_id, parent.div.z_index, type: def_sprite.type)!;
@@ -129,9 +134,11 @@ fn ElemEvents? Ctx.button_icon(&ctx, String label, String icon, String on_icon =
 
 // FIXME: this should be inside the style
 const ushort DEFAULT_CHECKBOX_SIZE = 16;
-fn void? Ctx.checkbox(&ctx, String label, String description, Point off, bool* state, String tick_sprite = {})
+macro Ctx.checkbox(&ctx, String desc, Point off, bool* active, String tick_sprite = {}, ...)
+	=> ctx.checkbox_id(@compute_id($vasplat), desc, off, active, tick_sprite);
+fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* active, String tick_sprite)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -154,17 +161,17 @@ fn void? Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 	if (elem.bounds.is_null()) return;
 
 	elem.events = ctx.get_elem_events(elem);
-	if (elem.events.mouse_hover && elem.events.mouse_release) *state = !(*state);
+	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
 	Color col;
 	if (tick_sprite != {}) {
 		col = ctx.style.bgcolor;
 		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
-		if (*state) {
+		if (*active) {
 			ctx.draw_sprite_raw(tick_sprite, elem.bounds)!;
 		}
 	} else {
-		if (*state) {
+		if (*active) {
 			col = 0xff0000ffu.to_rgba();
 		} else {
 			col = 0xff00ffffu.to_rgba();
@@ -176,9 +183,11 @@ fn void? Ctx.checkbox(&ctx, String label, String description, Point off, bool* s
 
 // FIXME: this should be inside the style
 const short DEFAULT_SWITCH_SIZE = 16;
-fn void? Ctx.toggle(&ctx, String label, String description, Point off, bool* state)
+macro Ctx.toggle(&ctx, String desc, Point off, bool* active)
+	=> ctx.toggle_id(@compute_id($vasplat), desc, off, active);
+fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -201,10 +210,10 @@ fn void? Ctx.toggle(&ctx, String label, String description, Point off, bool* sta
 	if (elem.bounds.is_null()) return;
 
 	elem.events = ctx.get_elem_events(elem);
-	if (elem.events.mouse_hover && elem.events.mouse_release) *state = !(*state);
+	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
 	Color col;
-	if (*state) {
+	if (*active) {
 		col = 0xff0000ffu.to_rgba();
 	} else {
 		col = 0xff00ffffu.to_rgba();
@@ -212,6 +221,6 @@ fn void? Ctx.toggle(&ctx, String label, String description, Point off, bool* sta
 	// Draw the button
 	// FIXME: THIS IS SHIT
 	ctx.push_rect(elem.bounds, ctx.style.bgcolor, parent.div.z_index, do_border: true, do_radius: true)!;
-	Rect t = elem.bounds.add({*state ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
+	Rect t = elem.bounds.add({*active ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
 	ctx.push_rect(t, col, parent.div.z_index, do_border: false, do_radius: true)!;
 }

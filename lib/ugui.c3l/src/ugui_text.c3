@@ -7,9 +7,11 @@ struct ElemText {
 	usz cursor; // cursor offset
 }
 
-fn void? Ctx.text_unbounded(&ctx, String label, String text)
+macro Ctx.text_unbounded(&ctx, String text, ...)
+	=> ctx.text_unbounded_id(@compute_id($vasplat), text);
+fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
@@ -30,9 +32,11 @@ fn void? Ctx.text_unbounded(&ctx, String label, String text)
 	ctx.push_string(elem.bounds, text, parent.div.z_index)!;
 }
 
-fn ElemEvents? Ctx.text_box(&ctx, String label, Rect size, char[] text, usz* text_len)
+macro Ctx.text_box(&ctx, Rect size, char[] text, usz* text_len, ...)
+	=> ctx.text_box_id(@compute_id($vasplat), size, text, text_len);
+fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_len)
 {
-	Id id = ctx.gen_id(label)!;
+	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id)!;
