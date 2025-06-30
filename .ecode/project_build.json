@@ -2,12 +2,12 @@
   "Debug": {
     "build": [
       {
-        "args": "",
-        "command": "scripts/compile_shaders.sh",
+        "args": "-C resources/shaders",
+        "command": "make",
         "working_dir": ""
       },
       {
-        "args": "clean-run -g",
+        "args": "build -g",
         "command": "c3c",
         "working_dir": ""
       }
@@ -15,8 +15,8 @@
     "build_types": [],
     "clean": [
       {
-        "args": "",
-        "command": "rm build/ugui",
+        "args": "clean",
+        "command": "c3c",
         "working_dir": ""
       }
     ],
