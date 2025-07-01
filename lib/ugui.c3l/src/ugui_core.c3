@@ -9,7 +9,7 @@ import std::core::string;
 
 
 // element ids are just long ints
-alias Id = usz;
+alias Id = uint;
 
 enum ElemType {
 	ETYPE_NONE,

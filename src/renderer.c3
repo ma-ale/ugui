@@ -522,18 +522,18 @@ enum TextureType : (GPUTextureFormat format) {
 macro void Renderer.new_texture(&self, name_or_id, TextureType type, char[] pixels, uint width, uint height)
 {
 	$switch $typeof(name_or_id):
-	$case usz: return self.new_texture_by_id(id, type, pixels, width, height);
+	$case uint: return self.new_texture_by_id(id, type, pixels, width, height);
 	$case String: return self.new_texture_by_id(name_or_id.hash(), type, pixels, width, height);
-	$default: unreachable("texture must have a name (String) or an id (usz)");
+	$default: unreachable("texture must have a name (String) or an id (uint)");
 	$endswitch
 }
 
 macro void Renderer.update_texture(&self, name_or_id, char[] pixels, uint width, uint height, uint x = 0, uint y = 0)
 {
 	$switch $typeof(name_or_id):
-	$case usz: return self.update_texture_by_id(name_or_id, pixels, width, height, x, y);
+	$case uint: return self.update_texture_by_id(name_or_id, pixels, width, height, x, y);
 	$case String: return self.update_texture_by_id(name_or_id.hash(), pixels, width, height, x, y);
-	$default: unreachable("texture must have a name (String) or an id (usz)");
+	$default: unreachable("texture must have a name (String) or an id (uint)");
 	$endswitch
 }
 
