@@ -183,17 +183,7 @@ macro Elem* Ctx.find_elem(&ctx, Id id)
 	return elem;
 }
 
-// FIXME: Since ids are now keyed with the element's parent id, this function does not work
-//        outside of the element's div block.
-// this searches an element in the cache by label, it does not create a new element
-// if it does't find one
-//macro Ctx.get_elem_by_label(&ctx, String label)
-//{
-//	Id id = ctx.get_id(label);
-//	return ctx.cache.search(id);
-//}
-
-macro Ctx.get_elem_by_tree_idx(&ctx, isz idx) @private
+fn Elem*? Ctx.get_active_div(&ctx)
 {
 	Id id = ctx.tree.get(ctx.active_div)!;
 	return ctx.cache.search(id);
@@ -278,7 +268,8 @@ const int DEBUG = 1;
 
 fn void? Ctx.frame_end(&ctx)
 {
-	Elem* root = ctx.get_elem_by_tree_idx(0)!;
+	// FIXME: this is not guaranteed to be root. the user might forget to close a div or some other element
+	Elem* root = ctx.get_active_div()!;
 	root.div.layout = LAYOUT_ROW;
 
 	// 1. clear the tree

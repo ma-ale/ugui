@@ -87,7 +87,7 @@ fn void? Ctx.div_end(&ctx)
 {
 	// swap the children bounds
 	Elem* parent = ctx.get_parent()!;
-	Elem* elem = ctx.get_elem_by_tree_idx(ctx.active_div)!;
+	Elem* elem = ctx.get_active_div()!;
 	elem.div.pcb = elem.div.children_bounds;
 
 	// FIXME: this causes all elements inside the div to loose focus since the mouse press happens
