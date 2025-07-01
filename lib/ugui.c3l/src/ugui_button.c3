@@ -145,8 +145,6 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 	// add it to the tree
 	ctx.tree.add(id, ctx.active_div)!;
 
-	// FIXME: for now checkboxes and buttons have no members so the element types
-	//        can be the same
 	if (elem.flags.is_new) {
 		elem.type = ETYPE_BUTTON;
 	} else if (elem.type != ETYPE_BUTTON) {
@@ -163,21 +161,19 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 	elem.events = ctx.get_elem_events(elem);
 	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
-	Color col;
+	Color col = ctx.style.bgcolor;
 	if (tick_sprite != {}) {
-		col = ctx.style.bgcolor;
 		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
 		if (*active) {
-			ctx.draw_sprite_raw(tick_sprite, elem.bounds)!;
+			ctx.draw_sprite_raw(tick_sprite, elem.bounds, center: true)!;
 		}
 	} else {
-		if (*active) {
-			col = 0xff0000ffu.to_rgba();
-		} else {
-			col = 0xff00ffffu.to_rgba();
-		}
-		// Draw the button
 		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
+		if (*active) {
+			ushort x = DEFAULT_CHECKBOX_SIZE / 4;
+			Rect check = elem.bounds.add({x, x, -x*2, -x*2});
+			ctx.push_rect(check, 0xff0000ffu.to_rgba(), parent.div.z_index, do_radius: true)!;
+		}
 	}
 }
 

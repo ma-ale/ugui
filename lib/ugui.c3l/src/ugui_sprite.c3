@@ -145,10 +145,16 @@ fn void? Ctx.draw_sprite_id(&ctx, Id id, String name, Point off)
 	return ctx.push_sprite(elem.bounds, uv, tex_id, parent.div.z_index)!;
 }
 
-fn void? Ctx.draw_sprite_raw(&ctx, String name, Rect bounds)
+fn void? Ctx.draw_sprite_raw(&ctx, String name, Rect bounds, bool center = false)
 {
 	Elem *parent = ctx.get_parent()!;
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
 	Id tex_id = ctx.sprite_atlas.id;
+	
+	if (center) {
+		Point off = {.x = (bounds.w - sprite.w) / 2, .y = (bounds.h - sprite.h) / 2};
+		bounds = bounds.off(off);
+	}
+	
 	return ctx.push_sprite(bounds, sprite.uv(), tex_id, parent.div.z_index, type: sprite.type)!;
 }

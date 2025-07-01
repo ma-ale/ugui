@@ -124,7 +124,6 @@ fn void? Ctx.push_rect(&ctx, Rect rect, Color color, int z_index, bool do_border
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
-// TODO: add texture id
 fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_index, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
 {
 	Cmd cmd = {
