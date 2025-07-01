@@ -35,16 +35,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx,
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	// 1. Fill the element fields
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_SLIDER;
-	} else if (elem.type != ETYPE_SLIDER) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
 
 	// 2. Layout
 	elem.bounds = ctx.position_element(parent, size, true);
@@ -106,9 +97,7 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx,
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
+	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
 
 	// 1. Fill the element fields
 	if (elem.flags.is_new) {

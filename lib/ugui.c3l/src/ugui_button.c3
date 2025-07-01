@@ -16,15 +16,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, Rect size, bool active)
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_BUTTON;
-	} else if (elem.type != ETYPE_BUTTON) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 
 	elem.bounds = ctx.position_element(parent, size, true);
 
@@ -53,13 +45,7 @@ fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool ac
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	// 1. Fill the element fields
-	// this resets the flags
-	elem.type = ETYPE_BUTTON;
+	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	Rect text_size = ctx.get_text_bounds(label)!;
@@ -96,15 +82,7 @@ fn ElemEvents? Ctx.button_icon_id(&ctx, Id id, String icon, String on_icon, bool
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_BUTTON;
-	} else if (elem.type != ETYPE_BUTTON) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 
 	Sprite* def_sprite = ctx.sprite_atlas.get(icon)!;
 	Sprite* on_sprite = ctx.sprite_atlas.get(on_icon) ?? &&(Sprite){};
@@ -141,15 +119,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_BUTTON;
-	} else if (elem.type != ETYPE_BUTTON) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 
 	Rect size = {off.x, off.y, DEFAULT_CHECKBOX_SIZE, DEFAULT_CHECKBOX_SIZE};
 	elem.bounds = ctx.position_element(parent, size, true);
@@ -186,17 +156,7 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	// FIXME: for now switches and buttons have no members so the element types
-	//        can be the same
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_BUTTON;
-	} else if (elem.type != ETYPE_BUTTON) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 
 	Rect size = {off.x, off.y, DEFAULT_SWITCH_SIZE*2, DEFAULT_SWITCH_SIZE};
 	elem.bounds = ctx.position_element(parent, size, true);

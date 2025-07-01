@@ -231,7 +231,7 @@ fn int main(String[] args)
 			ui.checkbox("", {}, &check)!!;
 			ui.toggle("", {}, &toggle)!!;
 		};
-		ui.draw_sprite("tux")!!;
+		ui.sprite("tux")!!;
 		
 		static char[128] text_box = "ciao mamma";
 		static usz text_len = "ciao mamma".len;

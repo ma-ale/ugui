@@ -64,6 +64,8 @@ to maintain focus until mouse release (fix scroll bars)
     - border radius
 [x] add a command to update an atlas
 [ ] New window command, useful for popups
+[ ] Text command returns the text bounds, this way we can avoid the pattern 
+    draw_text(a, pos) -> off = compute_bounds(a) -> draw_text(b, pos+off) -> ...
 
 ## Atlas
 

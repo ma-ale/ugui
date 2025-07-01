@@ -36,17 +36,9 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 	id = ctx.gen_id(id)!;
 
 	Elem* parent = ctx.get_parent()!;
-	Elem* elem = ctx.get_elem(id)!;
-	isz div_node = ctx.tree.add(id, ctx.active_div)!;
-	ctx.active_div = div_node;
+	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
+	ctx.active_div = elem.tree_idx;
 
-	bool is_new = elem.flags.is_new;
-
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_DIV;
-	} else if (elem.type != ETYPE_DIV) {
-		return WRONG_ELEMENT_TYPE?;
-	}
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
 	elem.div.z_index = parent.div.z_index + 1;

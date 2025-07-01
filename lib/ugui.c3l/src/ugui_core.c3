@@ -40,6 +40,7 @@ bitstruct ElemEvents : uint {
 // element structure
 struct Elem {
 	Id id;
+	isz tree_idx;
 	ElemFlags flags;
 	ElemEvents events;
 	Rect bounds;
@@ -158,7 +159,7 @@ macro Id @compute_id(...)
 
 // get or push an element from the cache, return a pointer to it
 // resets all flags except is_new which is set accordingly
-fn Elem*? Ctx.get_elem(&ctx, Id id)
+fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
 {
 	Elem empty_elem;
 	bool is_new;
@@ -166,8 +167,13 @@ fn Elem*? Ctx.get_elem(&ctx, Id id)
 	elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
 	elem.flags = (ElemFlags)0;
 	elem.flags.is_new = is_new;
-	// FIXME: should this be here? or is it better to have the elements set the id?
 	elem.id = id;
+	if (is_new == false && elem.type != type) {
+		return WRONG_ELEMENT_TYPE?;
+	} else {
+		elem.type = type;
+	}
+	elem.tree_idx = ctx.tree.add(id, ctx.active_div)!;
 	return elem;
 }
 
@@ -223,11 +229,13 @@ fn void Ctx.free(&ctx)
 
 fn void? Ctx.frame_begin(&ctx)
 {
-
+	// 1. Reset the active div
 	// 2. Get the root element from the cache and update it
-	Elem* elem = ctx.get_elem(ROOT_ID)!;
+	ctx.active_div = 0;
+	Elem* elem = ctx.get_elem(ROOT_ID, ETYPE_DIV)!;
+	ctx.active_div = elem.tree_idx;
 	// The root should have the updated flag only if the size of the window
-	// was changed between frames, this propagates an element size recalculation
+	// was changed between frasmes, this propagates an element size recalculation
 	// down the element tree
 	elem.flags.updated = ctx.input.events.resize;
 	// if the window has focus then the root element also has focus, no other
@@ -235,28 +243,15 @@ fn void? Ctx.frame_begin(&ctx)
 	// other stuff
 	//elem.flags.has_focus = ctx.has_focus;
 
-	Elem def_root = {
-		.id = ROOT_ID,
-		.type = ETYPE_DIV,
-		.bounds = {
-			.w = ctx.width,
-			.h = ctx.height,
-		},
-		.div = {
-			.layout = LAYOUT_ROW,
-			.z_index = 0,
-			.children_bounds = {
-				.w = ctx.width,
-				.h = ctx.height,
-			}
-		},
-		.flags = elem.flags,
-	};
-
-	*elem = def_root;
-
-	// 3. Push the root element into the element tree
-	ctx.active_div = ctx.tree.add(ROOT_ID, 0)!;
+	elem.bounds = {0, 0, ctx.width, ctx.height};
+	elem.div.layout = LAYOUT_ROW;
+	elem.div.z_index = 0;
+	elem.div.children_bounds = elem.bounds;
+	elem.div.scroll_x.enabled = false;
+	elem.div.scroll_y.enabled = false;
+	elem.div.pcb = {};
+	elem.div.origin_c = {};
+	elem.div.origin_r = {};
 
 	ctx.div_scissor = {0, 0, ctx.width, ctx.height};
 

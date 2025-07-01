@@ -111,22 +111,14 @@ fn void? Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType t
 }
 
 
-macro Ctx.draw_sprite(&ctx, String name, Point off = {0,0}, ...)
-	=> ctx.draw_sprite_id(@compute_id($vasplat), name, off);
-fn void? Ctx.draw_sprite_id(&ctx, Id id, String name, Point off)
+macro Ctx.sprite(&ctx, String name, Point off = {0,0}, ...)
+	=> ctx.sprite_id(@compute_id($vasplat), name, off);
+fn void? Ctx.sprite_id(&ctx, Id id, String name, Point off)
 {
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_SPRITE;
-	} else if (elem.type != ETYPE_SPRITE) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	Elem *elem = ctx.get_elem(id, ETYPE_SPRITE)!;
 
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
 

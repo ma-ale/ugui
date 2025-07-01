@@ -14,13 +14,8 @@ fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
+	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
 
-	// 1. Fill the element fields
-	// this resets the flags
-	elem.type = ETYPE_TEXT;
 	elem.text.str = text;
 
 	// if the element is new or the parent was updated then redo layout
@@ -39,13 +34,8 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id)!;
-	// add it to the tree
-	ctx.tree.add(id, ctx.active_div)!;
-
-	// 1. Fill the element fields
-	// this resets the flags
-	elem.type = ETYPE_TEXT;
+	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
+	
 	elem.text.str = text;
 	
 	// layout the text box
