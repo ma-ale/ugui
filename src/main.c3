@@ -113,6 +113,15 @@ fn int main(String[] args)
 	ren.create_pipeline("UGUI_PIPELINE_RECT", RECT);
 
 
+	// TESTING CSS
+	String stylesheet = `
+	ciao {
+		margin: 12 24px 12mm 3;
+		brcolor: #ffff00ff;
+		radius: 10;
+	}`;
+	io::printfn("imported %d styles", ui.import_style_from_string(stylesheet));
+
 	isz frame;
 	double fps;
 	bool toggle = true;

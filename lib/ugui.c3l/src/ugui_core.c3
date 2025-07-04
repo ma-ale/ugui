@@ -6,6 +6,7 @@ import fifo;
 
 import std::io;
 import std::core::string;
+import std::core::mem::allocator;
 
 
 // element ids are just long ints
@@ -74,25 +75,14 @@ const uint MAX_CMDS   = 2048;
 const uint ROOT_ID    = 1;
 const uint TEXT_MAX   = 64;
 
-// global style, similar to the css box model
-struct Style { // css box model
-	Rect  padding;
-	Rect  border;
-	Rect  margin;
-	Color bgcolor; // background color
-	Color fgcolor; // foreground color
-	Color brcolor; // border color
-	ushort radius;
-}
-
-
 struct Ctx {
 	IdTree tree;
 	ElemCache cache;
 	CmdQueue cmd_queue;
+	StyleMap styles;
 	// total size in pixels of the context
 	ushort width, height;
-	Style style;
+	Style* style; // TODO: rename to "active_style" or something 
 	Font font;
 	SpriteAtlas sprite_atlas;
 
@@ -206,16 +196,12 @@ fn void? Ctx.init(&ctx)
 	ctx.cmd_queue.init(MAX_CMDS)!;
 	defer catch { (void)ctx.cmd_queue.free(); }
 
+	ctx.styles.init(allocator::heap());
+	defer catch { ctx.styles.free(); }
+
 	ctx.active_div = 0;
 
-	// TODO: add style config
-	ctx.style.margin  = {2, 2, 2, 2};
-	ctx.style.border  = {2, 2, 2, 2};
-	ctx.style.padding = {1, 1, 1, 1};
-	ctx.style.radius  = 12;
-	ctx.style.bgcolor = 0x282828ffu.to_rgba();
-	ctx.style.fgcolor = 0xfbf1c7ffu.to_rgba();
-	ctx.style.brcolor = 0xd79921ffu.to_rgba();
+	ctx.style = &DEFAULT_STYLE;
 }
 
 fn void Ctx.free(&ctx)
@@ -225,6 +211,7 @@ fn void Ctx.free(&ctx)
 	(void)ctx.cmd_queue.free();
 	(void)ctx.font.free();
 	(void)ctx.sprite_atlas.free();
+	(void)ctx.styles.free();
 }
 
 fn void? Ctx.frame_begin(&ctx)

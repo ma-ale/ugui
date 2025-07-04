@@ -203,6 +203,17 @@ macro Color uint.to_rgba(u)
 	};
 }
 
+
+macro Color uint.@to_rgba($u)
+{
+	return {
+		.r = (char)(($u >> 24) & 0xff),
+		.g = (char)(($u >> 16) & 0xff),
+		.b = (char)(($u >> 8) & 0xff),
+		.a = (char)(($u >> 0) & 0xff)
+	};
+}
+
 macro uint Color.to_uint(c)
 {
 	uint u = c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
