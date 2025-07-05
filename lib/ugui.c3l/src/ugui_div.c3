@@ -38,6 +38,8 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 	Elem* parent = ctx.get_parent()!;
 	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
 	ctx.active_div = elem.tree_idx;
+	
+	Style* style = ctx.styles.get_style(0);
 
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
@@ -50,7 +52,7 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 		.w = size.w < 0 ? max(elem.div.pcb.w, (short)-size.w) : size.w,
 		.h = size.h < 0 ? max(elem.div.pcb.h, (short)-size.h) : size.h,
 	};
-	elem.bounds = ctx.position_element(parent, wanted_size);
+	elem.bounds = ctx.position_element(parent, wanted_size, style);
 	elem.div.children_bounds = {};
 
 	// update the ctx scissor
@@ -67,7 +69,7 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 
 	// Add the background to the draw stack
 	bool do_border = parent.div.layout == LAYOUT_FLOATING;
-	ctx.push_rect(elem.bounds, ctx.style.bgcolor, elem.div.z_index, do_border: do_border)!;
+	ctx.push_rect(elem.bounds, elem.div.z_index, style)!;
 
 	elem.events = ctx.get_elem_events(elem);
 
@@ -104,8 +106,8 @@ fn void? Ctx.div_end(&ctx)
 	// vertical overflow
 	elem.div.scroll_y.on = cbc.y > bc.y && elem.div.scroll_y.enabled;
 
-	Id hsid = ctx.gen_id("div_scrollbar_horizontal".hash())!;
-	Id vsid = ctx.gen_id("div_scrollbar_vertical".hash())!;
+	Id hsid = ctx.gen_id(@str_hash("div_scrollbar_horizontal"))!;
+	Id vsid = ctx.gen_id(@str_hash("div_scrollbar_vertical"))!;
 	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid || ctx.is_hovered(ctx.find_elem(vsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid || ctx.is_hovered(ctx.find_elem(hsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 

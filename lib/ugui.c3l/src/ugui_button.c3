@@ -17,23 +17,21 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, Rect size, bool active)
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
+	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
 
-	elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, style_norm);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
 	if (elem.bounds.is_null()) { return {}; }
 
-	Color col = 0x0000ffffu.to_rgba();
+	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
+
 	elem.events = ctx.get_elem_events(elem);
-	if (active) {
-		col = 0xff0000ffu.to_rgba();
-	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
-		col = 0xff00ffffu.to_rgba();
-	}
+	bool is_active = active || ctx.elem_focus(elem) || elem.events.mouse_hover;
 
 	// Draw the button
-	ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, parent.div.z_index, is_active ? style_active : style_norm)!;
 
 	return elem.events;
 }
@@ -50,18 +48,18 @@ fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool ac
 	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
 	Rect text_size = ctx.get_text_bounds(label)!;
 	Rect btn_size = text_size.add({0,0,10,10});
+	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
 
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, btn_size, true);
+	elem.bounds = ctx.position_element(parent, btn_size, style_norm);
 	if (elem.bounds.is_null()) { return {}; }
 
-	Color col = 0x0000ffffu.to_rgba();
+	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
+
 	elem.events = ctx.get_elem_events(elem);
-	if (active) {
-		col = 0xff0000ffu.to_rgba();
-	} else if (ctx.elem_focus(elem) || elem.events.mouse_hover) {
-		col = 0xff00ffffu.to_rgba();
-	}
+
+	bool is_active = active || ctx.elem_focus(elem) || elem.events.mouse_hover;
+	Style* style = is_active ? style_active : style_norm;
 
 	// Draw the button
 	text_size.x = elem.bounds.x;
@@ -69,8 +67,8 @@ fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool ac
 	Point off = ctx.center_text(text_size, elem.bounds);
 	text_size.x += off.x;
 	text_size.y += off.y;
-	ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
-	ctx.push_string(text_size, label, parent.div.z_index)!;
+	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
+	ctx.push_string(text_size, label, parent.div.z_index, style.fg)!;
 
 	return elem.events;
 }
@@ -88,14 +86,20 @@ fn ElemEvents? Ctx.button_icon_id(&ctx, Id id, String icon, String on_icon, bool
 	Sprite* on_sprite = ctx.sprite_atlas.get(on_icon) ?? &&(Sprite){};
 	Rect max_size = def_sprite.rect().max(on_sprite.rect());
 
-	elem.bounds = ctx.position_element(parent, max_size, true);
+	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
+
+	elem.bounds = ctx.position_element(parent, max_size, style_norm);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
 	if (elem.bounds.is_null()) { return {}; }
 
-	Color col = 0x0000ffffu.to_rgba();
+	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
+
 	elem.events = ctx.get_elem_events(elem);
+
+	bool is_active = active || ctx.elem_focus(elem) || elem.events.mouse_hover;
+	Style* style = is_active ? style_active : style_norm;
 
 	Id tex_id = ctx.sprite_atlas.id;
 	if (active && on_icon != "") {
@@ -105,7 +109,7 @@ fn ElemEvents? Ctx.button_icon_id(&ctx, Id id, String icon, String on_icon, bool
 	}
 
 	// Draw the button
-	ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 
 	return elem.events;
 }
@@ -120,9 +124,10 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
+	Style* style = ctx.styles.get_style(@str_hash("checkbox"));
 
 	Rect size = {off.x, off.y, DEFAULT_CHECKBOX_SIZE, DEFAULT_CHECKBOX_SIZE};
-	elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, style);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
@@ -130,19 +135,21 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 
 	elem.events = ctx.get_elem_events(elem);
 	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
-
-	Color col = ctx.style.bgcolor;
+	
 	if (tick_sprite != {}) {
-		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
+		ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 		if (*active) {
 			ctx.draw_sprite_raw(tick_sprite, elem.bounds, center: true)!;
 		}
 	} else {
-		ctx.push_rect(elem.bounds, col, parent.div.z_index, do_border: true, do_radius: true)!;
+		ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 		if (*active) {
 			ushort x = DEFAULT_CHECKBOX_SIZE / 4;
 			Rect check = elem.bounds.add({x, x, -x*2, -x*2});
-			ctx.push_rect(check, 0xff0000ffu.to_rgba(), parent.div.z_index, do_radius: true)!;
+			Style s = *style;
+			s.bg = s.primary;
+			s.margin = s.border = s.padding = {};
+			ctx.push_rect(check, parent.div.z_index, &s)!;
 		}
 	}
 }
@@ -157,9 +164,10 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
+	Style* style = ctx.styles.get_style(@str_hash("toggle"));
 
 	Rect size = {off.x, off.y, DEFAULT_SWITCH_SIZE*2, DEFAULT_SWITCH_SIZE};
-	elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, style);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
@@ -168,15 +176,12 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	elem.events = ctx.get_elem_events(elem);
 	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
-	Color col;
-	if (*active) {
-		col = 0xff0000ffu.to_rgba();
-	} else {
-		col = 0xff00ffffu.to_rgba();
-	}
 	// Draw the button
 	// FIXME: THIS IS SHIT
-	ctx.push_rect(elem.bounds, ctx.style.bgcolor, parent.div.z_index, do_border: true, do_radius: true)!;
+	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 	Rect t = elem.bounds.add({*active ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
-	ctx.push_rect(t, col, parent.div.z_index, do_border: false, do_radius: true)!;
+	Style s = *style;
+	s.bg = s.primary;
+	s.margin = s.border = s.padding = {};
+	ctx.push_rect(t, parent.div.z_index, &s)!;
 }

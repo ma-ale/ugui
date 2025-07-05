@@ -82,7 +82,6 @@ struct Ctx {
 	StyleMap styles;
 	// total size in pixels of the context
 	ushort width, height;
-	Style* style; // TODO: rename to "active_style" or something 
 	Font font;
 	SpriteAtlas sprite_atlas;
 
@@ -200,8 +199,6 @@ fn void? Ctx.init(&ctx)
 	defer catch { ctx.styles.free(); }
 
 	ctx.active_div = 0;
-
-	ctx.style = &DEFAULT_STYLE;
 }
 
 fn void Ctx.free(&ctx)

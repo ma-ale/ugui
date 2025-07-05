@@ -15,16 +15,17 @@ fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
+	Style* style = ctx.styles.get_style(0);
 
 	elem.text.str = text;
 
 	// if the element is new or the parent was updated then redo layout
 	Rect text_size = ctx.get_text_bounds(text)!;
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, text_size, true);
+	elem.bounds = ctx.position_element(parent, text_size, style);
 	if (elem.bounds.is_null()) { return; }
 
-	ctx.push_string(elem.bounds, text, parent.div.z_index)!;
+	ctx.push_string(elem.bounds, text, parent.div.z_index, style.fg)!;
 }
 
 macro Ctx.text_box(&ctx, Rect size, char[] text, usz* text_len, ...)
@@ -35,11 +36,12 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
-	
+	Style* style = ctx.styles.get_style(0);
+
 	elem.text.str = text;
 	
 	// layout the text box
-	elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, style);
 
 	// check input and update the text
 	elem.events = ctx.get_elem_events(elem);
@@ -79,10 +81,10 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 	};
 	cursor = cursor.off(elem.bounds.position());
 
-	ctx.push_rect(text_box, 0xabababffu.to_rgba(), parent.div.z_index, do_border: true)!;
-	ctx.push_string(text_box, text[:*text_len], parent.div.z_index)!;
-	ctx.push_rect(input_box, 0x424242ffu.to_rgba(), parent.div.z_index)!;
-	ctx.push_rect(cursor, 0x00000042u.to_rgba(), parent.div.z_index)!;
+	ctx.push_rect(text_box, parent.div.z_index, style)!;
+	ctx.push_string(text_box, text[:*text_len], parent.div.z_index, style.fg)!;
+	ctx.push_rect(input_box, parent.div.z_index, style)!;
+	ctx.push_rect(cursor, parent.div.z_index, style)!;
 
 	return elem.events;
 }

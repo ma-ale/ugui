@@ -54,6 +54,77 @@ const char[*] RECT_FS_PATH = "resources/shaders/compiled/rect.frag.spv";
 const char[*] SPRITE_VS_PATH = "resources/shaders/compiled/sprite.vert.spv";
 const char[*] RECT_VS_PATH = "resources/shaders/compiled/rect.vert.spv";
 
+const String STYLESHEET = `
+default {
+	bg: #282828ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+button {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+button-active {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+
+	bg: #504945ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #cc241dff;
+	accent: #fabd2fff;
+}
+
+checkbox {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+toggle {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+slider {
+	margin: 2 2 2 2;
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+`;
 
 fn int main(String[] args)
 {
@@ -113,14 +184,8 @@ fn int main(String[] args)
 	ren.create_pipeline("UGUI_PIPELINE_RECT", RECT);
 
 
-	// TESTING CSS
-	String stylesheet = `
-	ciao {
-		margin: 12 24px 12mm 3;
-		brcolor: #ffff00ff;
-		radius: 10;
-	}`;
-	io::printfn("imported %d styles", ui.import_style_from_string(stylesheet));
+	// CSS INPUT
+	io::printfn("imported %d styles", ui.import_style_from_string(STYLESHEET));
 
 	isz frame;
 	double fps;
@@ -278,6 +343,7 @@ fn int main(String[] args)
 		TimeStats uts = ui_times.get_stats();
 
 		ui.layout_set_floating()!!;
+		// FIXME: I cannot anchor shit to the bottom of the screen
 		ui.div_begin({0, ui.height-150, -300, 150})!!;
 		{
 			ui.layout_set_column()!!;

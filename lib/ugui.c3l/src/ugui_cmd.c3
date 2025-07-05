@@ -90,21 +90,20 @@ fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
 	ctx.push_cmd(&sc, z_index)!;
 }
 
-// FIXME: is this really the best solution?
-// "rect" is the bounding box of the element, which includes the border and the padding (so not just the content)
-fn void? Ctx.push_rect(&ctx, Rect rect, Color color, int z_index, bool do_border = false, bool do_padding = false, bool do_radius = false)
+fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 {
-	Rect border = ctx.style.border;
-	Rect padding = ctx.style.padding;
-	ushort radius = ctx.style.radius;
-	Color border_color = ctx.style.brcolor;
+	Rect border        = style.border;
+	Rect padding       = style.padding;
+	ushort radius      = style.radius;
+	Color bg           = style.bg;
+	Color border_color = style.secondary;
 
-	if (do_border) {
+	if (!border.is_null()) {
 		Cmd cmd = {
 			.type = CMD_RECT,
 			.rect.rect = rect,
 			.rect.color = border_color,
-			.rect.radius = do_radius ? radius : 0,
+			.rect.radius = radius,
 		};
 		ctx.push_cmd(&cmd, z_index)!;
 	}
@@ -112,13 +111,13 @@ fn void? Ctx.push_rect(&ctx, Rect rect, Color color, int z_index, bool do_border
 	Cmd cmd = {
 		.type = CMD_RECT,
 		.rect.rect = {
-			.x = rect.x + (do_border ? border.x : 0) + (do_padding ? padding.x : 0),
-			.y = rect.y + (do_border ? border.y : 0) + (do_padding ? padding.y : 0),
-			.w = rect.w - (do_border ? border.x+border.w : 0) - (do_padding ? padding.x+padding.w : 0),
-			.h = rect.h - (do_border ? border.y+border.h : 0) - (do_padding ? padding.y+padding.h : 0),
+			.x = rect.x + border.x + padding.x,
+			.y = rect.y + border.y + padding.y,
+			.w = rect.w - (border.x+border.w) - (padding.x+padding.w),
+			.h = rect.h - (border.y+border.h) - (padding.y+padding.h),
 		},
-		.rect.color = color,
-		.rect.radius = do_radius ? radius : 0,
+		.rect.color = bg,
+		.rect.radius = radius,
 	};
 	if (cull_rect(cmd.rect.rect, ctx.div_scissor)) return;
 	ctx.push_cmd(&cmd, z_index)!;
@@ -137,7 +136,7 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_i
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
-fn void? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue = 0xffffffffu.to_rgba())
+fn void? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue)
 {
 	if (text.len == 0) {
 		return;

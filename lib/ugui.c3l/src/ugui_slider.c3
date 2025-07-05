@@ -14,31 +14,21 @@ struct ElemSlider {
  * |    |#####|                     |
  * +----+-----+---------------------+
  */
-macro Ctx.slider_hor(&ctx,
-    Rect size,
-    float* value,
-    float hpercent = 0.25,
-    Color bgcolor = 0x0000ffffu.to_rgba(),
-    Color handlecolor = 0x0ff000ffu.to_rgba(), ...)
-	=> ctx.slider_hor_id(@compute_id($vasplat), size, value, hpercent, bgcolor, handlecolor);
+macro Ctx.slider_hor(&ctx, Rect size, float* value, float hpercent = 0.25, ...)
+	=> ctx.slider_hor_id(@compute_id($vasplat), size, value, hpercent);
 <*
 @require value != null
 *>
-fn ElemEvents? Ctx.slider_hor_id(&ctx,
-    Id id,
-    Rect size,
-    float* value,
-    float hpercent = 0.25,
-    Color bgcolor = 0x0000ffffu.to_rgba(),
-    Color handlecolor = 0x0ff000ffu.to_rgba())
+fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpercent = 0.25)
 {
 	id = ctx.gen_id(id)!;
 
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
+	Elem* parent = ctx.get_parent()!;
+	Elem* elem = ctx.get_elem(id, ETYPE_SLIDER)!;
+	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, style);
 
 	// handle width
 	short hw = (short)(elem.bounds.w * hpercent);
@@ -60,8 +50,10 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx,
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(elem.bounds, bgcolor, parent.div.z_index)!;
-	ctx.push_rect(elem.slider.handle, handlecolor, parent.div.z_index)!;
+	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
+	Style s = *style;
+	s.bg = s.primary;
+	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
 
 	return elem.events;
 }
@@ -79,25 +71,15 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx,
  * |  |
  * +--+
  */
-macro Ctx.slider_ver(&ctx,
-    Rect size,
-    float* value,
-    float hpercent = 0.25,
-    Color bgcolor = 0x0000ffffu.to_rgba(),
-    Color handlecolor = 0x0ff000ffu.to_rgba(), ...)
-	=> ctx.slider_ver_id(@compute_id($vasplat), size, value, hpercent, bgcolor, handlecolor);
-fn ElemEvents? Ctx.slider_ver_id(&ctx,
-    Id id,
-    Rect size,
-    float* value,
-    float hpercent = 0.25,
-    Color bgcolor = 0x0000ffffu.to_rgba(),
-    Color handlecolor = 0x0ff000ffu.to_rgba())
+macro Ctx.slider_ver(&ctx, Rect size, float* value, float hpercent = 0.25, ...)
+	=> ctx.slider_ver_id(@compute_id($vasplat), size, value, hpercent);
+fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpercent = 0.25)
 {
 	id = ctx.gen_id(id)!;
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
+	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
 	// 1. Fill the element fields
 	if (elem.flags.is_new) {
@@ -107,7 +89,7 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx,
 	}
 
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, size, true);
+	elem.bounds = ctx.position_element(parent, size, style);
 
 	// handle height
 	short hh = (short)(elem.bounds.h * hpercent);
@@ -129,8 +111,10 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx,
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(elem.bounds, bgcolor, parent.div.z_index)!;
-	ctx.push_rect(elem.slider.handle, handlecolor, parent.div.z_index)!;
+	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
+	Style s = *style;
+	s.bg = s.primary;
+	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
 
 	return elem.events;
 }
