@@ -38,7 +38,7 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 	Elem* parent = ctx.get_parent()!;
 	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
 	ctx.active_div = elem.tree_idx;
-	
+
 	Style* style = ctx.styles.get_style(0);
 
 	elem.div.scroll_x.enabled = scroll_x;
@@ -106,10 +106,12 @@ fn void? Ctx.div_end(&ctx)
 	// vertical overflow
 	elem.div.scroll_y.on = cbc.y > bc.y && elem.div.scroll_y.enabled;
 
-	Id hsid = ctx.gen_id(@str_hash("div_scrollbar_horizontal"))!;
-	Id vsid = ctx.gen_id(@str_hash("div_scrollbar_vertical"))!;
-	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid || ctx.is_hovered(ctx.find_elem(vsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
-	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid || ctx.is_hovered(ctx.find_elem(hsid)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	Id hsid_raw = @str_hash("div_scrollbar_horizontal");
+	Id vsid_raw = @str_hash("div_scrollbar_vertical");
+	Id hsid_real = ctx.gen_id(@str_hash("div_scrollbar_horizontal"))!;
+	Id vsid_real = ctx.gen_id(@str_hash("div_scrollbar_vertical"))!;
+	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid_real || ctx.is_hovered(ctx.find_elem(vsid_real)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid_real || ctx.is_hovered(ctx.find_elem(hsid_real)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
 
 	if (elem.div.scroll_y.on) {
 		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id) {
@@ -124,7 +126,7 @@ fn void? Ctx.div_end(&ctx)
 		};
 		Layout prev_l = elem.div.layout;
 		elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_ver_id(vsid, vslider, &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
+		ctx.slider_ver_id(vsid_raw, vslider, &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
 		elem.div.layout = prev_l;
 	}
 
@@ -141,7 +143,7 @@ fn void? Ctx.div_end(&ctx)
 		};
 		Layout prev_l = elem.div.layout;
 		elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_hor_id(hsid, hslider, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
+		ctx.slider_hor_id(hsid_raw, hslider, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
 		elem.div.layout = prev_l;
 	}
 
