@@ -50,9 +50,12 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 	Style s = *style;
+	Rect padding = s.padding;
+	s.padding = {};
+	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
 	s.bg = s.primary;
+	s.padding = padding;
 	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
 
 	return elem.events;
@@ -111,9 +114,12 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 	}
 
 	// Draw the slider background and handle
-	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 	Style s = *style;
+	Rect padding = s.padding;
+	s.padding = {};
+	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
 	s.bg = s.primary;
+	s.padding = padding;
 	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
 
 	return elem.events;

@@ -196,6 +196,7 @@ fn void? Ctx.init(&ctx)
 	defer catch { (void)ctx.cmd_queue.free(); }
 
 	ctx.styles.init(allocator::heap());
+	ctx.styles.register_style(&DEFAULT_STYLE, @str_hash("default"));
 	defer catch { ctx.styles.free(); }
 
 	ctx.active_div = 0;

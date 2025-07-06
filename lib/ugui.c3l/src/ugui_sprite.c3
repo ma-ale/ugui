@@ -120,7 +120,7 @@ fn void? Ctx.sprite_id(&ctx, Id id, String name, Point off)
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_SPRITE)!;
 
-	Style* style = ctx.styles.get_style(0);
+	Style* style = ctx.styles.get_style(@str_hash("sprite"));
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
 
 	Rect uv = { sprite.u, sprite.v, sprite.w, sprite.h };

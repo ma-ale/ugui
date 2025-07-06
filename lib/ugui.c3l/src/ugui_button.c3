@@ -115,7 +115,6 @@ fn ElemEvents? Ctx.button_icon_id(&ctx, Id id, String icon, String on_icon, bool
 }
 
 // FIXME: this should be inside the style
-const ushort DEFAULT_CHECKBOX_SIZE = 16;
 macro Ctx.checkbox(&ctx, String desc, Point off, bool* active, String tick_sprite = {}, ...)
 	=> ctx.checkbox_id(@compute_id($vasplat), desc, off, active, tick_sprite);
 fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* active, String tick_sprite)
@@ -126,7 +125,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 	Style* style = ctx.styles.get_style(@str_hash("checkbox"));
 
-	Rect size = {off.x, off.y, DEFAULT_CHECKBOX_SIZE, DEFAULT_CHECKBOX_SIZE};
+	Rect size = {off.x, off.y, style.size, style.size};
 	elem.bounds = ctx.position_element(parent, size, style);
 
 	// if the bounds are null the element is outside the div view,
@@ -144,7 +143,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 	} else {
 		ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 		if (*active) {
-			ushort x = DEFAULT_CHECKBOX_SIZE / 4;
+			ushort x = style.size / 4;
 			Rect check = elem.bounds.add({x, x, -x*2, -x*2});
 			Style s = *style;
 			s.bg = s.primary;
@@ -155,7 +154,6 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 }
 
 // FIXME: this should be inside the style
-const short DEFAULT_SWITCH_SIZE = 16;
 macro Ctx.toggle(&ctx, String desc, Point off, bool* active)
 	=> ctx.toggle_id(@compute_id($vasplat), desc, off, active);
 fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
@@ -166,7 +164,7 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 	Style* style = ctx.styles.get_style(@str_hash("toggle"));
 
-	Rect size = {off.x, off.y, DEFAULT_SWITCH_SIZE*2, DEFAULT_SWITCH_SIZE};
+	Rect size = {off.x, off.y, style.size*2, style.size};
 	elem.bounds = ctx.position_element(parent, size, style);
 
 	// if the bounds are null the element is outside the div view,
@@ -179,7 +177,7 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	// Draw the button
 	// FIXME: THIS IS SHIT
 	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
-	Rect t = elem.bounds.add({*active ? (DEFAULT_SWITCH_SIZE+3) : +3, +3, -DEFAULT_SWITCH_SIZE-6, -6});
+	Rect t = elem.bounds.add({*active ? (style.size+3) : +3, +3, -style.size-6, -6});
 	Style s = *style;
 	s.bg = s.primary;
 	s.margin = s.border = s.padding = {};

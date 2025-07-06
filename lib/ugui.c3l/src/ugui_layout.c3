@@ -84,11 +84,11 @@ macro Rect Elem.get_view(&elem)
 	Rect off;
 	if (elem.div.scroll_x.enabled && elem.div.scroll_x.on) {
 		off.x = (short)((float)(elem.div.pcb.w - elem.bounds.w) * elem.div.scroll_x.value);
-		off.w = -SCROLLBAR_DIM;
+		off.w = -elem.div.scroll_size;
 	}
 	if (elem.div.scroll_y.enabled && elem.div.scroll_y.on) {
 		off.y = (short)((float)(elem.div.pcb.h - elem.bounds.h) * elem.div.scroll_y.value);
-		off.h = -SCROLLBAR_DIM;
+		off.h = -elem.div.scroll_size;
 	}
 	return elem.bounds.add(off);
 }

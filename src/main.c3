@@ -94,7 +94,7 @@ checkbox {
 	border: 2 2 2 2;
 	padding: 1 1 1 1;
 	radius: 10;
-
+	size: 16;
 	bg: #3c3836ff;
 	fg: #fbf1c7ff;
 	primary: #cc241dff;
@@ -107,7 +107,7 @@ toggle {
 	border: 2 2 2 2;
 	padding: 1 1 1 1;
 	radius: 10;
-
+	size: 16;
 	bg: #3c3836ff;
 	fg: #fbf1c7ff;
 	primary: #cc241dff;
@@ -117,6 +117,9 @@ toggle {
 
 slider {
 	margin: 2 2 2 2;
+	padding: 2 2 2 2;
+	radius: 4;
+	size: 8;
 	bg: #3c3836ff;
 	fg: #fbf1c7ff;
 	primary: #cc241dff;

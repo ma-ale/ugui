@@ -17,6 +17,7 @@ struct Style { // css box model
 	Color accent;    // accent color
 
 	ushort radius;
+	short  size;
 }
 
 const Style DEFAULT_STYLE = {
@@ -24,6 +25,7 @@ const Style DEFAULT_STYLE = {
 	.border  = {2, 2, 2, 2},
 	.padding = {1, 1, 1, 1},
 	.radius  = 12,
+	.size    = 16,
 	
 	.bg = 0x282828ffu.@to_rgba(),
 	.fg = 0xfbf1c7ffu.@to_rgba(),
@@ -46,7 +48,8 @@ fn void StyleMap.register_style(&map, Style* style, Id id)
 fn Style* StyleMap.get_style(&map, Id id)
 {
 	Style*? s = map.get_ref(id);
-	if (catch e = s) {
+	if (catch s) {
+//		io::eprintfn("WARNING: style %x not found, using default style", id);
 		return &DEFAULT_STYLE;
 	}
 	return s;
@@ -61,7 +64,6 @@ fn int StyleMap.import_style_string(&map, String text)
 	while (p.parse_style() == true) {
 		added++;
 		// set the default style correctly
-		if (p.style_id == @str_hash("default")) p.style_id = 0;
 		map.register_style(&p.style, p.style_id);
 		if (p.lex.peep_token().type == EOF) break;
 	}
@@ -83,7 +85,6 @@ fn int Ctx.import_style_from_file(&ctx, String path)
 }
 
 
-// TODO: add a "size" property that controls the size of elements like checkboxes
 /*
  * Style can be serialized and deserialized with a subset of CSS
  * <style name> {
@@ -91,6 +92,7 @@ fn int Ctx.import_style_from_file(&ctx, String path)
  *     border: left right top bottom;
  *     margin: left right top bottoms;
  *     radius: uint;
+ *     size: uint;
  *     Color: #RRGGBBAA;
  *     Color: #RRGGBBAA;
  *     Color: #RRGGBBAA;
@@ -368,10 +370,20 @@ fn bool Parser.parse_property(&p)
 		short r;
 		if (p.parse_number(&r) == false) return false;
 		if (r < 0) {
-			io::eprintfn("CSS parsing error at %d:%d: radius must be a positive number, got %d", t.line, t.col, r);
+			io::eprintfn("CSS parsing error at %d:%d: 'radius' must be a positive number, got %d", t.line, t.col, r);
 			return false;
 		}
 		p.style.radius = (ushort)r;
+		
+	case "size":
+		short s;
+		if (p.parse_number(&s) == false) return false;
+		if (s < 0) {
+			io::eprintfn("CSS parsing error at %d:%d: 'size' must be a positive number, got %d", t.line, t.col, s);
+			return false;
+		}
+		p.style.size = (ushort)s;
+
 
 	default:
 		io::eprintfn("CSS parsing error at %d:%d: '%s' is not a valid property", prop.line, prop.col, prop.text);

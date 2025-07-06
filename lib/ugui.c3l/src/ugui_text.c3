@@ -15,7 +15,7 @@ fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
-	Style* style = ctx.styles.get_style(0);
+	Style* style = ctx.styles.get_style(@str_hash("text"));
 
 	elem.text.str = text;
 
@@ -36,7 +36,7 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
-	Style* style = ctx.styles.get_style(0);
+	Style* style = ctx.styles.get_style(@str_hash("text-box"));
 
 	elem.text.str = text;
 	

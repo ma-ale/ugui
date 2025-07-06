@@ -3,8 +3,6 @@ module ugui;
 import std::io;
 import std::math;
 
-const short SCROLLBAR_DIM = 5;
-
 // div element
 struct ElemDiv {
 	Layout layout;
@@ -18,6 +16,7 @@ struct ElemDiv {
 		bool on;
 		float value;
 	}
+	ushort scroll_size;
 	int z_index;
 	Rect children_bounds; // current frame children bounds
 	Rect pcb; // previous frame children bounds
@@ -39,10 +38,12 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
 	ctx.active_div = elem.tree_idx;
 
-	Style* style = ctx.styles.get_style(0);
+	Style* style = ctx.styles.get_style(@str_hash("default"));
+	Style* slider_style = ctx.styles.get_style(@str_hash("slider"));
 
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
+	elem.div.scroll_size = slider_style.size ? slider_style.size : (style.size ? style.size : DEFAULT_STYLE.size);
 	elem.div.z_index = parent.div.z_index + 1;
 
 	// 2. layout the element
@@ -110,8 +111,8 @@ fn void? Ctx.div_end(&ctx)
 	Id vsid_raw = @str_hash("div_scrollbar_vertical");
 	Id hsid_real = ctx.gen_id(@str_hash("div_scrollbar_horizontal"))!;
 	Id vsid_real = ctx.gen_id(@str_hash("div_scrollbar_vertical"))!;
-	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid_real || ctx.is_hovered(ctx.find_elem(vsid_real)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
-	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid_real || ctx.is_hovered(ctx.find_elem(hsid_real)) ? SCROLLBAR_DIM*3 : SCROLLBAR_DIM) : 0;
+	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid_real || ctx.is_hovered(ctx.find_elem(vsid_real)) ? elem.div.scroll_size*2 : elem.div.scroll_size) : 0;
+	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid_real || ctx.is_hovered(ctx.find_elem(hsid_real)) ? elem.div.scroll_size*2 : elem.div.scroll_size) : 0;
 
 	if (elem.div.scroll_y.on) {
 		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id) {
