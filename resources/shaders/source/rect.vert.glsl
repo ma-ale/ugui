@@ -12,6 +12,7 @@ layout(location = 3) in uvec4 color;
 layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec4 out_quad_size;
 layout(location = 2) out float out_radius;
+layout(location = 3) out float out_thickness;
 
 void main()
 {
@@ -26,4 +27,5 @@ void main()
 	out_color = vec4(color) / 255.0;
 	out_quad_size = vec4(attr);
 	out_radius = float(abs(uv.x));
+	out_thickness = float(uv.y - uv.x);
 }

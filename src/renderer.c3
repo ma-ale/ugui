@@ -651,11 +651,11 @@ fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u,
 	return self.map_quad(qa);
 }
 
-fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color, ushort radius = 0)
+fn bool Renderer.push_quad(&self, short x, short y, short w, short h, uint color, ushort radius = 0, ushort thickness = 0)
 {
 	QuadAttributes qa = {
 		.pos = {.x = x, .y = y, .w = w, .h = h},
-		.uv  = {.u = radius, .v = radius},
+		.uv  = {.u = radius, .v = radius+thickness},
 		.color = color
 	};
 
@@ -866,7 +866,7 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 	foreach (&c : queue) {
 		if (c.type == CMD_RECT) {
 			CmdRect r = c.rect;
-			self.push_quad(r.rect.x, r.rect.y, r.rect.w, r.rect.h, r.color.to_uint(), r.radius);
+			self.push_quad(r.rect.x, r.rect.y, r.rect.w, r.rect.h, r.color.to_uint(), r.radius, r.thickness);
 		} else if (c.type == CMD_SPRITE) {
 			CmdSprite s = c.sprite;
 			self.push_sprite(s.rect.x, s.rect.y, s.texture_rect.w, s.texture_rect.h, s.texture_rect.x, s.texture_rect.y, s.hue.to_uint());

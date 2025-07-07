@@ -7,6 +7,7 @@ layout(set = 3, binding = 0) uniform Viewport {
 layout(location = 0) in vec4 in_color;
 layout(location = 1) in vec4 in_quad_size; // x,y, w,h
 layout(location = 2) in float in_radius;
+layout(location = 3) in float thickness;
 
 layout(location = 0) out vec4 fragColor;
 
@@ -16,12 +17,16 @@ float sdf_rr(vec2 p, vec2 half_size, float radius) {
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
+const float smoothness = 1.5;
+
 void main()
 {
     vec2 centerpoint = in_quad_size.xy + in_quad_size.zw * 0.5;
     vec2 half_size = in_quad_size.zw * 0.5;
-    float distance = sdf_rr(vec2(gl_FragCoord) - centerpoint, half_size, in_radius);
-    float alpha = 1.0 - smoothstep(0.0, 1.5, distance);
+    float distance = -sdf_rr(vec2(gl_FragCoord) - centerpoint, half_size, in_radius);
 
-    fragColor = vec4(in_color.rgb, in_color.a * alpha);
+    float alpha_out = smoothstep(0.0, smoothness, distance);
+    float alpha_in = 1.0 - smoothstep(thickness, thickness+smoothness, distance);
+
+    fragColor = vec4(in_color.rgb, in_color.a * alpha_out * alpha_in);
 }

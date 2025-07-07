@@ -14,6 +14,7 @@ enum CmdType {
 // command to draw a rect
 struct CmdRect {
 	Rect rect;
+	ushort thickness;
 	ushort radius;
 	Color color;
 }
@@ -104,6 +105,7 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 			.rect.rect = rect,
 			.rect.color = border_color,
 			.rect.radius = radius,
+			.rect.thickness = border.x,
 		};
 		ctx.push_cmd(&cmd, z_index)!;
 	}
@@ -118,6 +120,7 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 		},
 		.rect.color = bg,
 		.rect.radius = radius,
+		.rect.thickness = max(rect.w, rect.h),
 	};
 	if (cull_rect(cmd.rect.rect, ctx.div_scissor)) return;
 	ctx.push_cmd(&cmd, z_index)!;
