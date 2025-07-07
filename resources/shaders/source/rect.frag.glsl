@@ -17,7 +17,7 @@ float sdf_rr(vec2 p, vec2 half_size, float radius) {
     return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
 }
 
-const float smoothness = 1.5;
+const float smoothness = 0.9;
 
 void main()
 {
@@ -25,8 +25,8 @@ void main()
     vec2 half_size = in_quad_size.zw * 0.5;
     float distance = -sdf_rr(vec2(gl_FragCoord) - centerpoint, half_size, in_radius);
 
-    float alpha_out = smoothstep(0.0, smoothness, distance);
-    float alpha_in = 1.0 - smoothstep(thickness, thickness+smoothness, distance);
+    float alpha_out = smoothstep(0.0-smoothness, 0.0, distance);
+    float alpha_in = 1.0 - smoothstep(thickness-smoothness, thickness, distance);
 
     fragColor = vec4(in_color.rgb, in_color.a * alpha_out * alpha_in);
 }
