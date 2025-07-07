@@ -144,22 +144,22 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, Style* style)
 	child_occupied  = child_occupied.off(origin.add(rect.position()));
 
 	Rect margin  = style.margin;
-	Rect border  = style.border;
 	Rect padding = style.padding;
+	ushort border  = style.border;
 
 	// padding, grows both the placement and occupied area
 	child_placement = child_placement.grow(padding.position().add(padding.size()));
 	child_occupied  = child_occupied.grow(padding.position().add(padding.size()));
 	// border, grows both the placement and occupied area
-	child_placement = child_placement.grow(border.position().add(border.size()));
-	child_occupied  = child_occupied.grow(border.position().add(border.size()));
+	child_placement = child_placement.grow({border*2, border*2});
+	child_occupied  = child_occupied.grow({border*2, border*2});
 	// margin, offsets the placement and grows the occupied area
 	child_placement = child_placement.off(margin.position());
 	child_occupied  = child_occupied.grow(margin.position().add(margin.size()));
 
 	// oh yeah also adjust the rect if i was to grow
-	if (adapt_x) rect.w -= padding.x+padding.w + border.x+border.w + margin.x+margin.w;
-	if (adapt_y) rect.h -= padding.y+padding.h + border.y+border.h + margin.y+margin.h;
+	if (adapt_x) rect.w -= padding.x+padding.w + border*2 + margin.x+margin.w;
+	if (adapt_y) rect.h -= padding.y+padding.h + border*2 + margin.y+margin.h;
 
 	// set the size
 	child_placement = child_placement.grow(rect.size());

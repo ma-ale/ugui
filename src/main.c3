@@ -13,6 +13,7 @@ alias Times = ringbuffer::RingBuffer{time::NanoDuration[128]};
 
 fn void Times.print_stats(&times)
 {
+	if (times.written == 0);
 	time::NanoDuration min, max, avg, x;
 	min = times.get(0);
 	for (usz i = 0; i < times.written; i++) {
@@ -21,7 +22,7 @@ fn void Times.print_stats(&times)
 		if (x > max) { max = x; }
 		avg += x;
 	}
-	avg = (NanoDuration)((ulong)avg/128.0);
+	avg = (NanoDuration)((ulong)avg/times.written);
 
 	io::printfn("min=%s, max=%s, avg=%s", min, max, avg);
 }
@@ -32,6 +33,7 @@ struct TimeStats {
 
 fn TimeStats Times.get_stats(&times)
 {
+	if (times.written == 0) return {};
 	time::NanoDuration min, max, avg, x;
 	min = times.get(0);
 	for (usz i = 0; i < times.written; i++) {
@@ -40,7 +42,7 @@ fn TimeStats Times.get_stats(&times)
 		if (x > max) { max = x; }
 		avg += x;
 	}
-	avg = (NanoDuration)((ulong)avg/128.0);
+	avg = (NanoDuration)((ulong)avg/times.written);
 
 	return {.min = min, .max = max, .avg = avg};
 }

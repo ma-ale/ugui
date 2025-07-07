@@ -7,8 +7,10 @@ import std::io;
 // global style, similar to the css box model
 struct Style { // css box model
 	Rect  padding;
-	Rect  border;
 	Rect  margin;
+	ushort border;
+	ushort radius;
+	ushort size;
 
 	Color bg;        // background color
 	Color fg;        // foreground color
@@ -16,14 +18,12 @@ struct Style { // css box model
 	Color secondary; // secondary color
 	Color accent;    // accent color
 
-	ushort radius;
-	short  size;
 }
 
 const Style DEFAULT_STYLE = {
 	.margin  = {2, 2, 2, 2},
-	.border  = {2, 2, 2, 2},
-	.padding = {1, 1, 1, 1},
+	.padding = {},
+	.border  = 2,
 	.radius  = 12,
 	.size    = 16,
 	
@@ -89,8 +89,8 @@ fn int Ctx.import_style_from_file(&ctx, String path)
  * Style can be serialized and deserialized with a subset of CSS
  * <style name> {
  *     padding: left right top bottom;
- *     border: left right top bottom;
  *     margin: left right top bottoms;
+ *     border: uint;
  *     radius: uint;
  *     size: uint;
  *     Color: #RRGGBBAA;
@@ -331,11 +331,6 @@ fn bool Parser.parse_property(&p)
 		if (p.parse_size(&padding) == false) return false;
 		p.style.padding = padding;
 
-	case "border":
-		Rect border;
-		if (p.parse_size(&border) == false) return false;
-		p.style.border = border;
-
 	case "margin":
 		Rect margin;
 		if (p.parse_size(&margin) == false) return false;
@@ -366,23 +361,32 @@ fn bool Parser.parse_property(&p)
 		if (p.parse_color(&accent) == false) return false;
 		p.style.accent = accent;
 
-	case "radius":
-		short r;
-		if (p.parse_number(&r) == false) return false;
-		if (r < 0) {
-			io::eprintfn("CSS parsing error at %d:%d: 'radius' must be a positive number, got %d", t.line, t.col, r);
+	case "border":
+		short border;
+		if (p.parse_number(&border) == false) return false;
+		if (border < 0) {
+			io::eprintfn("CSS parsing error at %d:%d: 'border' must be a positive number, got %d", t.line, t.col, border);
 			return false;
 		}
-		p.style.radius = (ushort)r;
+		p.style.border = (ushort)border;
+		
+	case "radius":
+		short radius;
+		if (p.parse_number(&radius) == false) return false;
+		if (radius < 0) {
+			io::eprintfn("CSS parsing error at %d:%d: 'radius' must be a positive number, got %d", t.line, t.col, radius);
+			return false;
+		}
+		p.style.radius = (ushort)radius;
 		
 	case "size":
-		short s;
-		if (p.parse_number(&s) == false) return false;
-		if (s < 0) {
-			io::eprintfn("CSS parsing error at %d:%d: 'size' must be a positive number, got %d", t.line, t.col, s);
+		short size;
+		if (p.parse_number(&size) == false) return false;
+		if (size < 0) {
+			io::eprintfn("CSS parsing error at %d:%d: 'size' must be a positive number, got %d", t.line, t.col, size);
 			return false;
 		}
-		p.style.size = (ushort)s;
+		p.style.size = (ushort)size;
 
 
 	default:

@@ -93,19 +93,19 @@ fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
 
 fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 {
-	Rect border        = style.border;
 	Rect padding       = style.padding;
+	ushort border      = style.border;
 	ushort radius      = style.radius;
 	Color bg           = style.bg;
 	Color border_color = style.secondary;
 
-	if (!border.is_null()) {
+	if (border != 0) {
 		Cmd cmd = {
 			.type = CMD_RECT,
 			.rect.rect = rect,
 			.rect.color = border_color,
-			.rect.radius = radius,
-			.rect.thickness = border.x,
+			.rect.radius = radius+border,
+			.rect.thickness = border,
 		};
 		ctx.push_cmd(&cmd, z_index)!;
 	}
@@ -113,10 +113,10 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 	Cmd cmd = {
 		.type = CMD_RECT,
 		.rect.rect = {
-			.x = rect.x + border.x + padding.x,
-			.y = rect.y + border.y + padding.y,
-			.w = rect.w - (border.x+border.w) - (padding.x+padding.w),
-			.h = rect.h - (border.y+border.h) - (padding.y+padding.h),
+			.x = rect.x + border + padding.x,
+			.y = rect.y + border + padding.y,
+			.w = rect.w - (border*2) - (padding.x+padding.w),
+			.h = rect.h - (border*2) - (padding.y+padding.h),
 		},
 		.rect.color = bg,
 		.rect.radius = radius,

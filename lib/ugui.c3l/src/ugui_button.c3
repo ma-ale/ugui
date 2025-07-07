@@ -147,7 +147,8 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 			Rect check = elem.bounds.add({x, x, -x*2, -x*2});
 			Style s = *style;
 			s.bg = s.primary;
-			s.margin = s.border = s.padding = {};
+			s.margin = s.padding = {};
+			s.border = 0;
 			ctx.push_rect(check, parent.div.z_index, &s)!;
 		}
 	}
@@ -180,6 +181,7 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	Rect t = elem.bounds.add({*active ? (style.size+3) : +3, +3, -style.size-6, -6});
 	Style s = *style;
 	s.bg = s.primary;
-	s.margin = s.border = s.padding = {};
+	s.margin = s.padding = {};
+	s.border = 0;
 	ctx.push_rect(t, parent.div.z_index, &s)!;
 }
