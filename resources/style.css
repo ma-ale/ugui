@@ -1,0 +1,72 @@
+default {
+	bg: #282828ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+button {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+button-active {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+
+	bg: #504945ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #cc241dff;
+	accent: #fabd2fff;
+}
+
+checkbox {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+	size: 16;
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+toggle {
+	margin: 2 2 2 2;
+	border: 2 2 2 2;
+	padding: 1 1 1 1;
+	radius: 10;
+	size: 16;
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
+slider {
+	margin: 2 2 2 2;
+	padding: 2 2 2 2;
+	border: 1 1 1 1;
+	radius: 4;
+	size: 8;
+	bg: #3c3836ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}

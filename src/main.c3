@@ -54,80 +54,7 @@ const char[*] RECT_FS_PATH = "resources/shaders/compiled/rect.frag.spv";
 const char[*] SPRITE_VS_PATH = "resources/shaders/compiled/sprite.vert.spv";
 const char[*] RECT_VS_PATH = "resources/shaders/compiled/rect.vert.spv";
 
-const String STYLESHEET = `
-default {
-	bg: #282828ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #458588ff;
-	accent: #fabd2fff;
-}
-
-button {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
-	radius: 10;
-
-	bg: #3c3836ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #458588ff;
-	accent: #fabd2fff;
-}
-
-button-active {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
-	radius: 10;
-
-	bg: #504945ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #cc241dff;
-	accent: #fabd2fff;
-}
-
-checkbox {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
-	radius: 10;
-	size: 16;
-	bg: #3c3836ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #458588ff;
-	accent: #fabd2fff;
-}
-
-toggle {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
-	radius: 10;
-	size: 16;
-	bg: #3c3836ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #458588ff;
-	accent: #fabd2fff;
-}
-
-slider {
-	margin: 2 2 2 2;
-	padding: 2 2 2 2;
-	radius: 4;
-	size: 8;
-	bg: #3c3836ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #458588ff;
-	accent: #fabd2fff;
-}
-
-`;
+const char[*] STYLESHEET_PATH = "resources/style.css";
 
 fn int main(String[] args)
 {
@@ -188,7 +115,7 @@ fn int main(String[] args)
 
 
 	// CSS INPUT
-	io::printfn("imported %d styles", ui.import_style_from_string(STYLESHEET));
+	io::printfn("imported %d styles", ui.import_style_from_file(STYLESHEET_PATH));
 
 	isz frame;
 	double fps;

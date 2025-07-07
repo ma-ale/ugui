@@ -42,7 +42,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 
 	Point m = ctx.input.mouse.pos;
 	elem.events = ctx.get_elem_events(elem);
-	
+
 	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
 		*value = calc_value(elem.bounds.x, m.x, elem.bounds.w, hw);
 		elem.slider.handle.x = calc_slider(elem.bounds.x, elem.bounds.w-hw, *value);
@@ -56,6 +56,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
 	s.bg = s.primary;
 	s.padding = padding;
+	s.border = {};
 	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
 
 	return elem.events;
@@ -120,6 +121,7 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
 	s.bg = s.primary;
 	s.padding = padding;
+	s.border = {};
 	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
 
 	return elem.events;
