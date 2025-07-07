@@ -12,10 +12,10 @@
 to maintain focus until mouse release (fix scroll bars)
 [x] Clip element bounds to parent div, specifically text
 [ ] Resizeable divs
-[ ] Implement a z index and sort command buffer based on that
+[x] Implement a z index and sort command buffer based on that
     [ ] Ctx.set_z_index()
-    [ ] Sort command buffer on insertion
-[ ] Standardize element handling, for example all buttons do almost the same thing, so write a lot of boiler plate and reuse it
+    [x] Sort command buffer on insertion
+[x] Standardize element handling, for example all buttons do almost the same thing, so write a lot of boiler plate and reuse it
 [x] The id combination in gen_id() uses an intger division, which is costly, use another combination function that is non-linear and doesn't use division
 [ ] Animations, somehow
 [ ] Maybe cache codepoint converted strings
@@ -30,22 +30,25 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] gif support?
 [ ] layout_set_max_rows() and layout_set_max_columns()
 [x] Maybe SDF sprites??
-[ ] Stylesheets and stylesheet import
-[ ] use SDF to draw anti-aliased rounded rectangles https://zed.dev/blog/videogame
+[x] Stylesheets and stylesheet import
+[x] use SDF to draw anti-aliased rounded rectangles https://zed.dev/blog/videogame
 [ ] Subdivide modules into ugui::ug for exported functions and ugui::core for
     internal use functions (used to create widgets)
-[ ] The render loop RAPES the gpu, valve pls fix
+[x] The render loop RAPES the gpu, valve pls fix
 [ ] The way the element structures are implemented wastes a lot of memory since
     each struct Elem, struct Cmd, etc. is as big as the largest element. It would
     be better to use a different allcation strategy.
 [ ] Add a way to handle time events like double clicks
+[ ] Border and padding do not go well together if the library issues two rect commands, the visible
+    border is effectively the border size plus the padding since there is a gap between the border 
+    rect and the internal rect. A better solution is to leave it up to the renderer to draw the rect
+    correctly
 
 ## Layout
 
-[ ] Text reflow
 [x] Flexbox
 [ ] Center elements to the row/column
-[ ] Text wrapping
+[ ] Text wrapping / reflow
 [ ] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
     instead of the curren multi-frame approach.
 
@@ -78,16 +81,11 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Fix the missing alpha channel
 [x] Fix the alignment
 
-## Raylib
-
-[x] Implement type (Rect, Color, Point) conversion functions between rl:: and ugui::
-[x] Implement pixel radius rounding for border radius
-
 ## Widgets
 
 [x] Dynamic text box to implement an fps counter
 [x] Button with label
-[ ] Text Input box
+[x] Text Input box
 [ ] Icon Buttons
 [x] Switch
 [x] Checkbox
@@ -111,9 +109,10 @@ to maintain focus until mouse release (fix scroll bars)
 
 ## SDL3 Renderer
 
-- smart batching
-- maybe use instancing since we are always drawing the same geometry. With instancing every
-  different quad could have its coulour, border and radius with much better performance than
-  issuing a draw call for every quad (and uploading it)
-  https://rastertek.com/dx11win10tut48.html
-  https://www.braynzarsoft.net/viewtutorial/q16390-33-instancing-with-indexed-primitives
+[x] smart batching
+[x] maybe use instancing since we are always drawing the same geometry. With instancing every
+    different quad could have its coulour, border and radius with much better performance than
+    issuing a draw call for every quad (and uploading it)
+    https://rastertek.com/dx11win10tut48.html
+    https://www.braynzarsoft.net/viewtutorial/q16390-33-instancing-with-indexed-primitives
+[ ] implement min and max fps
