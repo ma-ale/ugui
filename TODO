@@ -47,6 +47,8 @@ to maintain focus until mouse release (fix scroll bars)
 ## Layout
 
 [x] Flexbox
+[ ] For some reason padding is not correct, look at the sliders, they have 2px per side when the
+    theme specifies 4px per side
 [ ] Center elements to the row/column
 [ ] Text wrapping / reflow
 [ ] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)

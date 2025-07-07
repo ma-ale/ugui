@@ -115,12 +115,12 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 		.rect.rect = {
 			.x = rect.x + border + padding.x,
 			.y = rect.y + border + padding.y,
-			.w = rect.w - (border*2) - (padding.x+padding.w),
 			.h = rect.h - (border*2) - (padding.y+padding.h),
+			.w = rect.w - (border*2) - (padding.x+padding.w),
 		},
 		.rect.color = bg,
 		.rect.radius = radius,
-		.rect.thickness = max(rect.w, rect.h),
+		.rect.thickness = max(rect.w, rect.h)/2+1,
 	};
 	if (cull_rect(cmd.rect.rect, ctx.div_scissor)) return;
 	ctx.push_cmd(&cmd, z_index)!;

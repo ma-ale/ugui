@@ -8,7 +8,6 @@ default {
 
 button {
 	margin: 2 2 2 2;
-	padding: 2 2 2 2;
 	border: 2;
 	radius: 10;
 
@@ -21,7 +20,6 @@ button {
 
 button-active {
 	margin: 2 2 2 2;
-	padding: 1 1 1 1;
 	border: 2;
 	radius: 10;
 
@@ -34,7 +32,6 @@ button-active {
 
 checkbox {
 	margin: 2 2 2 2;
-	padding: 1 1 1 1;
 	border: 2;
 	radius: 10;
 	size: 16;
@@ -59,8 +56,8 @@ toggle {
 
 slider {
 	margin: 2 2 2 2;
-	padding: 2 2 2 2;
-	border: 2;
+	padding: 4 4 4 4;
+	border: 1;
 	radius: 4;
 	size: 8;
 	bg: #3c3836ff;
