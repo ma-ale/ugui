@@ -136,56 +136,30 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_i
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
-fn void? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue)
+// TODO: do not return the WHOLE TextInfo but instead something smaller
+fn TextInfo? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue, bool reflow = false)
 {
 	if (text.len == 0) {
-		return;
+		return {};
 	}
 
 	ctx.push_scissor(bounds, z_index)!;
 
-	short baseline = (short)ctx.font.ascender;
-	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
-	short line_gap = (short)ctx.font.linegap;
 	Id texture_id = ctx.font.id;  // or ctx.font.atlas.id
-	Point orig = {
-		.x = bounds.x,
-		.y = bounds.y,
-	};
+	Rect text_bounds = {bounds.x, bounds.y, 0, 0};
 
-	short line_len;
-	Codepoint cp;
-	usz off, x;
-	while (off < text.len && (cp = str_to_codepoint(text[off..], &x)) != 0) {
-		off += x;
-		Glyph* gp;
-		if (!ascii::is_cntrl((char)cp)) {
-			gp = ctx.font.get_glyph(cp)!;
-			Rect gb = {
-				.x = orig.x + line_len + gp.ox,
-				.y = orig.y + gp.oy + baseline,
-				.w = gp.w,
-				.h = gp.h,
-			};
-			Rect gt = {
-				.x = gp.u,
-				.y = gp.v,
-				.w = gp.w,
-				.h = gp.h,
-			};
-			// push the sprite only if it collides with the bounds
-			if (!cull_rect(gb, bounds)) ctx.push_sprite(gb, gt, texture_id, z_index, hue)!;
-			line_len += gp.adv;
-		} else if (cp == '\n'){
-			orig.y += line_height + line_gap;
-			line_len = 0;
-		} else {
-			continue;
+	TextInfo ti;
+	ti.init(&ctx.font, (String)text, bounds);
+
+	while (ti.place_glyph(reflow)!) {
+		if (!cull_rect(ti.glyph_bounds, bounds)) {
+			ctx.push_sprite(ti.glyph_bounds, ti.glyph_uv, texture_id, z_index, hue)!;
 		}
 	}
-
-	// FIXME: we never get here if an error was thrown before
+	
 	ctx.push_scissor({}, z_index)!;
+
+	return ti;
 }
 
 fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)

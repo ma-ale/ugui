@@ -48,7 +48,9 @@ to maintain focus until mouse release (fix scroll bars)
 
 [x] Flexbox
 [ ] Center elements to the row/column
-[ ] Text wrapping / reflow
+[x] Text wrapping / reflow
+[x] Implement a better and unified way to place a glyph and get the cursor position, maybe with a struct
+[ ] Correct whitespace handling in text (\t \r etc)
 [ ] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
     instead of the curren multi-frame approach.
 
@@ -59,6 +61,8 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] Touch input
 [x] Do not set input event to true if the movement was zero (like no mouse movement)
 [ ] Use input event flags, for example to consume the input event
+[ ] Fix bug in text box: when spamming keys you can get multiple characters in the text input field
+    of the context, this causes a bug where only the first char is actually used
 
 ## Commands
 
@@ -67,7 +71,7 @@ to maintain focus until mouse release (fix scroll bars)
     - border radius
 [x] add a command to update an atlas
 [ ] New window command, useful for popups
-[ ] Text command returns the text bounds, this way we can avoid the pattern 
+[x] Text command returns the text bounds, this way we can avoid the pattern 
     draw_text(a, pos) -> off = compute_bounds(a) -> draw_text(b, pos+off) -> ...
 
 ## Atlas
@@ -90,11 +94,6 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Switch
 [x] Checkbox
 [ ] Selectable text box
-
-## Main / exaple
-
-[ ] Create maps from ids to textures and images instead of hardcoding them
-
 
 ## API
 

@@ -10,6 +10,9 @@ struct Rect {
 	short x, y, w, h;
 }
 
+// TODO: find another name
+const Rect RECT_MAX = {0, 0, short.max, short.max};
+
 // return true if rect a contains b
 macro bool Rect.contains(Rect a, Rect b)
 {
@@ -31,6 +34,21 @@ macro Rect Rect.intersection(Rect a, Rect b)
 macro bool Rect.collides(Rect a, Rect b)
 {
 	return !(a.x > b.x+b.w || a.x+a.w < b.x || a.y > b.y+b.h || a.y+a.h < b.y);
+}
+
+// return a rect that contains both rects, a bounding box of both
+macro Rect containing_rect(Rect a, Rect b)
+{
+	short min_x = (short)min(a.x, b.x);
+	short min_y = (short)min(a.y, b.y);
+	short max_x = (short)max(a.x + a.w, b.x + b.w);
+	short max_y = (short)max(a.y + a.h, b.y + b.h);
+	return {
+		.x = min_x,
+		.y = min_y,
+		.w = (short)(max_x - min_x),
+		.h = (short)(max_y - min_y)
+	};
 }
 
 // check for empty rect
@@ -134,6 +152,12 @@ macro Point Rect.bottom_right(Rect r)
 		.x = r.x + r.w,
 		.y = r.y + r.h,
 	};
+}
+
+macro Rect Rect.center_to(Rect a, Rect b)
+{
+	Point off = {.x = (b.w - a.w)/2, .y = (b.h - a.h)/2};
+	return a.off(off);
 }
 
 

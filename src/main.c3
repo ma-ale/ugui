@@ -279,7 +279,7 @@ fn int main(String[] args)
 			ui.layout_set_column()!!;
 			ui.text_unbounded(string::tformat("frame %d, fps = %.2f", frame, fps))!!;
 			ui.text_unbounded(string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
-			ui.text_unbounded(string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[..]))!!;
+			ui.text_unbounded(string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[:ui.input.keyboard.text_len]))!!;
 		};
 		ui.div_end()!!;
 

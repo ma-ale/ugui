@@ -44,17 +44,20 @@ fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool ac
 
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
-
-	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
-	Rect text_size = ctx.get_text_bounds(label)!;
-	Rect btn_size = text_size.add({0,0,10,10});
 	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
+	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
+
+	// TODO: cache text_size just like text_unbounded() does
+	Rect text_size = ctx.get_text_bounds(label)!;
+	Rect btn_size = text_size.grow({10,10});
 
 	// 2. Layout
 	elem.bounds = ctx.position_element(parent, btn_size, style_norm);
 	if (elem.bounds.is_null()) { return {}; }
-
-	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
+	
+	text_size.x = elem.bounds.x;
+	text_size.y = elem.bounds.y;
+	text_size = text_size.center_to(elem.bounds);
 
 	elem.events = ctx.get_elem_events(elem);
 
@@ -62,11 +65,6 @@ fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool ac
 	Style* style = is_active ? style_active : style_norm;
 
 	// Draw the button
-	text_size.x = elem.bounds.x;
-	text_size.y = elem.bounds.y;
-	Point off = ctx.center_text(text_size, elem.bounds);
-	text_size.x += off.x;
-	text_size.y += off.y;
 	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
 	ctx.push_string(text_size, label, parent.div.z_index, style.fg)!;
 

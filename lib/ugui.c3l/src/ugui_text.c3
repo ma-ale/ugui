@@ -3,8 +3,10 @@ module ugui;
 import std::io;
 
 struct ElemText {
-	char[] str;
+	String str;
 	usz cursor; // cursor offset
+	Id hash;
+	Rect bounds;
 }
 
 macro Ctx.text_unbounded(&ctx, String text, ...)
@@ -17,12 +19,15 @@ fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
 	Style* style = ctx.styles.get_style(@str_hash("text"));
 
+	Id text_hash = text.hash();
+	if (elem.flags.is_new || elem.text.hash != text_hash) {
+		elem.text.bounds = ctx.get_text_bounds(text)!;
+	}
 	elem.text.str = text;
+	elem.text.hash = text_hash;
 
-	// if the element is new or the parent was updated then redo layout
-	Rect text_size = ctx.get_text_bounds(text)!;
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, text_size, style);
+	elem.bounds = ctx.position_element(parent, elem.text.bounds, style);
 	if (elem.bounds.is_null()) { return; }
 
 	ctx.push_string(elem.bounds, text, parent.div.z_index, style.fg)!;
@@ -38,7 +43,7 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
 	Style* style = ctx.styles.get_style(@str_hash("text-box"));
 
-	elem.text.str = text;
+	elem.text.str = (String)text;
 	
 	// layout the text box
 	elem.bounds = ctx.position_element(parent, size, style);
@@ -64,27 +69,11 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 
 	// draw the box
 	short line_height = (short)ctx.font.line_height();
-	Rect text_box = elem.bounds.sub({0,0,0,line_height});
-	Rect input_box = {
-		.x = elem.bounds.x,
-		.y = elem.bounds.y + elem.bounds.h - line_height,
-		.w = elem.bounds.w,
-		.h = line_height,
-	};
-	Rect cursor;
-	Point b = ctx.get_cursor_position((String)text[:elem.text.cursor])!;
-	cursor = {
-		.x = b.x,
-		.y = b.y,
-		.w = 3,
-		.h = line_height,
-	};
-	cursor = cursor.off(elem.bounds.position());
-
+	Rect text_box = elem.bounds;
 	ctx.push_rect(text_box, parent.div.z_index, style)!;
-	ctx.push_string(text_box, text[:*text_len], parent.div.z_index, style.fg)!;
-	ctx.push_rect(input_box, parent.div.z_index, style)!;
-	ctx.push_rect(cursor, parent.div.z_index, style)!;
+	ctx.push_string(text_box, text[:*text_len], parent.div.z_index, style.fg, true)!;
+	
+	// TODO: draw cursor
 
 	return elem.events;
 }

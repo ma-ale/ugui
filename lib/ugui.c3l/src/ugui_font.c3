@@ -167,6 +167,7 @@ fn void? Ctx.load_font(&ctx, String name, ZString path, uint height, float scale
 
 <*
 @require off != null
+@require str.ptr != null
 *>
 fn Codepoint str_to_codepoint(char[] str, usz* off)
 {
@@ -179,72 +180,119 @@ fn Codepoint str_to_codepoint(char[] str, usz* off)
 	return cp;
 }
 
+const uint TAB_SIZE = 4;
+
+// TODO: change the name
+// TODO: reorder to make smaller
+struct TextInfo {
+	Font* font;
+	Rect bounds;
+	String text;
+	usz off;
+	
+	// current glyph info
+	Point origin;
+	Rect glyph_bounds;
+	Rect glyph_uv;
+	
+	// cursor info
+	usz cursor_idx;
+	Point cursor_pos;
+	
+	// current text bounds
+	Rect text_bounds;
+}
+
+<*
+@require f != null
+*>
+fn void TextInfo.init(&self, Font* f, String s, Rect bounds = RECT_MAX)
+{
+	*self = {};
+	self.font = f;
+	self.text = s;
+	self.bounds = bounds;
+	self.origin = bounds.position();
+	self.text_bounds = { .x = bounds.x, .y = bounds.y };
+}
+
+fn void TextInfo.reset(&self)
+{
+	TextInfo old = *self;
+	self.init(old.font, old.text, old.bounds);
+}
+
+fn bool? TextInfo.place_glyph(&self, bool reflow)
+{
+	if (self.off >= self.text.len) {
+		return false;
+	}
+	if (!self.origin.in_rect(self.bounds)) {
+		return false;
+	}
+
+	short baseline = (short)self.font.ascender;
+	short line_height = (short)self.font.ascender - (short)self.font.descender;
+	short line_gap = (short)self.font.linegap;
+
+	Codepoint cp;
+	Glyph* gp;
+	usz x;
+	
+	cp = str_to_codepoint(self.text[self.off..], &x);
+	if (cp == 0) return false;
+	self.off += x;
+
+	if (ascii::is_cntrl((char)cp) == false) {
+		gp = self.font.get_glyph(cp)!;
+		self.glyph_uv = {
+			.x = gp.u,
+			.y = gp.v,
+			.w = gp.w,
+			.h = gp.h,
+		};
+		self.glyph_bounds = {
+			.x = self.origin.x + gp.ox,
+			.y = self.origin.y + gp.oy + baseline,
+			.w = gp.w,
+			.h = gp.h,
+		};
+		// try to wrap the text if the charcater goes outside of the bounds
+		if (reflow && !self.bounds.contains(self.glyph_bounds)) {
+			self.origin.y += line_height + line_gap;
+			self.glyph_bounds.y += line_height + line_gap;
+
+			self.origin.x = self.bounds.x;
+			self.glyph_bounds.x = self.bounds.x;
+		}
+
+		// handle tab
+		if (cp == '\t') {
+			self.origin.x += gp.adv*TAB_SIZE;
+		} else {
+			self.origin.x += gp.adv;
+		}
+
+	} else if (cp == '\n'){
+		self.origin.y += line_height + line_gap;
+		self.origin.x = self.bounds.x;
+	}
+
+	self.text_bounds = containing_rect(self.text_bounds, self.glyph_bounds);
+
+	if (self.off == self.cursor_idx) {
+		self.cursor_pos = self.origin;
+	}
+
+	return true;
+}
+
 fn Rect? Ctx.get_text_bounds(&ctx, String text)
 {
-	Rect text_bounds;
-	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
-	short line_gap = (short)ctx.font.linegap;
-	text_bounds.h = line_height;
-	Glyph* gp;
-
-	// TODO: account for unicode codepoints
-	short line_len;
-	Codepoint cp;
-	usz off, x;
-	while ((cp = str_to_codepoint(text[off..], &x)) != 0) {
-		off += x;
-		bool n;
-		if (!ascii::is_cntrl((char)cp)) {
-			gp = ctx.font.get_glyph(cp)!;
-			line_len += gp.adv;
-		} else if (cp == '\n'){
-			text_bounds.h += line_height + line_gap;
-			line_len = 0;
-		} else {
-			continue;
-		}
-		if (line_len > text_bounds.w) {
-			text_bounds.w = line_len;
-		}
-	}
-
-	return text_bounds;
-}
-
-fn Point? Ctx.get_cursor_position(&ctx, String text)
-{
-	short line_height = (short)ctx.font.ascender - (short)ctx.font.descender;
-	short line_gap = (short)ctx.font.linegap;
-	Glyph* gp;
-
-	// TODO: account for unicode codepoints
-	Point line;
-	Codepoint cp;
-	usz off, x;
-	while ((cp = str_to_codepoint(text[off..], &x)) != 0) {
-		off += x;
-		bool n;
-		if (!ascii::is_cntrl((char)cp)) {
-			gp = ctx.font.get_glyph(cp)!;
-			line.x += gp.adv;
-		} else if (cp == '\n'){
-			line.y += line_height + line_gap;
-			line.x = 0;
-		} else {
-			continue;
-		}
-	}
-
-	return line;
-}
-
-
-fn Point Ctx.center_text(&ctx, Rect text_bounds, Rect bounds)
-{
-	short dw = bounds.w - text_bounds.w;
-	short dh = bounds.h - text_bounds.h;
-
-	return {.x = dw/2, .y = dh/2};
+	TextInfo ti;
+	ti.init(&ctx.font, text);
+	while (ti.place_glyph(false)!);
+	return ti.text_bounds;
 }
 
 // TODO: check if the font is present in the context
