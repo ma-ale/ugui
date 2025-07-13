@@ -115,7 +115,10 @@ import std::io;
 enum TokenType {
 	INVALID,
 	IDENTIFIER,
-	PUNCT,
+	RCURLY,
+	LCURLY,
+	SEMICOLON,
+	COLON,
 	NUMBER,
 	COLOR,
 	EOF,
@@ -191,10 +194,16 @@ fn Token Lexer.next_token(&lex)
 
 	switch (true) {
 	case ascii::is_punct_m(lex.peep()) && lex.peep() != '#': // punctuation
-		t.type = PUNCT;
 		t.text = lex.text[lex.off:1];
 		if (lex.advance() == 0) { t.type = INVALID; break; }
-	
+		switch (t.text[0]) {
+		case ':': t.type = COLON;
+		case ';': t.type = SEMICOLON;
+		case '{': t.type = LCURLY;
+		case '}': t.type = RCURLY;
+		default:  t.type = INVALID;
+		}
+
 	case lex.peep() == '#': // color
 		t.type = COLOR;
 		if (lex.advance() == 0) { t.type = INVALID; break; }
@@ -276,17 +285,6 @@ struct Parser {
 	float mm_to_px;
 }
 
-macro bool Parser.expect_text(&p, Token* t, TokenType type, String text)
-{
-	*t = p.lex.next_token();
-	if (t.type == type && t.text == text) {
-		return true;
-	}
-	io::eprintfn("CSS parsing error at %d:%d: expected type:%s text:'%s' but got type:%s text:'%s'",
-	    t.line, t.col, type, text, t.type, t.text);
-	return false;
-}
-
 macro bool Parser.expect(&p, Token* t, TokenType type)
 {
 	*t = p.lex.next_token();
@@ -306,7 +304,7 @@ fn bool Parser.parse_style(&p)
 	p.style_id = t.text.hash();
 
 	// style body
-	if (p.expect_text(&t, PUNCT, "{") == false) return false;
+	if (p.expect(&t, LCURLY) == false) return false;
 	
 	while (true) {
 		if (p.parse_property() == false) return false;
@@ -314,7 +312,7 @@ fn bool Parser.parse_style(&p)
 		if (t.type != IDENTIFIER) break;
 	}
 	
-	if (p.expect_text(&t, PUNCT, "}") == false) return false;
+	if (p.expect(&t, RCURLY) == false) return false;
 	
 	return true;
 }
@@ -323,7 +321,7 @@ fn bool Parser.parse_property(&p)
 {
 	Token t, prop;
 	if (p.expect(&prop, IDENTIFIER) == false) return false;
-	if (p.expect_text(&t, PUNCT, ":") == false) return false;
+	if (p.expect(&t, COLON) == false) return false;
 
 	switch (prop.text) {
 	case "padding":
@@ -389,7 +387,7 @@ fn bool Parser.parse_property(&p)
 		io::eprintfn("CSS parsing error at %d:%d: '%s' is not a valid property", prop.line, prop.col, prop.text);
 		return false;
 	}
-	if (p.expect_text(&t, PUNCT, ";") == false) return false;
+	if (p.expect(&t, SEMICOLON) == false) return false;
 	return true;
 }
 
@@ -428,7 +426,7 @@ fn bool Parser.parse_size(&p, Rect* r)
 		if (p.parse_number(&x) == false) return false;
 		r.h = x;
 		return true;
-	} else if (t.type == PUNCT && t.text == ";") {
+	} else if (t.type == SEMICOLON) {
 		// just one number, all dimensions are the same
 		r.x = r.y = r.w = r.h = x;
 		return true;
