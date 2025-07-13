@@ -93,7 +93,6 @@ fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
 fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 {
 	Rect border        = style.border;
-	Rect padding       = style.padding;
 	ushort radius      = style.radius;
 	Color bg           = style.bg;
 	Color border_color = style.secondary;
@@ -111,10 +110,10 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 	Cmd cmd = {
 		.type = CMD_RECT,
 		.rect.rect = {
-			.x = rect.x + border.x + padding.x,
-			.y = rect.y + border.y + padding.y,
-			.w = rect.w - (border.x+border.w) - (padding.x+padding.w),
-			.h = rect.h - (border.y+border.h) - (padding.y+padding.h),
+			.x = rect.x + border.x,
+			.y = rect.y + border.y,
+			.w = rect.w - (border.x+border.w),
+			.h = rect.h - (border.y+border.h),
 		},
 		.rect.color = bg,
 		.rect.radius = radius,
@@ -123,6 +122,7 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
+// TODO: accept a Sprite* instead of all this shit
 fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_index, Color hue = 0xffffffffu.to_rgba(), SpriteType type = SPRITE_NORMAL)
 {
 	Cmd cmd = {

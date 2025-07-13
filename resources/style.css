@@ -9,27 +9,15 @@ default {
 button {
 	margin: 2 2 2 2;
 	border: 2 2 2 2;
-	padding: 1 1 1 1;
+	padding: 2 2 2 2;
 	radius: 10;
+	size: 32;
 
 	bg: #3c3836ff;
 	fg: #fbf1c7ff;
 	primary: #cc241dff;
 	secondary: #458588ff;
-	accent: #fabd2fff;
-}
-
-button-active {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
-	radius: 10;
-
-	bg: #504945ff;
-	fg: #fbf1c7ff;
-	primary: #cc241dff;
-	secondary: #cc241dff;
-	accent: #fabd2fff;
+	accent: #504945ff;
 }
 
 checkbox {

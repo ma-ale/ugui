@@ -15,8 +15,10 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Implement a z index and sort command buffer based on that
     [ ] Ctx.set_z_index()
     [x] Sort command buffer on insertion
-[x] Standardize element handling, for example all buttons do almost the same thing, so write a lot of boiler plate and reuse it
-[x] The id combination in gen_id() uses an intger division, which is costly, use another combination function that is non-linear and doesn't use division
+[x] Standardize element handling, for example all buttons do almost the same thing, so write a lot 
+    of boiler plate and reuse it
+[x] The id combination in gen_id() uses an intger division, which is costly, use another combination 
+    function that is non-linear and doesn't use division
 [ ] Animations, somehow
 [ ] Maybe cache codepoint converted strings
 [x] Fix scroll wheel when div is scrolled
@@ -39,10 +41,10 @@ to maintain focus until mouse release (fix scroll bars)
     each struct Elem, struct Cmd, etc. is as big as the largest element. It would
     be better to use a different allcation strategy.
 [ ] Add a way to handle time events like double clicks
-[ ] Border and padding do not go well together if the library issues two rect commands, the visible
-    border is effectively the border size plus the padding since there is a gap between the border 
-    rect and the internal rect. A better solution is to leave it up to the renderer to draw the rect
-    correctly
+[x] Fix how padding is applied in push_rect. In CSS padding is applied between the border and the
+    content, the background color is applied starting from the border. Right now push_rect() offsets
+    the background rect by both border and padding
+
 
 ## Layout
 

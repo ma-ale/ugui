@@ -78,6 +78,7 @@ fn void? Ctx.layout_next_column(&ctx)
 	parent.div.origin_r = parent.div.origin_c;
 }
 
+macro Rect Elem.content_bounds(&elem, style) => elem.bounds.pad(style.border).pad(style.padding);
 
 macro Rect Elem.get_view(&elem)
 {

@@ -202,16 +202,16 @@ fn int main(String[] args)
 		ui.div_begin({.w=-100})!!;
 		{
 			ui.layout_set_column()!!;
-			if (ui.button({0,0,30,30}, toggle)!!.mouse_press) {
+			if (ui.button(icon: "tux")!!.mouse_press) {
 				io::printn("press button0");
 				toggle = !toggle;
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button({0,0,30,30})!!.mouse_press) {
+			if (ui.button(label: "ciao", icon: "tick")!!.mouse_press) {
 				io::printn("press button1");
 			}
 			//ui.layout_next_column()!!;
-			if (ui.button({0,0,30,30})!!.mouse_release) {
+			if (ui.button()!!.mouse_release) {
 				io::printn("release button2");
 			}
 
@@ -227,7 +227,7 @@ fn int main(String[] args)
 			ui.text_unbounded("Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
 
 			ui.layout_next_column()!!;
-			ui.button_label("Continua!")!!;
+			ui.button("Continua!")!!;
 
 			ui.layout_next_row()!!;
 			static bool check;
@@ -250,15 +250,15 @@ fn int main(String[] args)
 			if (ui.slider_ver({0,0,30,100}, &slider2)!!.update) {
 				io::printfn("other slider: %f", slider2);
 			}
-			ui.button({0,0,50,50})!!;
-			ui.button({0,0,50,50})!!;
-			ui.button({0,0,50,50})!!;
-			ui.button({0,0,50,50})!!;
+			ui.button()!!;
+			ui.button()!!;
+			ui.button()!!;
+			ui.button()!!;
 			if (toggle) {
-				ui.button({0,0,50,50})!!;
-				ui.button({0,0,50,50})!!;
-				ui.button({0,0,50,50})!!;
-				ui.button({0,0,50,50})!!;
+				ui.button()!!;
+				ui.button()!!;
+				ui.button()!!;
+				ui.button()!!;
 			}
 			ui.layout_next_column()!!;
 			ui.layout_set_row()!!;

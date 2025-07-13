@@ -156,8 +156,22 @@ macro Point Rect.bottom_right(Rect r)
 
 macro Rect Rect.center_to(Rect a, Rect b)
 {
-	Point off = {.x = (b.w - a.w)/2, .y = (b.h - a.h)/2};
-	return a.off(off);
+	return {
+		.x = b.x + (b.w - a.w)/2,
+		.y = b.y + (b.h - a.h)/2,
+		.w = a.w,
+		.h = a.h,
+	};
+}
+
+macro Rect Rect.pad(Rect a, Rect b)
+{
+	return {
+		.x = a.x + b.x,
+		.y = a.y + b.y,
+		.w = a.w - b.x - b.w,
+		.h = a.h - b.y - b.h,
+	};
 }
 
 

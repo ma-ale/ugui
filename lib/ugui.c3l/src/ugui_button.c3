@@ -8,109 +8,79 @@ struct ElemButton {
 }
 
 
-// draw a button, return the events on that button
-macro Ctx.button(&ctx, Rect size, bool state = false, ...)
-	=> ctx.button_id(@compute_id($vasplat), size, state);
-fn ElemEvents? Ctx.button_id(&ctx, Id id, Rect size, bool active)
+macro Ctx.button(&ctx, String label = "", String icon = "", ...)
+	=> ctx.button_id(@compute_id($vasplat), label, icon);
+fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 {
 	id = ctx.gen_id(id)!;
-
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
-	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
-
-	elem.bounds = ctx.position_element(parent, size, style_norm);
-
-	// if the bounds are null the element is outside the div view,
-	//  no interaction should occur so just return
-	if (elem.bounds.is_null()) { return {}; }
-
-	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
-
-	elem.events = ctx.get_elem_events(elem);
-	bool is_active = active || ctx.elem_focus(elem) || elem.events.mouse_hover;
-
-	// Draw the button
-	ctx.push_rect(elem.bounds, parent.div.z_index, is_active ? style_active : style_norm)!;
-
-	return elem.events;
-}
-
-macro Ctx.button_label(&ctx, String label, Rect size = {0,0,short.max,short.max}, bool active = false, ...)
-	=> ctx.button_label_id(@compute_id($vasplat), label, size, active);
-fn ElemEvents? Ctx.button_label_id(&ctx, Id id, String label, Rect size, bool active)
-{
-	id = ctx.gen_id(id)!;
-
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
-	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
-	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
-
-	// TODO: cache text_size just like text_unbounded() does
-	Rect text_size = ctx.get_text_bounds(label)!;
-	Rect btn_size = text_size.grow({10,10});
-
-	// 2. Layout
-	elem.bounds = ctx.position_element(parent, btn_size, style_norm);
-	if (elem.bounds.is_null()) { return {}; }
+	Style* style = ctx.styles.get_style(@str_hash("button"));
 	
-	text_size.x = elem.bounds.x;
-	text_size.y = elem.bounds.y;
-	text_size = text_size.center_to(elem.bounds);
+	Sprite* sprite = icon != "" ? ctx.sprite_atlas.get(icon)! : &&(Sprite){};
 
+	Rect min_size = {0, 0, style.size, style.size};
+	Rect text_size = ctx.get_text_bounds(label)!;
+	Rect icon_size = sprite.rect();
+
+	ushort h_lh = (ushort)(ctx.font.line_height() / 2);
+	ushort left_pad = label != "" ? h_lh : 0;
+	ushort inner_pad = label != "" && icon != "" ? h_lh : 0;
+	ushort right_pad = left_pad;
+	
+	/*    |left_pad
+	 * +--v-----------------------------------+
+	 * |<->+--------+                         |
+	 * |   |        |   +-----------------+   |
+	 * |   |  icon  |   |     label       |   |
+	 * |   |        |   +-----------------+   |
+	 * |   +--------+<->|                 |<->|
+	 * +-------------^--------------------^---+
+	 *               |inner_pad           |right_pad
+	 */
+	
+	Rect tot_size = {
+		.w = (short)max(min_size.w, icon_size.w + text_size.w + left_pad + inner_pad + right_pad),
+		.h = (short)max(min_size.h, max(icon_size.h, text_size.h)),
+	};
+	
+	elem.bounds = ctx.position_element(parent, tot_size, style);
+	if (elem.bounds.is_null()) return {};
 	elem.events = ctx.get_elem_events(elem);
-
-	bool is_active = active || ctx.elem_focus(elem) || elem.events.mouse_hover;
-	Style* style = is_active ? style_active : style_norm;
-
-	// Draw the button
-	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
-	ctx.push_string(text_size, label, parent.div.z_index, style.fg)!;
-
-	return elem.events;
-}
-
-macro Ctx.button_icon(&ctx, String icon, String on_icon = "", bool active = false, ...)
-	=> ctx.button_icon_id(@compute_id($vasplat), icon, on_icon, active);
-fn ElemEvents? Ctx.button_icon_id(&ctx, Id id, String icon, String on_icon, bool active)
-{
-	id = ctx.gen_id(id)!;
-
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
-
-	Sprite* def_sprite = ctx.sprite_atlas.get(icon)!;
-	Sprite* on_sprite = ctx.sprite_atlas.get(on_icon) ?? &&(Sprite){};
-	Rect max_size = def_sprite.rect().max(on_sprite.rect());
-
-	Style* style_norm = ctx.styles.get_style(@str_hash("button"));
-
-	elem.bounds = ctx.position_element(parent, max_size, style_norm);
-
-	// if the bounds are null the element is outside the div view,
-	//  no interaction should occur so just return
-	if (elem.bounds.is_null()) { return {}; }
-
-	Style* style_active = ctx.styles.get_style(@str_hash("button-active"));
-
-	elem.events = ctx.get_elem_events(elem);
-
-	bool is_active = active || ctx.elem_focus(elem) || elem.events.mouse_hover;
-	Style* style = is_active ? style_active : style_norm;
-
-	Id tex_id = ctx.sprite_atlas.id;
-	if (active && on_icon != "") {
-		ctx.push_sprite(elem.bounds, on_sprite.uv(), tex_id, parent.div.z_index, type: on_sprite.type)!;
-	} else {
-		ctx.push_sprite(elem.bounds, def_sprite.uv(), tex_id, parent.div.z_index, type: def_sprite.type)!;
+	Rect content_bounds = elem.content_bounds(style);
+	
+	Rect text_bounds = {
+		.x = content_bounds.x + icon_size.w + left_pad + inner_pad,
+		.y = content_bounds.y,
+		.w = content_bounds.w - icon_size.w - left_pad - inner_pad - right_pad,
+		.h = content_bounds.h
+	};
+	text_bounds = text_size.center_to(text_bounds);
+	
+	Rect icon_bounds = {
+		.x = content_bounds.x,
+		.y = content_bounds.y,
+		.w = icon_size.w + right_pad + inner_pad,
+		.h = (short)max(icon_size.h, content_bounds.h)
+	};
+	icon_bounds = icon_size.center_to(icon_bounds);
+	
+	bool is_active = ctx.elem_focus(elem) || elem.events.mouse_hover;
+	Style s = *style;
+	if (is_active) {
+		s.secondary = s.primary;
+		s.bg = s.accent;
 	}
 
-	// Draw the button
-	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
-
+	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
+	ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
+//	Style ss = {.bg = 0x000000ffu.@to_rgba()};
+//	ctx.push_rect(content_bounds, parent.div.z_index, &ss)!;
+	ctx.push_string(text_bounds, label, parent.div.z_index, style.fg)!;
+	
 	return elem.events;
 }
+
 
 // FIXME: this should be inside the style
 macro Ctx.checkbox(&ctx, String desc, Point off, bool* active, String tick_sprite = {}, ...)
