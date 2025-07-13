@@ -29,14 +29,16 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 
 	// 2. Layout
 	elem.bounds = ctx.position_element(parent, size, style);
+	if (elem.bounds.is_null()) return {};
+	Rect content_bounds = elem.content_bounds(style);
 
 	// handle width
-	short hw = (short)(elem.bounds.w * hpercent);
+	short hw = (short)(content_bounds.w * hpercent);
 	Rect handle = {
-		.x = calc_slider(elem.bounds.x, elem.bounds.w-hw, *value),
-		.y = elem.bounds.y,
+		.x = calc_slider(content_bounds.x, content_bounds.w-hw, *value),
+		.y = content_bounds.y,
 		.w = hw,
-		.h = elem.bounds.h,
+		.h = content_bounds.h,
 	};
 	elem.slider.handle = handle;
 
@@ -44,8 +46,8 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 	elem.events = ctx.get_elem_events(elem);
 
 	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
-		*value = calc_value(elem.bounds.x, m.x, elem.bounds.w, hw);
-		elem.slider.handle.x = calc_slider(elem.bounds.x, elem.bounds.w-hw, *value);
+		*value = calc_value(content_bounds.x, m.x, content_bounds.w, hw);
+		elem.slider.handle.x = calc_slider(content_bounds.x, content_bounds.w-hw, *value);
 		elem.events.update = true;
 	}
 
@@ -94,13 +96,15 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 
 	// 2. Layout
 	elem.bounds = ctx.position_element(parent, size, style);
+	if (elem.bounds.is_null()) return {};
+	Rect content_bounds = elem.content_bounds(style);
 
 	// handle height
-	short hh = (short)(elem.bounds.h * hpercent);
+	short hh = (short)(content_bounds.h * hpercent);
 	Rect handle = {
-		.x = elem.bounds.x,
-		.y = calc_slider(elem.bounds.y, elem.bounds.h-hh, *value),
-		.w = elem.bounds.w,
+		.x = content_bounds.x,
+		.y = calc_slider(content_bounds.y, content_bounds.h-hh, *value),
+		.w = content_bounds.w,
 		.h = hh,
 	};
 	elem.slider.handle = handle;
@@ -109,8 +113,8 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 	elem.events = ctx.get_elem_events(elem);
 
 	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
-		*value = calc_value(elem.bounds.y, m.y, elem.bounds.h, hh);
-		elem.slider.handle.y = calc_slider(elem.bounds.y, elem.bounds.h-hh, *value);
+		*value = calc_value(content_bounds.y, m.y, content_bounds.h, hh);
+		elem.slider.handle.y = calc_slider(content_bounds.y, content_bounds.h-hh, *value);
 		elem.events.update = true;
 	}
 
