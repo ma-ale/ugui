@@ -44,7 +44,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		.h = (short)max(min_size.h, max(icon_size.h, text_size.h)),
 	};
 	
-	elem.bounds = ctx.position_element(parent, tot_size, style);
+	elem.bounds = ctx.layout_element(parent, tot_size, style);
 	if (elem.bounds.is_null()) return {};
 	elem.events = ctx.get_elem_events(elem);
 	Rect content_bounds = elem.content_bounds(style);
@@ -94,7 +94,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, Point off, bool* activ
 	Style* style = ctx.styles.get_style(@str_hash("checkbox"));
 
 	Rect size = {off.x, off.y, style.size, style.size};
-	elem.bounds = ctx.position_element(parent, size, style);
+	elem.bounds = ctx.layout_element(parent, size, style);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return
@@ -133,7 +133,7 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	Style* style = ctx.styles.get_style(@str_hash("toggle"));
 
 	Rect size = {off.x, off.y, style.size*2, style.size};
-	elem.bounds = ctx.position_element(parent, size, style);
+	elem.bounds = ctx.layout_element(parent, size, style);
 
 	// if the bounds are null the element is outside the div view,
 	//  no interaction should occur so just return

@@ -76,7 +76,7 @@ macro Point Elem.get_view_off(&elem)
 @require ctx != null
 @require parent.type == ETYPE_DIV
 *>
-fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, Style* style)
+fn Rect Ctx.layout_element(&ctx, Elem *parent, Rect rect, Style* style)
 {
 	ElemDiv* div = &parent.div;
 

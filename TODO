@@ -60,7 +60,7 @@ to maintain focus until mouse release (fix scroll bars)
     of elements
 [ ] Center elements to div (center children_bounds to the center of the div bounds and shift the origin accordingly)
 [x] Use containing_rect() in position_element() to skip some computing and semplify the function
-[ ] Rename position_element() to layout_element()
+[x] Rename position_element() to layout_element()
 [ ] Make functions to mark rows/columns as full, to fix the calculator demo
 
 ## Input

@@ -53,7 +53,7 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 		.w = size.w < 0 ? max(elem.div.pcb.w, (short)-size.w) : size.w,
 		.h = size.h < 0 ? max(elem.div.pcb.h, (short)-size.h) : size.h,
 	};
-	elem.bounds = ctx.position_element(parent, wanted_size, style);
+	elem.bounds = ctx.layout_element(parent, wanted_size, style);
 	elem.div.children_bounds = {};
 
 	// update the ctx scissor

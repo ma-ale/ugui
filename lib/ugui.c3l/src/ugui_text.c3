@@ -27,7 +27,7 @@ fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 	elem.text.hash = text_hash;
 
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, elem.text.bounds, style);
+	elem.bounds = ctx.layout_element(parent, elem.text.bounds, style);
 	if (elem.bounds.is_null()) { return; }
 
 	ctx.push_string(elem.bounds, text, parent.div.z_index, style.fg)!;
@@ -46,7 +46,7 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 	elem.text.str = (String)text;
 	
 	// layout the text box
-	elem.bounds = ctx.position_element(parent, size, style);
+	elem.bounds = ctx.layout_element(parent, size, style);
 
 	// check input and update the text
 	elem.events = ctx.get_elem_events(elem);

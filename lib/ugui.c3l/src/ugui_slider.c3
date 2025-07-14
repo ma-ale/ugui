@@ -28,7 +28,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, size, style);
+	elem.bounds = ctx.layout_element(parent, size, style);
 	if (elem.bounds.is_null()) return {};
 	Rect content_bounds = elem.content_bounds(style);
 
@@ -95,7 +95,7 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 	}
 
 	// 2. Layout
-	elem.bounds = ctx.position_element(parent, size, style);
+	elem.bounds = ctx.layout_element(parent, size, style);
 	if (elem.bounds.is_null()) return {};
 	Rect content_bounds = elem.content_bounds(style);
 
