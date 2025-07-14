@@ -9,51 +9,25 @@ enum Layout {
 
 fn void? Ctx.layout_set_row(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	Elem *parent = ctx.cache.search(parent_id)!;
-
-	if (parent.type != ETYPE_DIV) {
-		// what?
-		return UNEXPECTED_ELEMENT?;
-	}
-
+	Elem *parent = ctx.get_parent()!;
 	parent.div.layout = LAYOUT_ROW;
 }
 
 fn void? Ctx.layout_set_column(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	Elem *parent = ctx.cache.search(parent_id)!;
-
-	if (parent.type != ETYPE_DIV) {
-		// what?
-		return UNEXPECTED_ELEMENT?;
-	}
-
+	Elem *parent = ctx.get_parent()!;
 	parent.div.layout = LAYOUT_COLUMN;
 }
 
 fn void? Ctx.layout_set_floating(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	Elem *parent = ctx.cache.search(parent_id)!;
-
-	if (parent.type != ETYPE_DIV) {
-		// what?
-		return UNEXPECTED_ELEMENT?;
-	}
-
+	Elem *parent = ctx.get_parent()!;
 	parent.div.layout = LAYOUT_FLOATING;
 }
 
 fn void? Ctx.layout_next_row(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	Elem *parent = ctx.cache.search(parent_id)!;
-
-	if (parent.type != ETYPE_DIV) {
-		return UNEXPECTED_ELEMENT?;
-	}
+	Elem *parent = ctx.get_parent()!;
 
 	parent.div.origin_r = {
 		.x = parent.bounds.x,
@@ -64,12 +38,7 @@ fn void? Ctx.layout_next_row(&ctx)
 
 fn void? Ctx.layout_next_column(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	Elem *parent = ctx.cache.search(parent_id)!;
-
-	if (parent.type != ETYPE_DIV) {
-		return UNEXPECTED_ELEMENT?;
-	}
+	Elem *parent = ctx.get_parent()!;
 
 	parent.div.origin_c = {
 		.x = parent.div.children_bounds.bottom_right().x,

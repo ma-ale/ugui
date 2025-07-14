@@ -65,7 +65,7 @@ alias ElemCache = cache::Cache{Id, Elem, MAX_ELEMENTS};
 
 alias CmdQueue = fifo::Fifo{Cmd};
 
-faultdef INVALID_SIZE, EVENT_UNSUPPORTED, UNEXPECTED_ELEMENT, WRONG_ELEMENT_TYPE, WRONG_ID;
+faultdef INVALID_SIZE, EVENT_UNSUPPORTED, WRONG_ELEMENT_TYPE, WRONG_ID;
 
 const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
 
@@ -117,7 +117,10 @@ struct Ctx {
 fn Elem*? Ctx.get_parent(&ctx)
 {
 	Id parent_id = ctx.tree.get(ctx.active_div)!;
-	return ctx.cache.search(parent_id);
+	Elem*? parent = ctx.cache.search(parent_id);
+	if (catch parent) return parent;
+	if (parent.type != ETYPE_DIV) return WRONG_ELEMENT_TYPE?;
+	return parent; 
 }
 
 macro @bits(#a) => $typeof(#a).sizeof*8;
