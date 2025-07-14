@@ -4,12 +4,13 @@ default {
 	primary: #cc241dff;
 	secondary: #458588ff;
 	accent: #fabd2fff;
+	border: 1;
 }
 
 button {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 2 2 2 2;
+	margin: 2;
+	border: 2;
+	padding: 2;
 	radius: 10;
 	size: 32;
 
@@ -21,9 +22,9 @@ button {
 }
 
 checkbox {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
+	margin: 2;
+	border: 2;
+	padding: 1;
 	radius: 10;
 	size: 16;
 	bg: #3c3836ff;
@@ -34,9 +35,9 @@ checkbox {
 }
 
 toggle {
-	margin: 2 2 2 2;
-	border: 2 2 2 2;
-	padding: 1 1 1 1;
+	margin: 2;
+	border: 2;
+	padding: 1;
 	radius: 10;
 	size: 16;
 	bg: #3c3836ff;
@@ -47,9 +48,9 @@ toggle {
 }
 
 slider {
-	margin: 2 2 2 2;
-	padding: 2 2 2 2;
-	border: 1 1 1 1;
+	margin: 2;
+	padding: 2;
+	border: 1;
 	radius: 4;
 	size: 8;
 	bg: #3c3836ff;

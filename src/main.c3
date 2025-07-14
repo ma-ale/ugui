@@ -119,7 +119,6 @@ fn int main(String[] args)
 
 	isz frame;
 	double fps;
-	bool toggle = true;
 	time::Clock clock;
 	time::Clock fps_clock;
 	time::Clock sleep_clock;
@@ -199,74 +198,13 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
-		ui.div_begin({.w=-100})!!;
-		{
-			ui.layout_set_column()!!;
-			if (ui.button(icon: "tux")!!.mouse_press) {
-				io::printn("press button0");
-				toggle = !toggle;
-			}
-			//ui.layout_next_column()!!;
-			if (ui.button(label: "ciao", icon: "tick")!!.mouse_press) {
-				io::printn("press button1");
-			}
-			//ui.layout_next_column()!!;
-			if (ui.button()!!.mouse_release) {
-				io::printn("release button2");
-			}
-
-			ui.layout_set_row()!!;
-			ui.layout_next_row()!!;
-			static float rf, gf, bf, af;
-			ui.slider_ver({0,0,30,100}, &rf)!!;
-			ui.slider_ver({0,0,30,100}, &gf)!!;
-			ui.slider_ver({0,0,30,100}, &bf)!!;
-			ui.slider_ver({0,0,30,100}, &af)!!;
-
-			ui.layout_next_column()!!;
-			ui.text_unbounded("Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
-
-			ui.layout_next_column()!!;
-			ui.button("Continua!")!!;
-
-			ui.layout_next_row()!!;
-			static bool check;
-			ui.checkbox("", {}, &check, "tick")!!;
-			ui.checkbox("", {}, &check)!!;
-			ui.toggle("", {}, &toggle)!!;
-		};
-		ui.sprite("tux")!!;
-		
-		static char[128] text_box = "ciao mamma";
-		static usz text_len = "ciao mamma".len;
-		ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
-
-		ui.div_end()!!;
-
-		ui.div_begin(ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
-		{
-			ui.layout_set_column()!!;
-			static float slider2 = 0.5;
-			if (ui.slider_ver({0,0,30,100}, &slider2)!!.update) {
-				io::printfn("other slider: %f", slider2);
-			}
-			ui.button()!!;
-			ui.button()!!;
-			ui.button()!!;
-			ui.button()!!;
-			if (toggle) {
-				ui.button()!!;
-				ui.button()!!;
-				ui.button()!!;
-				ui.button()!!;
-			}
-			ui.layout_next_column()!!;
-			ui.layout_set_row()!!;
-			static float f1, f2;
-			ui.slider_hor({0,0,100,30}, &f1)!!;
-			ui.slider_hor({0,0,100,30}, &f2)!!;
-		};
-		ui.div_end()!!;
+const String APPLICATION = "calculator";
+$if APPLICATION == "debug":
+		debug_app(&ui);
+$endif
+$if APPLICATION == "calculator":
+		calculator(&ui);
+$endif
 
 		// Timings counter
 		TimeStats dts = draw_times.get_stats();
@@ -309,4 +247,113 @@ fn int main(String[] args)
 	}
 
 	return 0;
+}
+
+fn void debug_app(ugui::Ctx* ui)
+{
+	static bool toggle;
+	ui.div_begin({.w=-100})!!;
+	{
+		ui.layout_set_column()!!;
+		if (ui.button(icon:"tux")!!.mouse_press) {
+			io::printn("press button0");
+			toggle = !toggle;
+		}
+		//ui.layout_next_column()!!;
+		if (ui.button(label: "ciao", icon: "tick")!!.mouse_press) {
+			io::printn("press button1");
+		}
+		//ui.layout_next_column()!!;
+		if (ui.button()!!.mouse_release) {
+			io::printn("release button2");
+		}
+
+		ui.layout_set_row()!!;
+		ui.layout_next_row()!!;
+		static float rf, gf, bf, af;
+		ui.slider_ver({0,0,30,100}, &rf)!!;
+		ui.slider_ver({0,0,30,100}, &gf)!!;
+		ui.slider_ver({0,0,30,100}, &bf)!!;
+		ui.slider_ver({0,0,30,100}, &af)!!;
+
+		ui.layout_next_column()!!;
+		ui.text_unbounded("Ciao Mamma\nAbilità ⚡\n'\udb80\udd2c'")!!;
+
+		ui.layout_next_column()!!;
+		ui.button("Continua!")!!;
+
+		ui.layout_next_row()!!;
+		static bool check;
+		ui.checkbox("", {}, &check, "tick")!!;
+		ui.checkbox("", {}, &check)!!;
+		ui.toggle("", {}, &toggle)!!;
+	};
+	ui.sprite("tux")!!;
+	
+	static char[128] text_box = "ciao mamma";
+	static usz text_len = "ciao mamma".len;
+	ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
+
+	ui.div_end()!!;
+
+	ui.div_begin(ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
+	{
+		ui.layout_set_column()!!;
+		static float slider2 = 0.5;
+		if (ui.slider_ver({0,0,30,100}, &slider2)!!.update) {
+			io::printfn("other slider: %f", slider2);
+		}
+		ui.button()!!;
+		ui.button()!!;
+		ui.button()!!;
+		ui.button()!!;
+		if (toggle) {
+			ui.button()!!;
+			ui.button()!!;
+			ui.button()!!;
+			ui.button()!!;
+		}
+		ui.layout_next_column()!!;
+		ui.layout_set_row()!!;
+		static float f1, f2;
+		ui.slider_hor({0,0,100,30}, &f1)!!;
+		ui.slider_hor({0,0,100,30}, &f2)!!;
+	};
+	ui.div_end()!!;
+}
+
+fn void calculator(ugui::Ctx* ui)
+{
+	ui.div_begin(ugui::DIV_FILL)!!;
+
+	ui.layout_set_row()!!;
+	ui.div_begin({0,0,-300,50})!!;
+	ui.text_unbounded("80085")!!;
+	ui.div_end()!!;
+	ui.layout_next_row()!!;
+	
+	ui.button("7")!!;
+	ui.button("8")!!;
+	ui.button("9")!!;
+	ui.layout_next_row()!!;
+	ui.button("4")!!;
+	ui.button("5")!!;
+	ui.button("6")!!;
+	ui.layout_next_row()!!;
+	ui.button("3")!!;
+	ui.button("2")!!;
+	ui.button("1")!!;
+	ui.layout_next_row()!!;
+	ui.button(".")!!;
+	ui.button("0")!!;
+	ui.button("")!!;
+	
+	ui.layout_next_column()!!;
+	ui.layout_set_column()!!;
+	ui.button("+")!!;
+	ui.button("-")!!;
+	ui.button("*")!!;
+	ui.button("/")!!;
+	
+	ui.div_end()!!;
 }
