@@ -250,7 +250,7 @@ fn void? Ctx.frame_end(&ctx)
 {
 	// FIXME: this is not guaranteed to be root. the user might forget to close a div or some other element
 	Elem* root = ctx.get_active_div()!;
-	root.div.layout = LAYOUT_ROW;
+	if (root.id != ROOT_ID) return WRONG_ID?;
 
 	// 1. clear the tree
 	ctx.tree.nuke();
