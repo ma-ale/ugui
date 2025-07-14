@@ -97,12 +97,13 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 	Color bg           = style.bg;
 	Color border_color = style.secondary;
 
+	// FIXME: this implies that the border has to be uniform
 	if (!border.is_null()) {
 		Cmd cmd = {
 			.type = CMD_RECT,
 			.rect.rect = rect,
 			.rect.color = border_color,
-			.rect.radius = radius,
+			.rect.radius = radius + border.x,
 		};
 		ctx.push_cmd(&cmd, z_index)!;
 	}
