@@ -34,8 +34,8 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 {
 	id = ctx.gen_id(id)!;
 
-	Elem* parent = ctx.get_parent()!;
 	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
+	Elem* parent = ctx.get_parent()!;
 	ctx.active_div = elem.tree_idx;
 
 	Style* style = ctx.styles.get_style(@str_hash("default"));
@@ -81,7 +81,6 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 fn void? Ctx.div_end(&ctx)
 {
 	// swap the children bounds
-	Elem* parent = ctx.get_parent()!;
 	Elem* elem = ctx.get_active_div()!;
 	elem.div.pcb = elem.div.children_bounds;
 
@@ -150,4 +149,7 @@ fn void? Ctx.div_end(&ctx)
 
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
+	Elem* parent = ctx.get_parent()!;
+	// TODO: reset the scissor back to the parent div
+	ctx.div_scissor = parent.bounds;
 }
