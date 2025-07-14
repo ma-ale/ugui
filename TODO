@@ -59,7 +59,7 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] Find a way to concile pixel measurements to the mm ones used in css, for example in min/max sizing
     of elements
 [ ] Center elements to div (center children_bounds to the center of the div bounds and shift the origin accordingly)
-[ ] Use containing_rect() in position_element() to skip some computing and semplify the function
+[x] Use containing_rect() in position_element() to skip some computing and semplify the function
 [ ] Rename position_element() to layout_element()
 [ ] Make functions to mark rows/columns as full, to fix the calculator demo
 

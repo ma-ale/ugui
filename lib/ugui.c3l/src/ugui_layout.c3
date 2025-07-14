@@ -146,16 +146,7 @@ fn Rect Ctx.position_element(&ctx, Elem *parent, Rect rect, Style* style)
 	};
 
 	// 5. Update the parent's children bounds
-	if (!child_occupied.bottom_right().in_rect(div.children_bounds)) {
-		// right overflow
-		if (child_occupied.bottom_right().x > div.children_bounds.bottom_right().x) {
-			div.children_bounds.w += child_occupied.bottom_right().x - div.children_bounds.bottom_right().x;
-		}
-		// bottom overflow
-		if (child_occupied.bottom_right().y > div.children_bounds.bottom_right().y) {
-			div.children_bounds.h += child_occupied.bottom_right().y - div.children_bounds.bottom_right().y;
-		}
-	}
+	div.children_bounds = containing_rect(div.children_bounds, child_occupied);
 
 	// 99. return the placement
 	if (child_placement.collides(parent_view)) {
