@@ -199,12 +199,12 @@ fn int main(String[] args)
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
 const String APPLICATION = "calculator";
-$if APPLICATION == "debug":
+$switch APPLICATION:
+$case "debug":
 		debug_app(&ui);
-$endif
-$if APPLICATION == "calculator":
+$case "calculator":
 		calculator(&ui);
-$endif
+$endswitch
 
 		// Timings counter
 		TimeStats dts = draw_times.get_stats();
@@ -287,13 +287,12 @@ fn void debug_app(ugui::Ctx* ui)
 		ui.checkbox("", {}, &check, "tick")!!;
 		ui.checkbox("", {}, &check)!!;
 		ui.toggle("", {}, &toggle)!!;
+		
+		ui.sprite("tux")!!;
+		static char[128] text_box = "ciao mamma";
+		static usz text_len = "ciao mamma".len;
+		ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
 	};
-	ui.sprite("tux")!!;
-	
-	static char[128] text_box = "ciao mamma";
-	static usz text_len = "ciao mamma".len;
-	ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
-
 	ui.div_end()!!;
 
 	ui.div_begin(ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
@@ -324,36 +323,35 @@ fn void debug_app(ugui::Ctx* ui)
 
 fn void calculator(ugui::Ctx* ui)
 {
-	ui.div_begin(ugui::DIV_FILL)!!;
+	ui.@div(ugui::DIV_FILL) {
+		ui.@div({0,0,-300,50}) {
+			ui.text_unbounded("80085")!!;
+		}!!;
 
-	ui.layout_set_row()!!;
-	ui.div_begin({0,0,-300,50})!!;
-	ui.text_unbounded("80085")!!;
-	ui.div_end()!!;
-	ui.layout_next_row()!!;
-	
-	ui.button("7")!!;
-	ui.button("8")!!;
-	ui.button("9")!!;
-	ui.layout_next_row()!!;
-	ui.button("4")!!;
-	ui.button("5")!!;
-	ui.button("6")!!;
-	ui.layout_next_row()!!;
-	ui.button("3")!!;
-	ui.button("2")!!;
-	ui.button("1")!!;
-	ui.layout_next_row()!!;
-	ui.button(".")!!;
-	ui.button("0")!!;
-	ui.button("")!!;
-	
-	ui.layout_next_column()!!;
-	ui.layout_set_column()!!;
-	ui.button("+")!!;
-	ui.button("-")!!;
-	ui.button("*")!!;
-	ui.button("/")!!;
-	
-	ui.div_end()!!;
+		ui.layout_next_row()!!;
+		
+		ui.button("7")!!;
+		ui.button("8")!!;
+		ui.button("9")!!;
+		ui.layout_next_row()!!;
+		ui.button("4")!!;
+		ui.button("5")!!;
+		ui.button("6")!!;
+		ui.layout_next_row()!!;
+		ui.button("3")!!;
+		ui.button("2")!!;
+		ui.button("1")!!;
+		ui.layout_next_row()!!;
+		ui.button(".")!!;
+		ui.button("0")!!;
+		ui.button("")!!;
+		
+		ui.layout_next_column()!!;
+		ui.layout_set_column()!!;
+		ui.button("+")!!;
+		ui.button("-")!!;
+		ui.button("*")!!;
+		ui.button("/")!!;
+		
+	}!!;
 }

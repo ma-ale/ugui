@@ -23,6 +23,15 @@ struct ElemDiv {
 	Point origin_r, origin_c;
 }
 
+
+// useful macro to start and end a div, capturing the trailing block
+macro Ctx.@div(&ctx, Rect size, bool scroll_x = false, bool scroll_y = false, ...; @body())
+{
+	ctx.div_begin(size, scroll_x, scroll_y, $vasplat)!;
+	@body();
+	ctx.div_end()!;
+}
+
 // begin a widget container, or div, the size determines the offset (x,y) width and height.
 // if the width or height are zero the width or height are set to the maximum available.
 // if the width or height are negative the width or height will be calculated based on the children size
