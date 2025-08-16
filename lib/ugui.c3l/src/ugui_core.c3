@@ -291,6 +291,11 @@ $endif
 
 	// sort the command buffer by the z-index
 	ctx.cmd_queue.sort()!;
+
+//	foreach (i, c: ctx.cmd_queue) {
+//		io::printf("[%d]: ", i);
+//		io::printn(c);
+//	}
 }
 
 <*

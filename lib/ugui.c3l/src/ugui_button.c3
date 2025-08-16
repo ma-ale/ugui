@@ -64,7 +64,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		.h = (short)max(icon_size.h, content_bounds.h)
 	};
 	icon_bounds = icon_size.center_to(icon_bounds);
-	
+
 	bool is_active = ctx.elem_focus(elem) || elem.events.mouse_hover;
 	Style s = *style;
 	if (is_active) {
@@ -73,11 +73,12 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	}
 
 	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
-	ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
-//	Style ss = {.bg = 0x000000ffu.@to_rgba()};
-//	ctx.push_rect(content_bounds, parent.div.z_index, &ss)!;
-	ctx.push_string(text_bounds, label, parent.div.z_index, style.fg)!;
-	
+	if (icon != "") {
+		ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
+	}
+	if (label != "") {
+		ctx.push_string(text_bounds, label, parent.div.z_index, style.fg)!;
+	}
 	return elem.events;
 }
 

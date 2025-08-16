@@ -56,12 +56,22 @@ to maintain focus until mouse release (fix scroll bars)
 [ ] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
     instead of the curren multi-frame approach.
 [ ] Implement column/row sizing (min, max)
+[ ] Implement a way to size the element as the current row/column size
+    *   +-------------+
+    *   |             |
+    *   +-------------+
+    *   +--+
+    *   |  |
+    *   +--+
+    *   <------------->
+    *     column size
+    See the calculator example for why it is useful
 [ ] Find a way to concile pixel measurements to the mm ones used in css, for example in min/max sizing
     of elements
 [ ] Center elements to div (center children_bounds to the center of the div bounds and shift the origin accordingly)
 [x] Use containing_rect() in position_element() to skip some computing and semplify the function
 [x] Rename position_element() to layout_element()
-[ ] Make functions to mark rows/columns as full, to fix the calculator demo
+[x] Make functions to mark rows/columns as full, to fix the calculator demo
 
 ## Input
 

@@ -212,14 +212,12 @@ $endswitch
 
 		ui.layout_set_floating()!!;
 		// FIXME: I cannot anchor shit to the bottom of the screen
-		ui.div_begin({0, ui.height-150, -300, 150})!!;
-		{
+		ui.@div({0, ui.height-150, -300, 150}) {
 			ui.layout_set_column()!!;
 			ui.text_unbounded(string::tformat("frame %d, fps = %.2f", frame, fps))!!;
 			ui.text_unbounded(string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 			ui.text_unbounded(string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[:ui.input.keyboard.text_len]))!!;
-		};
-		ui.div_end()!!;
+		}!!;
 
 		ui.frame_end()!!;
 		/* End UI Handling */
@@ -324,34 +322,37 @@ fn void debug_app(ugui::Ctx* ui)
 fn void calculator(ugui::Ctx* ui)
 {
 	ui.@div(ugui::DIV_FILL) {
-		ui.@div({0,0,-300,50}) {
+		ui.layout_set_column()!!;
+
+		ui.@div({0,0,250,50}) {
 			ui.text_unbounded("80085")!!;
 		}!!;
 
-		ui.layout_next_row()!!;
-		
-		ui.button("7")!!;
-		ui.button("8")!!;
-		ui.button("9")!!;
-		ui.layout_next_row()!!;
-		ui.button("4")!!;
-		ui.button("5")!!;
-		ui.button("6")!!;
-		ui.layout_next_row()!!;
-		ui.button("3")!!;
-		ui.button("2")!!;
-		ui.button("1")!!;
-		ui.layout_next_row()!!;
-		ui.button(".")!!;
-		ui.button("0")!!;
-		ui.button("")!!;
-		
-		ui.layout_next_column()!!;
-		ui.layout_set_column()!!;
-		ui.button("+")!!;
-		ui.button("-")!!;
-		ui.button("*")!!;
-		ui.button("/")!!;
-		
+		ui.@div({0,0,250,-100}) {
+			ui.layout_set_row()!!;
+
+			ui.button("7")!!;
+			ui.button("8")!!;
+			ui.button("9")!!;
+			ui.layout_next_row()!!;
+			ui.button("4")!!;
+			ui.button("5")!!;
+			ui.button("6")!!;
+			ui.layout_next_row()!!;
+			ui.button("3")!!;
+			ui.button("2")!!;
+			ui.button("1")!!;
+			ui.layout_next_row()!!;
+			ui.button(".")!!;
+			ui.button("0")!!;
+			//ui.button("")!!;
+			
+			ui.layout_next_column()!!;
+			ui.layout_set_column()!!;
+			ui.button("+")!!;
+			ui.button("-")!!;
+			ui.button("*")!!;
+			ui.button("/")!!;
+		}!!;
 	}!!;
 }
