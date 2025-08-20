@@ -319,40 +319,91 @@ fn void debug_app(ugui::Ctx* ui)
 	ui.div_end()!!;
 }
 
+import std::os::process;
+
 fn void calculator(ugui::Ctx* ui)
 {
+	static char[128] buffer;
+	static usz len;
+	bool eval;
+	
+	// keyboard input
+	switch(ui.get_keys()) {
+	case "+": nextcase;
+	case "-": nextcase;
+	case "*": nextcase;
+	case "/": nextcase;
+	case "(": nextcase;
+	case ")": nextcase;
+	case "0": nextcase;
+	case "1": nextcase;
+	case "2": nextcase;
+	case "3": nextcase;
+	case "4": nextcase;
+	case "5": nextcase;
+	case "6": nextcase;
+	case "7": nextcase;
+	case "8": nextcase;
+	case "9":
+		buffer[len++] = ui.get_keys()[0];
+	case "\n":
+		eval = true;
+	case "c":
+		len = 0;
+	case "d":
+		len--;
+	}
+
+	// ui input/output
 	ui.@div(ugui::DIV_FILL) {
 		ui.layout_set_column()!!;
 
 		ui.@div({0,0,250,50}) {
-			ui.text_unbounded("80085")!!;
+			ui.text_unbounded((String)buffer[:len])!!;
 		}!!;
 
 		ui.@div({0,0,250,-100}) {
 			ui.layout_set_row()!!;
 
-			ui.button("7")!!;
-			ui.button("8")!!;
-			ui.button("9")!!;
+			ui.button("7")!!.mouse_press ? buffer[len++] = '7' : 0;
+			ui.button("8")!!.mouse_press ? buffer[len++] = '8' : 0;
+			ui.button("9")!!.mouse_press ? buffer[len++] = '9' : 0;
 			ui.layout_next_row()!!;
-			ui.button("4")!!;
-			ui.button("5")!!;
-			ui.button("6")!!;
+			ui.button("4")!!.mouse_press ? buffer[len++] = '4' : 0;
+			ui.button("5")!!.mouse_press ? buffer[len++] = '5' : 0;
+			ui.button("6")!!.mouse_press ? buffer[len++] = '6' : 0;
 			ui.layout_next_row()!!;
-			ui.button("3")!!;
-			ui.button("2")!!;
-			ui.button("1")!!;
+			ui.button("3")!!.mouse_press ? buffer[len++] = '3' : 0;
+			ui.button("2")!!.mouse_press ? buffer[len++] = '2' : 0;
+			ui.button("1")!!.mouse_press ? buffer[len++] = '1' : 0;
 			ui.layout_next_row()!!;
-			ui.button(".")!!;
-			ui.button("0")!!;
-			//ui.button("")!!;
+			ui.button("0")!!.mouse_press ? buffer[len++] = '0' : 0;
+			ui.button(".")!!.mouse_press ? buffer[len++] = '.' : 0;
+			ui.button("(")!!.mouse_press ? buffer[len++] = '(' : 0;
 			
 			ui.layout_next_column()!!;
-			ui.layout_set_column()!!;
-			ui.button("+")!!;
-			ui.button("-")!!;
-			ui.button("*")!!;
-			ui.button("/")!!;
+			
+			ui.@div({0,0,0,-1}) {
+				ui.button("C")!!.mouse_press ? len = 0 : 0;
+				ui.button("D")!!.mouse_press ? len-- : 0;
+				ui.layout_next_row()!!;
+				ui.button("x")!!.mouse_press ? buffer[len++] = '*' : 0;
+				ui.button("/")!!.mouse_press ? buffer[len++] = '/' : 0;
+				ui.layout_next_row()!!;
+				ui.button("+")!!.mouse_press ? buffer[len++] = '+' : 0;
+				ui.button("-")!!.mouse_press ? buffer[len++] = '-' : 0;
+				ui.layout_next_row()!!;
+				ui.button(")")!!.mouse_press ? buffer[len++] = ')' : 0;
+				
+				// eval the expression with 'bc'
+				if (ui.button("=")!!.mouse_press || eval) {
+					char[128] out;
+					String y = string::tformat("echo '%s' | bc", (String)buffer[:len]);
+					String x = process::execute_stdout_to_buffer(out[:128], (String[]){"sh", "-c", y}) ?? "";
+					buffer[:x.len] = x[..];
+					len = x.len;
+				}
+			}!!;
 		}!!;
 	}!!;
 }

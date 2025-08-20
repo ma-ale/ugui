@@ -195,6 +195,8 @@ fn void Ctx.input_char(&ctx, char c)
 	ctx.input_text_utf8(b[..]);
 }
 
+fn String Ctx.get_keys(&ctx) => (String)ctx.input.keyboard.text[:ctx.input.keyboard.text_len];
+
 // Modifier keys, like control or backspace
 // TODO: make this call repetible to input modkeys one by one
 fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys)
