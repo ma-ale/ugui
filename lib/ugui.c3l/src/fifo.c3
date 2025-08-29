@@ -9,21 +9,23 @@ import std::sort;
 // TODO: specify the allocator
 
 struct Fifo {
+	Allocator allocator;
 	Type[] arr;
 	usz out;
 	usz count;
 }
 
-fn void? Fifo.init(&fifo, usz size)
+fn void? Fifo.init(&fifo, usz size, Allocator allocator)
 {
-	fifo.arr = mem::new_array(Type, size);
+	fifo.allocator = allocator;
+	fifo.arr = allocator::new_array(fifo.allocator, Type, size);
 	fifo.out = 0;
 	fifo.count = 0;
 }
 
 fn void Fifo.free(&fifo)
 {
-	(void)mem::free(fifo.arr);
+	(void)allocator::free(fifo.allocator, fifo.arr);
 }
 
 fn void? Fifo.enqueue(&fifo, Type *elem)
@@ -69,8 +71,8 @@ macro usz Fifo.len(&fifo) @operator(len)
 
 fn void? Fifo.sort(&fifo)
 {
-	Type[] arr = mem::new_array(Type, fifo.count);
-	defer mem::free(arr);
+	Type[] arr = allocator::new_array(fifo.allocator, Type, fifo.count);
+	defer allocator::free(fifo.allocator, arr);
 
 	foreach(i, c: fifo) {
 		arr[i] = c;

@@ -6,6 +6,7 @@ import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
 import std::ascii;
+import std::core::mem::allocator;
 import sdlrenderer::ren;
 import sdl3::sdl;
 
@@ -58,8 +59,13 @@ const char[*] STYLESHEET_PATH = "resources/style.css";
 
 fn int main(String[] args)
 {
+	ArenaAllocator arena;
+	char[] mem = mem::new_array(char, 1024*1024);
+	defer (void)mem::free(mem);
+	arena.init(mem);
+
 	ugui::Ctx ui;
-	ui.init()!!;
+	ui.init(&arena)!!;
 	defer ui.free();
 
 	ren::Renderer ren;

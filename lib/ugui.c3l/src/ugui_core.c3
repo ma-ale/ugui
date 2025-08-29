@@ -187,18 +187,18 @@ fn Elem*? Ctx.get_active_div(&ctx)
 	return ctx.cache.search(id);
 }
 
-fn void? Ctx.init(&ctx)
+fn void? Ctx.init(&ctx, Allocator allocator)
 {
-	ctx.tree.init(MAX_ELEMENTS)!;
+	ctx.tree.init(MAX_ELEMENTS, allocator)!;
 	defer catch { (void)ctx.tree.free(); }
 
-	ctx.cache.init()!;
+	ctx.cache.init(allocator)!;
 	defer catch { (void)ctx.cache.free(); }
 
-	ctx.cmd_queue.init(MAX_CMDS)!;
+	ctx.cmd_queue.init(MAX_CMDS, allocator)!;
 	defer catch { (void)ctx.cmd_queue.free(); }
 
-	ctx.styles.init(allocator::heap());
+	ctx.styles.init(allocator);
 	ctx.styles.register_style(&DEFAULT_STYLE, @str_hash("default"));
 	defer catch { ctx.styles.free(); }
 

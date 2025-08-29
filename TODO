@@ -5,7 +5,7 @@
 [x] Port font system from C to C3 (rewrite1)
 [ ] Update ARCHITECTURE.md
 [ ] Write a README.md
-[ ] Use an arena allocator for cache
+[x] Use an arena allocator for cache
 [ ] Do not redraw if there was no update (no layout and no draw)
 [ ] Do command buffer damage tracking based on a context grid (see rxi writeup)
 [x] Better handling of the active and focused widgets, try

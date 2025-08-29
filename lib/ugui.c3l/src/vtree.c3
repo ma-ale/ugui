@@ -4,39 +4,43 @@ faultdef CANNOT_SHRINK, INVALID_REFERENCE, TREE_FULL, REFERENCE_NOT_PRESENT, INV
 module vtree{ElemType};
 
 import std::core::mem;
+import std::core::mem::allocator;
 import std::io;
 
 struct VTree {
+	Allocator allocator;
 	usz elements;
 	ElemType[] vector; // vector of element ids
 	isz[] refs, ordered_refs;
 }
 
 
-macro VTree.ref_is_valid(&tree, isz ref) { return (ref >= 0 && ref < tree.refs.len); }
-macro VTree.ref_is_present(&tree, isz ref) { return tree.refs[ref] >= 0; }
-macro VTree.size(&tree) { return tree.refs.len; }
+macro VTree.ref_is_valid(&tree, isz ref) => (ref >= 0 && ref < tree.refs.len);
+macro VTree.ref_is_present(&tree, isz ref) => tree.refs[ref] >= 0;
+macro VTree.size(&tree) => tree.refs.len;
 
-// macro to zero an elemen
+// macro to zero an element
 macro @zero()
 {
-	$if $assignable(0, ElemType):
+	$if @assignable_to(0, ElemType):
 		return 0;
 	$else
 		return {};
 	$endif
 }
 
-fn void? VTree.init(&tree, usz size)
+fn void? VTree.init(&tree, usz size, Allocator allocator)
 {
-	tree.vector = mem::new_array(ElemType, size);
-	defer catch { (void)mem::free(tree.vector); }
+	tree.allocator = allocator;
 
-	tree.refs = mem::new_array(isz, size);
-	defer catch { (void)mem::free(tree.refs); }
+	tree.vector = allocator::new_array(tree.allocator, ElemType, size);
+	defer catch { (void)allocator::free(tree.allocator, tree.vector); }
 
-	tree.ordered_refs = mem::new_array(isz, size);
-	defer catch { (void)mem::free(tree.ordered_refs); }
+	tree.refs = allocator::new_array(tree.allocator, isz, size);
+	defer catch { (void)allocator::free(tree.allocator, tree.refs); }
+
+	tree.ordered_refs = allocator::new_array(tree.allocator, isz, size);
+	defer catch { (void)allocator::free(tree.allocator, tree.ordered_refs); }
 
 	// set all refs to -1, meaning invalid (free) element
 	tree.refs[..] = -1;
@@ -46,9 +50,9 @@ fn void? VTree.init(&tree, usz size)
 
 fn void VTree.free(&tree)
 {
-	(void)mem::free(tree.vector);
-	(void)mem::free(tree.refs);
-	(void)mem::free(tree.ordered_refs);
+	(void)allocator::free(tree.allocator, tree.vector);
+	(void)allocator::free(tree.allocator, tree.refs);
+	(void)allocator::free(tree.allocator, tree.ordered_refs);
 }
 
 fn void VTree.pack(&tree)
@@ -102,14 +106,14 @@ fn void? VTree.resize(&tree, usz newsize)
 
 	usz old_size = tree.size();
 
-	tree.vector = ((ElemType*)mem::realloc(tree.vector, newsize*ElemType.sizeof))[:newsize];
-	defer catch { (void)mem::free(tree.vector); }
+	tree.vector = ((ElemType*)allocator::realloc(tree.allocator, tree.vector, newsize*ElemType.sizeof))[:newsize];
+	defer catch { (void)allocator::free(tree.allocator, tree.vector); }
 
-	tree.refs = ((isz*)mem::realloc(tree.refs, newsize*isz.sizeof))[:newsize];
-	defer catch { (void)mem::free(tree.refs); }
+	tree.refs = ((isz*)allocator::realloc(tree.allocator, tree.refs, newsize*isz.sizeof))[:newsize];
+	defer catch { (void)allocator::free(tree.allocator, tree.refs); }
 
-	tree.ordered_refs = ((isz*)mem::realloc(tree.ordered_refs, newsize*isz.sizeof))[:newsize];
-	defer catch { (void)mem::free(tree.ordered_refs); }
+	tree.ordered_refs = ((isz*)allocator::realloc(tree.allocator, tree.ordered_refs, newsize*isz.sizeof))[:newsize];
+	defer catch { (void)allocator::free(tree.allocator, tree.ordered_refs); }
 
 	if (newsize > tree.size()) {
 		tree.vector[old_size..newsize-1] = @zero();
