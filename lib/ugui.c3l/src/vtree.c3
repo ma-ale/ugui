@@ -24,9 +24,17 @@ macro @zero()
 {
 	$if @assignable_to(0, ElemType):
 		return 0;
-	$else
+	$endif
+
+	$if @assignable_to(null, ElemType):
+		return null;
+	$endif
+
+	$if @assignable_to({}, ElemType):
 		return {};
 	$endif
+
+	//$assert true == false : ElemType.nameof +++ " is not assignable to zero or equivalent";
 }
 
 fn void? VTree.init(&tree, usz size, Allocator allocator)
@@ -216,6 +224,8 @@ fn usz? VTree.subtree_size(&tree, isz ref)
 
 	return count;
 }
+
+fn bool? VTree.is_root(&tree, isz node) => node == tree.parentof(node)!;
 
 // iterate through the first level children, use a cursor like strtok_r
 fn isz? VTree.children_it(&tree, isz parent, isz *cursor)

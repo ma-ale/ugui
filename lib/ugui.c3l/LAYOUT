@@ -1,0 +1,220 @@
+               Div Children Alignment             
++------------------------------------------------+
+|TOP-LEFT              TOP              TOP-RIGHT|
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|LEFT                 CENTER                RIGHT|
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|                                                |
+|BOTTOM-LEFT          BOTTOM         BOTTOM-RIGHT|
++------------------------------------------------+
+
+ALIGNMENT CHART:
++------------------------------+----------------------+------------------------------+-----------------------+------------------------------+----------------------+
+|       TOP-LEFT,  ROW:        |  TOP-LEFT, COLUMN:   |          BOTTOM, ROW:        |     BOTTOM, COLUMN:   |       TOP-RIGHT,  ROW:       |  TOP-RIGHT, COLUMN:  |
+|                              |                      |                              |                       |                              |                      |
+| +------------------------- - |    +----------- -    |                              |        +----+         |                              |  - -----------+      |
+| |+-------++-----++-----+     |    |+-------+        |                              |        | E1 |         |                              |      +-------+|      |
+| ||  E1   || E2  ||     |     |    ||  E1   |        |                              |        |    |         |  - -----------------------+  |      |  E1   ||      |
+| ||       |+-----+|  E3 |     |    ||       |        |                              |        +----+         |    +-------++-----++-----+|  |      |       ||      |
+| |+-------+       |     |     |    |+-------+        |    +-------+        +---+    |       +------+        |    |  E1   || E2  ||     ||  |      +-------+|      |
+| |                +-----+     |    |+----+           |    |  E1   |+------+|E3 |    |       |  E2  |        |    |       |+-----+|  E3 ||  |         +----+|      |
+| '                            |    || E2 |           |    |       ||  E2  ||   |    |       |      |        |    +-------+       |     ||  |         | E2 ||      |
+| '                            |    |+----+           |    +-------++------++---+    |       +------+        |                    +-----+|  |         +----+|      |
+|                              |    |+---------+      | - ------------------------ - |         +--+          |                           '  |    +---------+|      |
+|                              |    ||   E3    |      |                              |         |E3|          |                           '  |    |   E3    ||      |
+|                              |    |+---------+      |                              |         +--+          |                              |    +---------+|      |
+|                              |    '                 |                              |   - ----------- -     |                              |               '      |
+|                              |    '                 |                              |                       |                              |               '      |
+|                              |                      |                              |                       |                              |                      |
++------------------------------+----------------------+------------------------------+-----------------------+------------------------------+----------------------+
+|         LEFT, ROW:           |     LEFT, COLUMN:    |     BOTTOM-RIGHT, ROW:       | BOTTOM-RIGHT, COLUMN: |          TOP, ROW:           |     TOP, COLUMN:     |
+|                              |                      |                              |                       |                              |                      |
+|                              |    '                 |                              |                 '     |                              |  - -------------- -  |
+|    '                         |    |+-------+        |                              |        +-------+|     |                              |     +----------+     |
+|    |               +----+    |    ||  E1   |        |                           '  |        |  E1   ||     |  - ----------------------- - |     |    E1    |     |
+|    |+------+       |    |    |    ||       |        |                    +-----+|  |        |       ||     |     +------++----++-----+    |     |          |     |
+|    ||      |+-----+|    |    |    |+-------+        |    +-------+       |     ||  |        +-------+|     |     |  E1  || E2 || E3  |    |     +----------+     |
+|    ||  E1  || E2  || E3 |    |    |+----+           |    |  E1   |+-----+|  E3 ||  |           +----+|     |     |      |+----+|     |    |      +--------+      |
+|    ||      |+-----+|    |    |    || E2 |           |    |       || E2  ||     ||  |           | E2 ||     |     +------+      |     |    |      |   E2   |      |
+|    |+------+       |    |    |    |+----+           |    +-------++-----++-----+|  |           +----+|     |                   +-----+    |      +--------+      |
+|    |               +----+    |    |+---------+      |  - -----------------------+  |      +---------+|     |                              |       +------+       |
+|    '                         |    ||   E3    |      |                              |      |   E3    ||     |                              |       |  E3  |       |
+|    '                         |    |+---------+      |                              |      +---------+|     |                              |       |      |       |
+|                              |    '                 |                              |    - -----------+     |                              |       +------+       |
+|                              |    '                 |                              |                       |                              |                      |
++------------------------------+----------------------+------------------------------+-----------------------+------------------------------+----------------------+
+|      BOTTOM-LEFT,  ROW:      | BOTTOM-LEFT, COLUMN: |        RIGHT, ROW:           |     RIGHT, COLUMN:    |        CENTER, ROW:          |    CENTER, COLUMN:   |
+|                              |                      |                              |                       |                              |                      |
+|                              |    '                 |                              |                 '     |                              |           |          |
+|                              |    |+-------+        |                              |        +-------+|     |              |               |     +-----------+    |
+|                              |    ||  E1   |        |                          '   |        |  E1   ||     |              |               |     |    E1     |    |
+| '                            |    ||       |        |                    +----+|   |        |       ||     |              |   +----+      |     |     |     |    |
+| |                +-----+     |    |+-------+        |     +------+       |    ||   |        +-------+|     |    +------+  |   |    |      |     +-----------+    |
+| |+-------+       |     |     |    |+----+           |     |      |+-----+|    ||   |           +----+|     |    |      |+----+|    |      |      +---------+     |
+| ||  E1   |+-----+|  E3 |     |    || E2 |           |     |  E1  || E2  || E3 ||   |           | E2 ||     | ---|--E1--||-E2-||-E3-|---   |  ----|---E2----|---- |
+| ||       || E2  ||     |     |    |+----+           |     |      |+-----+|    ||   |           +----+|     |    |      |+----+|    |      |      +---------+     |
+| |+-------++-----++-----+     |    |+---------+      |     +------+       |    ||   |      +---------+|     |    +------+  |   |    |      |       +-------+      |
+| +------------------------- - |    ||   E3    |      |                    +----+|   |      |   E3    ||     |              |   +----+      |       |  E3   |      |
+|                              |    |+---------+      |                          '   |      +---------+|     |              |               |       |   |   |      |
+|                              |    +----------- -    |                          '   |                 '     |              |               |       +-------+      |
+|                              |                      |                              |                 '     |                              |           |          |
+|                              |                      |                              |                       |                              |                      |
++------------------------------+----------------------+------------------------------+-----------------------+------------------------------+----------------------+
+
+div (
+	align: TOP-LEFT | LEFT | BOTTOM-LEFT | BOTTOM | BOTTOM-RIGHT | RIGHT | TOP-RIGHT | RIGHT | CENTER
+	size_x/y: EXACT(x) | GROW() | FIT(min, max)
+	scroll_x/y: true | false
+	resize_x/y: true | false
+	layout: ROW | COLUMN
+)
+
+align: alignment of the children elements
+size: how the div should be sized
+scroll: enables scrollbars
+layout: the layout direction of the children
+
+         COLUMN                                    ROW
+ +--------------------+   +----------------------------------------------------+
+ | +----------------+ |   |+----------------+              +------------------+|
+ | |                | |   ||                |+------------+|                  ||
+ | |                | |   ||                ||            ||        E3        ||
+ | |       E1       | |   ||       E1       ||     E2     ||                  ||
+ | |                | |   ||                ||            ||                  ||
+ | |                | |   ||                |+------------++------------------+|
+ | +----------------+ |   |+----------------+                                  |
+ |   +------------+   |   +----------------------------------------------------+
+ |   |            |   |
+ |   |     E2     |   |
+ |   |            |   |
+ |   +------------+   |
+ |+------------------+|
+ ||                  ||
+ ||        E3        ||
+ ||                  ||
+ ||                  ||
+ |+------------------+|
+ +--------------------+
+ 
+Element {
+	id: uint
+	sizing: { min_w, min_h max_w, max_h }
+	bounds: { x, y, w, h }
+}
+
+id: unique identifier of the element
+sizing: the size that the element wants
+bounds: the absoulte bounds that the element got assigned
+
+Rendering
+=========
+
+Rendering happens when the element is called (immediately for leaf widgets like buttons and at the end
+for root widgets like divs). The drawing is done on the bounds assigned to the widget, these bounds
+have a one-frame delay on the current layout.
+
+The layout is calculated by each div at the end of their block and at frame end all the sizes and positions 
+are assigned at frame end by iterating the element tree.
+
+ElemDiv {
+	align: TOP-LEFT | LEFT | BOTTOM-LEFT | BOTTOM | BOTTOM-RIGHT | RIGHT | TOP-RIGHT | RIGHT | CENTER
+	size_x/y: { min, max }
+	scroll_x/y: true | false
+	layout: ROW | COLUMN
+	children_size_x/y: { min, max }
+}
+
+size:
+	- min != max      -> FIT sizing, fit to the content but respect the min and max size
+	- min == max == 0 -> GROW sizing, grow to the max amount of space possible
+	- min == max != 0 -> EXACT sizing
+children_size: the size of the combined children sizes
+
+
+
+root(size_x: screen width, size_y: screen height, layout: ROW) {
+
+	div1(layout: COLUMN, size_x: FIT, size_y GROW, resize_x: true) {
+		E1()
+		E2()
+		E3()
+		E4()
+	} <-(end div 1)
+
+	div2(size_x: GROW, size_y: GROW) {
+		...
+	} <-(end div 2)
+
+	div3(layout: COLUMN, size_x: FIT, size_y: GROW) {
+		E5()
+		E6()
+		E7()
+	} <-(end div 3)
+
+} <-(end root)
+(frame end)
+
+
++-Root-Div------------------------------------------------+
+|+-Div-1----------++-Div-2--------------------++-Div-3---+|
+||+--------------+||                          ||+-------+||
+|||     E1       |||                          |||  E5   |||
+|||              |||                          |||       |||
+||+--------------+||                          ||+-------+||                 [Root Div]
+||+--------------+||                          ||+-------+||                     |
+|||     E2       |||                          |||  E6   |||          +----------+----+-------+
+|||              |||                          |||       |||          v               v       v
+||+--------------+||                          ||+-------+||       [Div 1]         [Div 2] [Div 3]
+||+------+        ||                          ||+-------+||          |                       |
+|||      |        ||                          |||  E7   |||     +----+----+----+             |
+|||  E3  |        ||                          |||       |||     v    v    v    v             |
+|||      |        ||                          ||+-------+||    [E1] [E2] [E3] [E4]      +----+----+
+||+------+        ||                          ||         ||                             v    v    v
+||+------+        ||                          ||         ||                            [E5] [E6] [E7]
+|||      |        ||                          ||         ||
+|||  E4  |        ||                          ||         ||
+|||      |        ||                          ||         ||
+||+------+        ||                          ||         ||
+||                ||                          ||         ||
+|+----------------++--------------------------++---------+|
++---------------------------------------------------------+
+
+the call order is as follows
+
+E1()       -> updates the children size of div1
+E2()       -> " "
+E3()       -> " "
+E4()       -> " "
+end div1() -> updates the children size of root
+end div2() -> updates the children size of root
+E5()       -> updates the children size of div3
+E6()       -> " "
+E7()       -> " "
+end root() -> does nothing
+
+at frame end:
+	* Root: the root has a size constraint of fit so the bounds get assigned the whole window
+	* Div 1: the width has a size of fit, so it gets set to the children bounds, the height is set
+	  to the root height since it has a height of GROW
+		- E1 to E4 get laid out
+	* Div 2: it has a width of GROW which is **along** the layout axis, so it gets added to grow list
+	  the height gets set to the root height
+	* Div 3: the width is FIT, so it gets set to the content width, the height gets se to the root
+	  height.
+		- E5 to E7 get laid out
+	* Div 2: is given a width (if there were other contending grow divs along the layout axis they
+	  would also get sized).
+		- Now that div 2 has a size all it's children can be given a size
+
+Styling
+=======
+
