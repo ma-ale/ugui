@@ -21,8 +21,8 @@ enum Anchor {
 }
 
 struct Layout {
-	Size w, h;
-	struct children {
+	Size w, h; // size of the CONTENT, does not include margin, border and padding
+	struct children { // the children size includes the children's margin/border/pading 
 		Size w, h;
 	}
 	ushort grow_children;
@@ -32,24 +32,22 @@ struct Layout {
 	}
 	LayoutDirection dir;
 	Anchor anchor;
-	// FIXME: all this cruft with margin border and padding could be resolved by simply providing
-	//        a "Rect content_offset" that represents the combined effect of all three above 
-	Rect margin, border, padding;
+	Rect content_offset; // combined effect of margin, border and padding
 }
 
 // Total width of a layout element, complete with margin, border and padding
 macro Size Layout.total_width(&el)
 {
-	Rect min = (Rect){.w = el.w.min, .h = el.h.min}.expand(el.margin).expand(el.border).expand(el.padding);
-	Rect max = (Rect){.w = el.w.max, .h = el.h.max}.expand(el.margin).expand(el.border).expand(el.padding);
+	Rect min = (Rect){.w = el.w.min, .h = el.h.min}.expand(el.content_offset);
+	Rect max = (Rect){.w = el.w.max, .h = el.h.max}.expand(el.content_offset);
 	return {.min = min.w, .max = max.w};
 }
 
 // Total height of a layout element, complete with margin, border and padding
 macro Size Layout.total_height(&el)
 {
-	Rect min = (Rect){.w = el.w.min, .h = el.h.min}.expand(el.margin).expand(el.border).expand(el.padding);
-	Rect max = (Rect){.w = el.w.max, .h = el.h.max}.expand(el.margin).expand(el.border).expand(el.padding);
+	Rect min = (Rect){.w = el.w.min, .h = el.h.min}.expand(el.content_offset);
+	Rect max = (Rect){.w = el.w.max, .h = el.h.max}.expand(el.content_offset);
 	return {.min = min.h, .max = max.h};
 }
 
@@ -57,8 +55,8 @@ macro Size Layout.total_height(&el)
 macro Point Elem.content_space(&e)
 {
 	return {
-		.x = e.bounds.w - e.layout.border.x - e.layout.border.w - e.layout.padding.x - e.layout.padding.w,
-		.y = e.bounds.h - e.layout.border.y - e.layout.border.h - e.layout.padding.y - e.layout.padding.h,
+		.x = e.bounds.w - e.layout.content_offset.x - e.layout.content_offset.w,
+		.y = e.bounds.h - e.layout.content_offset.y - e.layout.content_offset.h,
 	};
  }
 
@@ -94,7 +92,7 @@ fn void update_children_bounds(Elem* child, Elem* parent)
 	parent.children_bounds = containing_rect(child.bounds, parent.bounds);
 }
 
-macro Rect Elem.content_bounds(&elem, style) => elem.bounds.pad(style.border).pad(style.padding);
+macro Rect Elem.content_bounds(&elem) => elem.bounds.pad(elem.layout.content_offset);
 
 /*
 macro Rect Elem.get_view(&elem)
@@ -120,16 +118,11 @@ macro Point Elem.get_view_off(&elem)
 // Assign the width and height of an element in the directions that it doesn't need to grow
 fn void resolve_dimensions(Elem* e, Elem* p)
 {
-	// The element's border and paddign total width and height
-	Point m_tot = {.x = e.layout.margin.x + e.layout.margin.w, .y = e.layout.margin.y + e.layout.margin.h};
-	Point b_tot = {.x = e.layout.border.x + e.layout.border.w, .y = e.layout.border.y + e.layout.border.h};
-	Point p_tot = {.x = e.layout.padding.x + e.layout.padding.w, .y = e.layout.padding.y + e.layout.padding.h};
-
 	// ASSIGN WIDTH
 	switch {
 	case e.layout.w.@is_exact():
-		// if width is exact then assign it to the bounds and add border and paddign
-		e.bounds.w = e.layout.w.min + b_tot.x + p_tot.x;
+		// if width is exact then assign it to the bounds
+		e.bounds.w = e.layout.total_width().min;
 	case e.layout.w.@is_grow():
 		// done in another pass
 		break;
@@ -140,20 +133,10 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 
 		if (combined.min <= combined.max) { // OK!
 			// the final element width is the content width plus padding and border
-			e.bounds.w = min(elem_width.max, children_width.max) + b_tot.x + p_tot.x;
+			e.bounds.w = min(elem_width.max, children_width.max) + e.layout.content_offset.x + e.layout.content_offset.w;
 		} else {
 			unreachable("Cannot fit children width: min:%d max:%d", combined.min, combined.max);
 		}
-		/*
-		Size w = e.needed_width().combine(e.layout.children.w);
-		if (w.max >= w.min) { // OK!
-			e.bounds.w = w.min;
-		} else {
-			println(e.needed_width(), " ", e.needed_height());
-			println(e.layout.children.w, " ", e.layout.children.h);
-			unreachable("Cannot fit children width: min:%d max:%d", w.min, w.max);
-		}
-		*/
 	default: unreachable("width is not exact, grow or fit");
 	}
 
@@ -161,7 +144,7 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 	switch {
 	case e.layout.h.@is_exact():
 		// if width is exact then assign it to the bounds and add border and paddign
-		e.bounds.h = e.layout.h.min + b_tot.y + p_tot.y;
+		e.bounds.h = e.layout.total_height().min;
 	case e.layout.h.@is_grow():
 		break;
 		// done in another pass
@@ -172,47 +155,34 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 
 		if (combined.min <= combined.max) { // OK!
 			// the final element width is the content width plus padding and border
-			e.bounds.h = min(elem_height.max, children_height.max) + b_tot.y + p_tot.y;
+			e.bounds.h = min(elem_height.max, children_height.max) + e.layout.content_offset.y + e.layout.content_offset.h;
 		} else {
 			unreachable("Cannot fit children height: min:%d max:%d", combined.min, combined.max);
 		}
-		/*
-		Size h = e.needed_height().combine(e.layout.children.h);
-		if (h.max >= h.min) { // OK!
-			e.bounds.h = h.max;
-		} else {
-			unreachable("Cannot fit children height: min:%d max:%d", h.min, h.max);
-		}
-		*/
 	default: unreachable("width is not exact, grow or fit");
 	}
 
-	// the occupied space must account for the element's margin as well
 	switch (p.layout.dir) {
 	case ROW:
-		if (!e.layout.w.@is_grow()) p.layout.occupied += e.bounds.w + m_tot.x;
+		if (!e.layout.w.@is_grow()) p.layout.occupied += e.bounds.w;
 	case COLUMN:
-		if (!e.layout.h.@is_grow()) p.layout.occupied += e.bounds.h + m_tot.y;
+		if (!e.layout.h.@is_grow()) p.layout.occupied += e.bounds.h;
 	}
 }
 
 fn void resolve_grow_elements(Elem* e, Elem* p)
 {
-	Point m_tot = {.x = e.layout.margin.x + e.layout.margin.w, .y = e.layout.margin.y + e.layout.margin.h};
-	Point b_tot = {.x = e.layout.border.x + e.layout.border.w, .y = e.layout.border.y + e.layout.border.h};
-	Point p_tot = {.x = e.layout.padding.x + e.layout.padding.w, .y = e.layout.padding.y + e.layout.padding.h};
-
 	// WIDTH
 	if (e.layout.w.@is_grow()) {
 		if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().x - p.layout.occupied) / p.layout.grow_children);
 			// the space slot accounts for the total size, while the element bounds does not account 
 			// for the margin
-			e.bounds.w = slot - m_tot.x;
+			e.bounds.w = slot;
 			p.layout.grow_children--;
 			p.layout.occupied += slot;
 		} else if (p.layout.dir == COLUMN) { // grow across the layout axis, inherit width of the parent
-			e.bounds.w = p.content_space().x - m_tot.x;
+			e.bounds.w = p.content_space().x;
 		}
 	}
 	
@@ -220,11 +190,11 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 	if (e.layout.h.@is_grow()) {
 		if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().y - p.layout.occupied) / p.layout.grow_children);
-			e.bounds.h = slot - m_tot.y;
+			e.bounds.h = slot;
 			p.layout.grow_children--;
 			p.layout.occupied += slot;
 		} else if (p.layout.dir == ROW) { // grow across the layout axis, inherit width of the parent
-			e.bounds.h = p.content_space().y - m_tot.y;
+			e.bounds.h = p.content_space().y;
 		}
 	}
 }
@@ -235,8 +205,8 @@ fn void resolve_placement(Elem* c, Elem* p)
 	Layout* cl = &c.layout;
 
 	Point off = {
-		.x = p.bounds.x + pl.origin.x + cl.margin.x,
-		.y = p.bounds.y + pl.origin.y + cl.margin.x,
+		.x = p.bounds.x + pl.origin.x,
+		.y = p.bounds.y + pl.origin.y,
 	};
 
 	switch (pl.anchor) {
@@ -320,9 +290,9 @@ fn void resolve_placement(Elem* c, Elem* p)
 
 	switch (pl.dir) {
 	case ROW:
-		pl.origin.x += c.bounds.w + cl.margin.x + cl.margin.w;
+		pl.origin.x += c.bounds.w;
 	case COLUMN:
-		pl.origin.y += c.bounds.h + cl.margin.x + cl.margin.w;
+		pl.origin.y += c.bounds.h;
 	default: unreachable("unknown layout direction");
 	}
 	
@@ -336,8 +306,8 @@ fn void Ctx.layout_element_tree(&ctx)
 	for (; current >= 0; current = ctx.tree.level_order_it(0, &cursor)!!) {
 		Elem* p = ctx.find_elem(ctx.tree.get(current))!!;
 		// offset the origin by the margin
-		p.layout.origin.x = p.layout.border.x + p.layout.padding.x;
-		p.layout.origin.y = p.layout.border.y + p.layout.padding.y;
+		p.layout.origin.x = p.layout.content_offset.x;
+		p.layout.origin.y = p.layout.content_offset.y;
 
 		// RESOLVE KNOWN DIMENSIONS
 		isz ch_cur = 0;

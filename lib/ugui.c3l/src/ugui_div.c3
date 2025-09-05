@@ -78,15 +78,13 @@ fn void? Ctx.div_begin_id(&ctx,
 		.h = height,
 		.dir = dir,
 		.anchor = anchor,
-		.margin = style.margin,
-		.border = style.border,
-		.padding = style.padding,
+		.content_offset = style.margin.add(style.border).add(style.padding),
 	};
 	
 	// update parent grow children
 	update_parent_grow(elem, parent);
 
-	ctx.push_rect(elem.bounds, elem.div.z_index, style)!;
+	ctx.push_rect(elem.bounds.pad(style.margin), elem.div.z_index, style)!;
 
 	elem.events = ctx.get_elem_events(elem);
 

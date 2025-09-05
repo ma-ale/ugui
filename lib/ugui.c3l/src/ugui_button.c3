@@ -49,9 +49,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		.max = (short)max(min_size, left_pad + icon_size.w + text_size.height.max + right_pad),
 	};
 	// add style border and padding
-	elem.layout.margin = style.margin;
-	elem.layout.border = style.border;
-	elem.layout.padding = style.padding;
+	elem.layout.content_offset = style.margin.add(style.border).add(style.padding);
 
 	elem.layout.children.w = elem.layout.w;
 	elem.layout.children.h = elem.layout.h;
@@ -60,7 +58,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);
-	Rect content_bounds = elem.content_bounds(style);
+	Rect content_bounds = elem.content_bounds();
 	
 	Rect text_bounds = {
 		.x = content_bounds.x + icon_size.w + left_pad + inner_pad,
@@ -85,7 +83,8 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		s.bg = s.accent;
 	}
 
-	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
+	Rect border_bounds = elem.bounds.pad(style.margin);
+	ctx.push_rect(border_bounds, parent.div.z_index, &s)!;
 	if (icon != "") {
 		ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
 	}
