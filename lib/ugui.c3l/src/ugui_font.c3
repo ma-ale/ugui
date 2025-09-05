@@ -9,10 +9,33 @@ import std::io;
 import std::ascii;
 
 
+// ---------------------------------------------------------------------------------- //
+//                                CODEPOINT                                           //
+// ---------------------------------------------------------------------------------- //
+
 // unicode code point, different type for a different hash
 alias Codepoint = uint;
 
+<*
+@require off != null
+@require str.ptr != null
+*>
+fn Codepoint str_to_codepoint(char[] str, usz* off)
+{
+	Codepoint cp;
+	isz b = grapheme::decode_utf8(str, str.len, (uint*)&cp);
+	if (b == 0 || b > str.len) {
+		return 0;
+	}
+	*off = b;
+	return cp;
+}
+
 //macro uint Codepoint.hash(self) => ((uint)self).hash();
+
+// ---------------------------------------------------------------------------------- //
+//                                FONT ATLAS                                          //
+// ---------------------------------------------------------------------------------- //
 
 /* width and height of a glyph contain the kering advance
  * (u,v)
@@ -60,7 +83,7 @@ struct Font {
 
 fn void? Font.load(&font, String name, ZString path, uint height, float scale)
 {
-	font.table.init(allocator::heap(), capacity: FONT_CACHED);
+	font.table.init(allocator::mem, capacity: FONT_CACHED);
 	font.id = name.hash();
 
 	font.size = height*scale;
@@ -160,25 +183,38 @@ fn void Font.free(&font)
 	schrift::freefont(font.sft.font);
 }
 
+
+// ---------------------------------------------------------------------------------- //
+//                           FONT LOAD AND QUERY                                      //
+// ---------------------------------------------------------------------------------- //
+
 fn void? Ctx.load_font(&ctx, String name, ZString path, uint height, float scale = 1.0)
 {
 	return ctx.font.load(name, path, height, scale);
 }
 
-<*
-@require off != null
-@require str.ptr != null
-*>
-fn Codepoint str_to_codepoint(char[] str, usz* off)
+// TODO: check if the font is present in the context
+fn Id Ctx.get_font_id(&ctx, String label)
 {
-	Codepoint cp;
-	isz b = grapheme::decode_utf8(str, str.len, (uint*)&cp);
-	if (b == 0 || b > str.len) {
-		return 0;
-	}
-	*off = b;
-	return cp;
+	return (Id)label.hash();
 }
+
+fn Atlas*? Ctx.get_font_atlas(&ctx, String name)
+{
+	// TODO: use the font name, for now there is only one font
+	if (name.hash() != ctx.font.id) {
+		return WRONG_ID?;
+	}
+
+	return &ctx.font.atlas;
+}
+
+fn int Font.line_height(&font) => (int)(font.ascender - font.descender + (float)0.5);
+
+// ---------------------------------------------------------------------------------- //
+//                              TEXT MEASUREMENT                                      //
+// ---------------------------------------------------------------------------------- //
+
 
 const uint TAB_SIZE = 4;
 
@@ -189,6 +225,7 @@ struct TextInfo {
 	Rect bounds;
 	String text;
 	usz off;
+	Size width, height;
 	
 	// current glyph info
 	Point origin;
@@ -295,20 +332,81 @@ fn Rect? Ctx.get_text_bounds(&ctx, String text)
 	return ti.text_bounds;
 }
 
-// TODO: check if the font is present in the context
-fn Id Ctx.get_font_id(&ctx, String label)
-{
-	return (Id)label.hash();
+
+struct TextSize {
+	Size width, height;
 }
 
-fn Atlas*? Ctx.get_font_atlas(&ctx, String name)
+// Measeure the size of a string.
+// width.min: as if each word is broken up by a new line
+// width.max: the width of the string left as-is
+// height.min: the height of the string left as-is
+// height.max: the height of the string with each word broken up by a new line
+fn TextSize? Ctx.measure_string(&ctx, String text)
 {
-	// TODO: use the font name, for now there is only one font
-	if (name.hash() != ctx.font.id) {
-		return WRONG_ID?;
+	Font* font = &ctx.font;
+	short baseline = (short)font.ascender;
+	short line_height = (short)font.line_height();
+	short line_gap = (short)font.linegap;
+	short space_width = font.get_glyph(' ').adv!;
+	short tab_width = space_width * TAB_SIZE;
+
+	isz off;
+	usz x;
+
+	TextSize ts;
+
+	short word_width;
+	short words = 1;
+	Rect bounds; // unaltered text bounds;
+	Point origin;
+
+	Codepoint cp = str_to_codepoint(text[off..], &x);
+	for (; cp != 0; cp = str_to_codepoint(text[off..], &x)) {
+		off += x;
+		Glyph* gp = font.get_glyph(cp)!;
+		
+		// update the text bounds
+		switch {
+		case cp == '\n':
+			origin.x = 0;
+			origin.y += line_height + line_gap;
+		case cp == '\t':
+			origin.x += tab_width;
+		case ascii::is_cntrl((char)cp):
+			break;
+		default:
+			Rect b = {
+				.x = origin.x + gp.ox,
+				.y = origin.y + gp.oy + baseline,
+				.w = gp.w,
+				.h = gp.h,
+			};
+			bounds = containing_rect(bounds, b);
+			origin.x += gp.adv;
+		}
+		
+		// update the word width
+		switch {
+		case ascii::is_space((char)cp):
+			if (word_width > ts.width.min) ts.width.min = word_width;
+			word_width = 0;
+			words++;
+		default:
+			word_width += gp.w + gp.ox;
+			if (off < text.len) word_width += gp.adv;
+		}
 	}
+	// end of string is also end of word
+	if (word_width > ts.width.min) ts.width.min = word_width;
 
-	return &ctx.font.atlas;
+	ts.width.max = bounds.w;
+	ts.height.min = bounds.h;
+	ts.height.max = words * line_height + line_gap * (words-1);
+
+	//io::print("'");
+	//io::print(text);
+	//io::print("': ");
+	//io::printn(ts);
+	return ts;
 }
-
-fn int Font.line_height(&font) => (int)(font.ascender - font.descender + (float)0.5);

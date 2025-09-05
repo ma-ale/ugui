@@ -9,6 +9,7 @@ struct ElemText {
 	Rect bounds;
 }
 
+/*
 macro Ctx.text_unbounded(&ctx, String text, ...)
 	=> ctx.text_unbounded_id(@compute_id($vasplat), text);
 fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
@@ -77,3 +78,4 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 
 	return elem.events;
 }
+*/

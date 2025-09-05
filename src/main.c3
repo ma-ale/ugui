@@ -216,6 +216,7 @@ $endswitch
 		TimeStats dts = draw_times.get_stats();
 		TimeStats uts = ui_times.get_stats();
 
+/*
 		ui.layout_set_floating()!!;
 		// FIXME: I cannot anchor shit to the bottom of the screen
 		ui.@div({0, ui.height-150, -300, 150}) {
@@ -224,12 +225,12 @@ $endswitch
 			ui.text_unbounded(string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 			ui.text_unbounded(string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[:ui.input.keyboard.text_len]))!!;
 		}!!;
+*/
 
 		ui.frame_end()!!;
 		/* End UI Handling */
 		ui_times.push(clock.mark());
 		//ui_times.print_stats();
-
 
 		/* Start UI Drawing */
 		ren.begin_render(true);
@@ -253,6 +254,7 @@ $endswitch
 	return 0;
 }
 
+/*
 fn void debug_app(ugui::Ctx* ui)
 {
 	static bool toggle;
@@ -324,6 +326,7 @@ fn void debug_app(ugui::Ctx* ui)
 	};
 	ui.div_end()!!;
 }
+*/
 
 import std::os::process;
 
@@ -361,34 +364,36 @@ fn void calculator(ugui::Ctx* ui)
 	}
 
 	// ui input/output
-	ui.@div(ugui::DIV_FILL) {
-		ui.layout_set_column()!!;
+	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) {
 
+/*
 		ui.@div({0,0,250,50}) {
 			ui.text_unbounded((String)buffer[:len])!!;
 		}!!;
+*/
 
-		ui.@div({0,0,250,-100}) {
-			ui.layout_set_row()!!;
-
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 			ui.button("7")!!.mouse_press ? buffer[len++] = '7' : 0;
 			ui.button("8")!!.mouse_press ? buffer[len++] = '8' : 0;
 			ui.button("9")!!.mouse_press ? buffer[len++] = '9' : 0;
-			ui.layout_next_row()!!;
+		}!!;
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 			ui.button("4")!!.mouse_press ? buffer[len++] = '4' : 0;
 			ui.button("5")!!.mouse_press ? buffer[len++] = '5' : 0;
 			ui.button("6")!!.mouse_press ? buffer[len++] = '6' : 0;
-			ui.layout_next_row()!!;
+		}!!;
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 			ui.button("3")!!.mouse_press ? buffer[len++] = '3' : 0;
 			ui.button("2")!!.mouse_press ? buffer[len++] = '2' : 0;
 			ui.button("1")!!.mouse_press ? buffer[len++] = '1' : 0;
-			ui.layout_next_row()!!;
+		}!!;
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 			ui.button("0")!!.mouse_press ? buffer[len++] = '0' : 0;
 			ui.button(".")!!.mouse_press ? buffer[len++] = '.' : 0;
 			ui.button("(")!!.mouse_press ? buffer[len++] = '(' : 0;
-			
-			ui.layout_next_column()!!;
-			
+		}!!;
+		
+		/*
 			ui.@div({0,0,0,-1}) {
 				ui.button("C")!!.mouse_press ? len = 0 : 0;
 				ui.button("D")!!.mouse_press ? len-- : 0;
@@ -409,7 +414,6 @@ fn void calculator(ugui::Ctx* ui)
 					buffer[:x.len] = x[..];
 					len = x.len;
 				}
-			}!!;
-		}!!;
+		*/
 	}!!;
 }

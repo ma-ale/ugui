@@ -19,13 +19,14 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	
 	Sprite* sprite = icon != "" ? ctx.sprite_atlas.get(icon)! : &&(Sprite){};
 
-	Rect min_size = {0, 0, style.size, style.size};
-	Rect text_size = ctx.get_text_bounds(label)!;
+	// TODO: get min size by style
+	TextSize text_size = ctx.measure_string(label)!;
 	Rect icon_size = sprite.rect();
-
-	ushort h_lh = (ushort)(ctx.font.line_height() / 2);
-	ushort left_pad = label != "" ? h_lh : 0;
-	ushort inner_pad = label != "" && icon != "" ? h_lh : 0;
+	
+	ushort min_size = style.size; 
+	ushort half_lh = (ushort)(ctx.font.line_height() / 2);
+	ushort left_pad = label != "" ? half_lh : 0;
+	ushort inner_pad = label != "" && icon != "" ? half_lh : 0;
 	ushort right_pad = left_pad;
 	
 	/*    |left_pad
@@ -39,13 +40,25 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	 *               |inner_pad           |right_pad
 	 */
 	
-	Rect tot_size = {
-		.w = (short)max(min_size.w, icon_size.w + text_size.w + left_pad + inner_pad + right_pad),
-		.h = (short)max(min_size.h, max(icon_size.h, text_size.h)),
+	elem.layout.w = {
+		.min = (short)max(min_size, left_pad + icon_size.w + inner_pad + text_size.width.min + right_pad),
+		.max = (short)max(min_size, left_pad + icon_size.w + inner_pad + text_size.width.max + right_pad),
 	};
-	
-	elem.bounds = ctx.layout_element(parent, tot_size, style);
-	if (elem.bounds.is_null()) return {};
+	elem.layout.h = {
+		.min = (short)max(min_size, left_pad + icon_size.h + text_size.height.min + right_pad),
+		.max = (short)max(min_size, left_pad + icon_size.w + text_size.height.max + right_pad),
+	};
+	// add style border and padding
+	elem.layout.margin = style.margin;
+	elem.layout.border = style.border;
+	elem.layout.padding = style.padding;
+
+	elem.layout.children.w = elem.layout.w;
+	elem.layout.children.h = elem.layout.h;
+
+	update_parent_grow(elem, parent);
+	update_parent_size(elem, parent);
+
 	elem.events = ctx.get_elem_events(elem);
 	Rect content_bounds = elem.content_bounds(style);
 	
@@ -55,7 +68,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		.w = content_bounds.w - icon_size.w - left_pad - inner_pad - right_pad,
 		.h = content_bounds.h
 	};
-	text_bounds = text_size.center_to(text_bounds);
+	//text_bounds = text_size.center_to(text_bounds);
 	
 	Rect icon_bounds = {
 		.x = content_bounds.x,
@@ -82,6 +95,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	return elem.events;
 }
 
+/*
 
 // FIXME: this should be inside the style
 macro Ctx.checkbox(&ctx, String desc, Point off, bool* active, String tick_sprite = {}, ...)
@@ -152,3 +166,4 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	s.margin = s.border = s.padding = {};
 	ctx.push_rect(t, parent.div.z_index, &s)!;
 }
+*/

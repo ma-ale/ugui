@@ -8,12 +8,12 @@ struct ElemSlider {
 	Rect handle;
 }
 
-
 /*       handle
  * +----+-----+---------------------+
  * |    |#####|                     |
  * +----+-----+---------------------+
  */
+/*
 macro Ctx.slider_hor(&ctx, Rect size, float* value, float hpercent = 0.25, ...)
 	=> ctx.slider_hor_id(@compute_id($vasplat), size, value, hpercent);
 <*
@@ -63,6 +63,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 
 	return elem.events;
 }
+*/
 
 
 /*
@@ -77,6 +78,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
  * |  |
  * +--+
  */
+/*
 macro Ctx.slider_ver(&ctx, Rect size, float* value, float hpercent = 0.25, ...)
 	=> ctx.slider_ver_id(@compute_id($vasplat), size, value, hpercent);
 fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpercent = 0.25)
@@ -134,3 +136,4 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 macro short calc_slider(short off, short dim, float value) => (short)off + (short)(dim * value);
 macro float calc_value(short off, short mouse, short dim, short slider)
 	=> math::clamp((float)(mouse-off-slider/2)/(float)(dim-slider), 0.0f, 1.0f);
+*/

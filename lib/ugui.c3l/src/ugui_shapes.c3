@@ -174,6 +174,16 @@ macro Rect Rect.pad(Rect a, Rect b)
 	};
 }
 
+macro Rect Rect.expand(Rect a, Rect b)
+{
+	return {
+		.x = a.x - b.x,
+		.y = a.y - b.y,
+		.w = a.w + b.x + b.w,
+		.h = a.h + b.y + b.h,
+	};
+}
+
 
 // ---------------------------------------------------------------------------------- //
 //                                    POINT                                           //
@@ -189,39 +199,12 @@ macro bool Point.in_rect(Point p, Rect r)
 	return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
 }
 
-macro Point Point.add(Point a, Point b)
-{
-	return {
-		.x = a.x + b.x,
-		.y = a.y + b.y,
-	};
-}
+macro Point Point.add(Point a, Point b) @operator_s(+) => {.x = a.x+b.x, .y = a.y+b.y};
+macro Point Point.sub(Point a, Point b) @operator_s(-) => {.x = a.x-b.x, .y = a.y-b.y};
+macro Point Point.neg(Point p) @operator_s(-) => {-p.x, -p.y};
 
-macro Point Point.sub(Point a, Point b)
-{
-	return {
-		.x = a.x - b.x,
-		.y = a.y - b.y,
-	};
-}
-
-macro Point Point.neg(Point p) => {-p.x, -p.y};
-
-macro Point Point.max(Point a, Point b)
-{
-	return {
-		.x = max(a.x, b.x),
-		.y = max(a.y, b.y),
-	};
-}
-
-macro Point Point.min(Point a, Point b)
-{
-	return {
-		.x = min(a.x, b.x),
-		.y = min(a.y, b.y),
-	};
-}
+macro Point Point.max(Point a, Point b) => {.x = max(a.x, b.x), .y = max(a.y, b.y)};
+macro Point Point.min(Point a, Point b) => {.x = min(a.x, b.x), .y = min(a.y, b.y)};
 
 // ---------------------------------------------------------------------------------- //
 //                                    COLOR                                           //
@@ -252,8 +235,26 @@ macro Color uint.@to_rgba($u)
 	};
 }
 
-macro uint Color.to_uint(c)
-{
-	uint u = c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
-	return u;
+macro uint Color.to_uint(c) => c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
+
+// ---------------------------------------------------------------------------------- //
+//                                    SIZE                                            //
+// ---------------------------------------------------------------------------------- //
+
+struct Size {
+	short min, max;
 }
+
+macro Size @grow() => {.min = 0, .max = 0};
+macro Size @exact(short s) => {.min = s, .max = s};
+macro Size @fit(short min = 0, short max = short.max/2) => {.min = min, .max = max};
+macro bool Size.@is_grow(s) => (s.min == 0 && s.max == 0);
+macro bool Size.@is_exact(s) => (s.min == s.max && s.min != 0);
+macro bool Size.@is_fit(s) => (s.min != s.max);
+
+macro Size Size.add(a, Size b) @operator_s(+) => {.min = a.min+b.min, .max = a.max+b.max};
+macro Size Size.sub(a, Size b) @operator_s(-) => {.min = a.min-b.min, .max = a.max-b.max};
+
+macro Size Size.combine(a, Size b) => {.min = max(a.min, b.min), .max = min(a.max, b.max)};
+macro Size Size.comb_max(a, Size b) => {.min = max(a.min, b.min), .max = max(a.max, b.max)};
+macro Size Size.comb_min(a, Size b) => {.min = min(a.min, b.min), .max = min(a.max, b.max)};

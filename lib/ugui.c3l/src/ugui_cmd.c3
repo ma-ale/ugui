@@ -97,9 +97,9 @@ macro Ctx.push_cmd(&ctx, Cmd *cmd, int z_index)
 	default: return ctx.cmd_queue.enqueue(cmd);
 	}
 	if (cull_rect(rect, ctx.div_scissor)) {
-		io::print("NOPE: ");
-		io::print(cmd.rect.rect);
-		io::printn(cmd.z_index);
+//		io::print("NOPE: ");
+//		io::print(cmd.rect.rect);
+//		io::printn(cmd.z_index);
 //		unreachable();
 		return;
 	}

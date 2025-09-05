@@ -9,6 +9,15 @@ import std::core::string;
 import std::core::mem::allocator;
 
 
+macro println(...)
+{
+	$for var $i = 0; $i < $vacount; $i++:
+		io::print($vaexpr[$i]);
+	$endfor
+	io::printn();
+}
+
+
 // element ids are just long ints
 alias Id = uint;
 
@@ -45,7 +54,9 @@ struct Elem {
 	ElemFlags flags;
 	ElemEvents events;
 	Rect bounds;
+	Rect children_bounds;
 	ElemType type;
+	Layout layout;
 	union {
 		ElemDiv div;
 		ElemButton button;
@@ -131,6 +142,7 @@ const uint GOLDEN_RATIO = 0x9E3779B9;
 // with the Cantor pairing function
 fn Id? Ctx.gen_id(&ctx, Id id2)
 {
+	// FIXME: this is SHIT
 	Id id1 = ctx.tree.get(ctx.active_div)!;
 	// Mix the two IDs non-linearly
 	Id mixed = id1 ^ id2.rotate_left(13);
@@ -160,6 +172,7 @@ fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
 	elem.flags = (ElemFlags)0;
 	elem.flags.is_new = is_new;
 	elem.id = id;
+	elem.layout = {};
 	if (is_new == false && elem.type != type) {
 		return WRONG_ELEMENT_TYPE?;
 	} else {
@@ -232,16 +245,15 @@ fn void? Ctx.frame_begin(&ctx)
 	//elem.flags.has_focus = ctx.has_focus;
 
 	elem.bounds = {0, 0, ctx.width, ctx.height};
-	elem.div.layout = LAYOUT_ROW;
 	elem.div.z_index = 0;
-	elem.div.children_bounds = elem.bounds;
 	elem.div.scroll_x.enabled = false;
 	elem.div.scroll_y.enabled = false;
-	elem.div.pcb = {};
-	elem.div.origin_c = {};
-	elem.div.origin_r = {};
+	elem.layout.dir = ROW;
+	elem.layout.anchor = TOP_LEFT;
+	elem.layout.w = @exact(ctx.width);
+	elem.layout.h = @exact(ctx.height);
 
-	ctx.div_scissor = {0, 0, ctx.width, ctx.height};
+	ctx.div_scissor = elem.bounds;
 
 	// The root element does not push anything to the stack
 	// TODO: add a background color taken from a theme or config
@@ -253,7 +265,13 @@ fn void? Ctx.frame_end(&ctx)
 {
 	// FIXME: this is not guaranteed to be root. the user might forget to close a div or some other element
 	Elem* root = ctx.get_active_div()!;
-	if (root.id != ROOT_ID) return WRONG_ID?;
+	if (root.id != ROOT_ID) {
+		io::printn(root.id);
+		return WRONG_ID?;
+	}
+
+	// DO THE LAYOUT
+	ctx.layout_element_tree();
 
 	// 1. clear the tree
 	ctx.tree.nuke();

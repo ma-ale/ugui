@@ -5,7 +5,6 @@ import std::math;
 
 // div element
 struct ElemDiv {
-	Layout layout;
 	struct scroll_x {
 		bool enabled;
 		bool on;
@@ -18,28 +17,42 @@ struct ElemDiv {
 	}
 	ushort scroll_size;
 	int z_index;
-	Rect children_bounds; // current frame children bounds
-	Rect pcb; // previous frame children bounds
-	Point origin_r, origin_c;
 }
 
 
 // useful macro to start and end a div, capturing the trailing block
-macro Ctx.@div(&ctx, Rect size, bool scroll_x = false, bool scroll_y = false, ...; @body())
+macro Ctx.@div(&ctx,
+               Size width = @grow, Size height = @grow,
+               LayoutDirection dir = ROW,
+               Anchor anchor = TOP_LEFT,
+               bool scroll_x = false, bool scroll_y = false,
+               ...; 
+               @body()
+              )
 {
-	ctx.div_begin(size, scroll_x, scroll_y, $vasplat)!;
+	ctx.div_begin(width, height, dir, anchor, scroll_x, scroll_y, $vasplat)!;
 	@body();
 	ctx.div_end()!;
 }
 
-// begin a widget container, or div, the size determines the offset (x,y) width and height.
-// if the width or height are zero the width or height are set to the maximum available.
-// if the width or height are negative the width or height will be calculated based on the children size
-// sort similar to a flexbox, and the minimum size is set by the negative of the width or height
-// FIXME: there is a bug if the size.w or size.h == -0
-macro Ctx.div_begin(&ctx, Rect size, bool scroll_x = false, bool scroll_y = false, ...)
-	=> ctx.div_begin_id(@compute_id($vasplat), size, scroll_x, scroll_y);
-fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
+macro Ctx.div_begin(&ctx,
+                    Size width = @grow(), Size height = @grow(),
+                    LayoutDirection dir = ROW,
+                    Anchor anchor = TOP_LEFT,
+                    bool scroll_x = false, bool scroll_y = false,
+                    ...
+                   )
+{
+	return ctx.div_begin_id(@compute_id($vasplat), width, height, dir, anchor, scroll_x, scroll_y);
+}
+
+fn void? Ctx.div_begin_id(&ctx,
+                          Id id,
+                          Size width, Size height,
+                          LayoutDirection dir,
+                          Anchor anchor,
+                          bool scroll_x, bool scroll_y
+                         )
 {
 	id = ctx.gen_id(id)!;
 
@@ -55,30 +68,24 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 	elem.div.scroll_size = slider_style.size ? slider_style.size : (style.size ? style.size : DEFAULT_STYLE.size);
 	elem.div.z_index = parent.div.z_index + 1;
 
-	// 2. layout the element
-	Rect wanted_size = {
-		.x = size.x,
-		.y = size.y,
-		.w = size.w < 0 ? max(elem.div.pcb.w, (short)-size.w) : size.w,
-		.h = size.h < 0 ? max(elem.div.pcb.h, (short)-size.h) : size.h,
-	};
-	elem.bounds = ctx.layout_element(parent, wanted_size, style);
-	elem.div.children_bounds = {.x = elem.bounds.x, .y = elem.bounds.y};
-
 	// update the ctx scissor
 	ctx.div_scissor = elem.bounds;
 	ctx.push_scissor(elem.bounds, elem.div.z_index)!;
 
-	// 4. Fill the div fields
-	elem.div.origin_c = {
-		.x = elem.bounds.x,
-		.y = elem.bounds.y
+	// update layout with correct info
+	elem.layout = {
+		.w = width,
+		.h = height,
+		.dir = dir,
+		.anchor = anchor,
+		.margin = style.margin,
+		.border = style.border,
+		.padding = style.padding,
 	};
-	elem.div.origin_r = elem.div.origin_c;
-	elem.div.layout   = parent.div.layout;
+	
+	// update parent grow children
+	update_parent_grow(elem, parent);
 
-	// Add the background to the draw stack
-	bool do_border = parent.div.layout == LAYOUT_FLOATING;
 	ctx.push_rect(elem.bounds, elem.div.z_index, style)!;
 
 	elem.events = ctx.get_elem_events(elem);
@@ -89,14 +96,9 @@ fn void? Ctx.div_begin_id(&ctx, Id id, Rect size, bool scroll_x, bool scroll_y)
 
 fn void? Ctx.div_end(&ctx)
 {
-	// swap the children bounds
 	Elem* elem = ctx.get_active_div()!;
-	elem.div.pcb = elem.div.children_bounds;
 
-	// FIXME: this causes all elements inside the div to loose focus since the mouse press happens
-	//        both inside the element and inside the div bounds
-	//elem.events = ctx.get_elem_events(elem);
-
+/* FIXME: Redo slider functionality
 	Rect cb = elem.div.pcb;
 	// children bounds bottom-right corner
 	Point cbc = {
@@ -155,10 +157,13 @@ fn void? Ctx.div_end(&ctx)
 		ctx.slider_hor_id(hsid_raw, hslider, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
 		elem.div.layout = prev_l;
 	}
+*/
 
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
 	Elem* parent = ctx.get_parent()!;
-	// TODO: reset the scissor back to the parent div
 	ctx.div_scissor = parent.bounds;
+	ctx.push_scissor(parent.bounds, elem.div.z_index)!;
+
+	update_parent_size(elem, parent);
 }
