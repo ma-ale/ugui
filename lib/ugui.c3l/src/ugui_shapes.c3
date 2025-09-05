@@ -55,7 +55,7 @@ macro Rect containing_rect(Rect a, Rect b)
 macro bool Rect.is_null(Rect r) => r.x == 0 && r.y == 0 && r.x == 0 && r.w == 0;
 
 // returns the element-wise addition of r1 and r2
-macro Rect Rect.add(Rect r1, Rect r2)
+macro Rect Rect.add(Rect r1, Rect r2) @operator_s(+)
 {
 	return {
 		.x = r1.x + r2.x,
@@ -66,7 +66,7 @@ macro Rect Rect.add(Rect r1, Rect r2)
 }
 
 // returns the element-wise subtraction of r1 and r2
-macro Rect Rect.sub(Rect r1, Rect r2)
+macro Rect Rect.sub(Rect r1, Rect r2) @operator_s(-)
 {
 	return {
 		.x = r1.x - r2.x,
@@ -77,7 +77,7 @@ macro Rect Rect.sub(Rect r1, Rect r2)
 }
 
 // returns the element-wise multiplication of r1 and r2
-macro Rect Rect.mul(Rect r1, Rect r2)
+macro Rect Rect.mul(Rect r1, Rect r2) @operator_s(*)
 {
 	return {
 		.x = r1.x * r2.x,

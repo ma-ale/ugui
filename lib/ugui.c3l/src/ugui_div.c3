@@ -78,7 +78,7 @@ fn void? Ctx.div_begin_id(&ctx,
 		.h = height,
 		.dir = dir,
 		.anchor = anchor,
-		.content_offset = style.margin.add(style.border).add(style.padding),
+		.content_offset = style.margin + style.border + style.padding,
 	};
 	
 	// update parent grow children
