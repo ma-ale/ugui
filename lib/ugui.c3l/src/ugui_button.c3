@@ -25,56 +25,50 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	
 	ushort min_size = style.size; 
 	ushort half_lh = (ushort)(ctx.font.line_height() / 2);
-	ushort left_pad = label != "" ? half_lh : 0;
 	ushort inner_pad = label != "" && icon != "" ? half_lh : 0;
-	ushort right_pad = left_pad;
-	
-	/*    |left_pad
-	 * +--v-----------------------------------+
-	 * |<->+--------+                         |
+	/*    
+	 * +--------------------------------------+
+	 * |   +--------+                         |
 	 * |   |        |   +-----------------+   |
 	 * |   |  icon  |   |     label       |   |
 	 * |   |        |   +-----------------+   |
-	 * |   +--------+<->|                 |<->|
-	 * +-------------^--------------------^---+
-	 *               |inner_pad           |right_pad
+	 * |   +--------+<->|                     |
+	 * +-------------^------------------------+
+	 *               |inner_pad
 	 */
-	
-	elem.layout.w = {
-		.min = (short)max(min_size, left_pad + icon_size.w + inner_pad + text_size.width.min + right_pad),
-		.max = (short)max(min_size, left_pad + icon_size.w + inner_pad + text_size.width.max + right_pad),
+	Point content_size = {
+		.x = icon_size.w + inner_pad, // text sizing is handled differently
+		.y = icon_size.h + inner_pad,
 	};
-	elem.layout.h = {
-		.min = (short)max(min_size, left_pad + icon_size.h + text_size.height.min + right_pad),
-		.max = (short)max(min_size, left_pad + icon_size.w + text_size.height.max + right_pad),
-	};
-	// add style border and padding
+	//elem.layout.w = @fit(min_size);
+	elem.layout.w = @fit(min_size);
+	elem.layout.h = @fit(min_size);
+	elem.layout.children.w = @exact(content_size.x);
+	elem.layout.children.h = @exact(content_size.y);
+	elem.layout.text = text_size;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
-
-	elem.layout.children.w = elem.layout.w;
-	elem.layout.children.h = elem.layout.h;
 
 	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);
 	Rect content_bounds = elem.content_bounds();
-	
-	Rect text_bounds = {
-		.x = content_bounds.x + icon_size.w + left_pad + inner_pad,
-		.y = content_bounds.y,
-		.w = content_bounds.w - icon_size.w - left_pad - inner_pad - right_pad,
-		.h = content_bounds.h
-	};
-	//text_bounds = text_size.center_to(text_bounds);
-	
+
 	Rect icon_bounds = {
 		.x = content_bounds.x,
 		.y = content_bounds.y,
-		.w = icon_size.w + right_pad + inner_pad,
-		.h = (short)max(icon_size.h, content_bounds.h)
+		.w = icon_size.w,
+		.h = icon_size.h
 	};
 	icon_bounds = icon_size.center_to(icon_bounds);
+
+	Rect text_bounds = {
+		.x = content_bounds.x + icon_bounds.w + inner_pad,
+		.y = content_bounds.y,
+		.w = content_bounds.w - icon_bounds.w - inner_pad,
+		.h = content_bounds.h,
+	};
+	//text_bounds = text_size.center_to(text_bounds);
 
 	bool is_active = ctx.elem_focus(elem) || elem.events.mouse_hover;
 	Style s = *style;
@@ -88,8 +82,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
 	}
 	if (label != "") {
-		ctx.push_rect(text_bounds, parent.div.z_index, &&{.bg=0xff0000abu.@to_rgba()})!;
-		ctx.push_string(text_bounds, label, parent.div.z_index, style.fg)!;
+		ctx.push_string(text_bounds, label, parent.div.z_index, style.fg, true)!;
 	}
 	return elem.events;
 }

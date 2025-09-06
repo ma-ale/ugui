@@ -335,6 +335,7 @@ fn Rect? Ctx.get_text_bounds(&ctx, String text)
 
 struct TextSize {
 	Size width, height;
+	int area;
 }
 
 // Measeure the size of a string.
@@ -393,8 +394,12 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 			word_width = 0;
 			words++;
 		default:
-			word_width += gp.w + gp.ox;
-			if (off < text.len) word_width += gp.adv;
+			//word_width += gp.w + gp.ox;
+			if (off < text.len) {
+				word_width += gp.adv;
+			} else {
+				word_width += gp.w + gp.ox;
+			}
 		}
 	}
 	// end of string is also end of word
@@ -403,6 +408,7 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 	ts.width.max = bounds.w;
 	ts.height.min = bounds.h;
 	ts.height.max = words * line_height + line_gap * (words-1);
+	ts.area = bounds.w * bounds.h;
 
 	return ts;
 }

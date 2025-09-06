@@ -247,7 +247,8 @@ struct Size {
 
 macro Size @grow() => {.min = 0, .max = 0};
 macro Size @exact(short s) => {.min = s, .max = s};
-macro Size @fit(short min = 0, short max = short.max/2) => {.min = min, .max = max};
+	// PROBLEM WE ARE OVERFLOWING
+macro Size @fit(short min = 0, short max = 999) => {.min = min, .max = max};
 macro bool Size.@is_grow(s) => (s.min == 0 && s.max == 0);
 macro bool Size.@is_exact(s) => (s.min == s.max && s.min != 0);
 macro bool Size.@is_fit(s) => (s.min != s.max);
@@ -258,3 +259,5 @@ macro Size Size.sub(a, Size b) @operator_s(-) => {.min = a.min-b.min, .max = a.m
 macro Size Size.combine(a, Size b) => {.min = max(a.min, b.min), .max = min(a.max, b.max)};
 macro Size Size.comb_max(a, Size b) => {.min = max(a.min, b.min), .max = max(a.max, b.max)};
 macro Size Size.comb_min(a, Size b) => {.min = min(a.min, b.min), .max = min(a.max, b.max)};
+
+macro short Size.greater(a) => a.min > a.max ? a.min : a.max; 
