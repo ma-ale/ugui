@@ -118,22 +118,25 @@ macro Point Elem.get_view_off(&elem)
 // Assign the width and height of an element in the directions that it doesn't need to grow
 fn void resolve_dimensions(Elem* e, Elem* p)
 {
+	Layout* el = &e.layout;
+	Layout* pl = &p.layout;
+
 	// ASSIGN WIDTH
 	switch {
-	case e.layout.w.@is_exact():
+	case el.w.@is_exact():
 		// if width is exact then assign it to the bounds
-		e.bounds.w = e.layout.total_width().min;
-	case e.layout.w.@is_grow():
+		e.bounds.w = el.total_width().min;
+	case el.w.@is_grow():
 		// done in another pass
 		break;
-	case e.layout.w.@is_fit(): // fit the element's children
-		Size elem_width = e.layout.w; // the element's content width
-		Size children_width = e.layout.children.w; // element children (content) width
+	case el.w.@is_fit(): // fit the element's children
+		Size elem_width = el.w; // the element's content width
+		Size children_width = el.children.w; // element children (content) width
 		Size combined = elem_width.combine(children_width);
 
 		if (combined.min <= combined.max) { // OK!
 			// the final element width is the content width plus padding and border
-			e.bounds.w = min(elem_width.max, children_width.max) + e.layout.content_offset.x + e.layout.content_offset.w;
+			e.bounds.w = min(elem_width.max, children_width.max) + el.content_offset.x + el.content_offset.w;
 		} else {
 			unreachable("Cannot fit children width: min:%d max:%d", combined.min, combined.max);
 		}
@@ -142,31 +145,31 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 
 	// ASSIGN HEIGHT
 	switch {
-	case e.layout.h.@is_exact():
+	case el.h.@is_exact():
 		// if width is exact then assign it to the bounds and add border and paddign
-		e.bounds.h = e.layout.total_height().min;
-	case e.layout.h.@is_grow():
+		e.bounds.h = el.total_height().min;
+	case el.h.@is_grow():
 		break;
 		// done in another pass
-	case e.layout.h.@is_fit(): // fit the element's children
-		Size elem_height = e.layout.h; // the element's content width
-		Size children_height = e.layout.children.h; // element children (content) width
+	case el.h.@is_fit(): // fit the element's children
+		Size elem_height = el.h; // the element's content width
+		Size children_height = el.children.h; // element children (content) width
 		Size combined = elem_height.combine(children_height);
 
 		if (combined.min <= combined.max) { // OK!
 			// the final element width is the content width plus padding and border
-			e.bounds.h = min(elem_height.max, children_height.max) + e.layout.content_offset.y + e.layout.content_offset.h;
+			e.bounds.h = min(elem_height.max, children_height.max) + el.content_offset.y + el.content_offset.h;
 		} else {
 			unreachable("Cannot fit children height: min:%d max:%d", combined.min, combined.max);
 		}
 	default: unreachable("width is not exact, grow or fit");
 	}
 
-	switch (p.layout.dir) {
+	switch (pl.dir) {
 	case ROW:
-		if (!e.layout.w.@is_grow()) p.layout.occupied += e.bounds.w;
+		if (!el.w.@is_grow()) pl.occupied += e.bounds.w;
 	case COLUMN:
-		if (!e.layout.h.@is_grow()) p.layout.occupied += e.bounds.h;
+		if (!el.h.@is_grow()) pl.occupied += e.bounds.h;
 	}
 }
 
@@ -295,8 +298,6 @@ fn void resolve_placement(Elem* c, Elem* p)
 		pl.origin.y += c.bounds.h;
 	default: unreachable("unknown layout direction");
 	}
-	
-	//sprintln("origin: ", p.layout.origin, " bounds: ", c.bounds);
 }
 
 fn void Ctx.layout_element_tree(&ctx)

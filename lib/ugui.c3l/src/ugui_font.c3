@@ -404,9 +404,5 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 	ts.height.min = bounds.h;
 	ts.height.max = words * line_height + line_gap * (words-1);
 
-	//io::print("'");
-	//io::print(text);
-	//io::print("': ");
-	//io::printn(ts);
 	return ts;
 }

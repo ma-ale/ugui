@@ -218,7 +218,6 @@ $endswitch
 
 /*
 		ui.layout_set_floating()!!;
-		// FIXME: I cannot anchor shit to the bottom of the screen
 		ui.@div({0, ui.height-150, -300, 150}) {
 			ui.layout_set_column()!!;
 			ui.text_unbounded(string::tformat("frame %d, fps = %.2f", frame, fps))!!;
@@ -374,46 +373,44 @@ fn void calculator(ugui::Ctx* ui)
 
 		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 			ui.button("7")!!.mouse_press ? buffer[len++] = '7' : 0;
-			ui.button("8")!!.mouse_press ? buffer[len++] = '8' : 0;
-			ui.button("9")!!.mouse_press ? buffer[len++] = '9' : 0;
-		}!!;
-		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 			ui.button("4")!!.mouse_press ? buffer[len++] = '4' : 0;
-			ui.button("5")!!.mouse_press ? buffer[len++] = '5' : 0;
-			ui.button("6")!!.mouse_press ? buffer[len++] = '6' : 0;
-		}!!;
-		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
-			ui.button("3")!!.mouse_press ? buffer[len++] = '3' : 0;
-			ui.button("2")!!.mouse_press ? buffer[len++] = '2' : 0;
 			ui.button("1")!!.mouse_press ? buffer[len++] = '1' : 0;
+			ui.button("0")!!.mouse_press ? buffer[len++] = '0' : 0;
 		}!!;
 		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
-			ui.button("0")!!.mouse_press ? buffer[len++] = '0' : 0;
+			ui.button("8")!!.mouse_press ? buffer[len++] = '8' : 0;
+			ui.button("5")!!.mouse_press ? buffer[len++] = '5' : 0;
+			ui.button("2")!!.mouse_press ? buffer[len++] = '2' : 0;
 			ui.button(".")!!.mouse_press ? buffer[len++] = '.' : 0;
+		}!!;
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+			ui.button("9")!!.mouse_press ? buffer[len++] = '9' : 0;
+			ui.button("6")!!.mouse_press ? buffer[len++] = '6' : 0;
+			ui.button("3")!!.mouse_press ? buffer[len++] = '3' : 0;
 			ui.button("(")!!.mouse_press ? buffer[len++] = '(' : 0;
 		}!!;
+
+		ui.@div(ugui::@exact(10), ugui::@exact(10)) {}!!;
 		
-		/*
-			ui.@div({0,0,0,-1}) {
-				ui.button("C")!!.mouse_press ? len = 0 : 0;
-				ui.button("D")!!.mouse_press ? len-- : 0;
-				ui.layout_next_row()!!;
-				ui.button("x")!!.mouse_press ? buffer[len++] = '*' : 0;
-				ui.button("/")!!.mouse_press ? buffer[len++] = '/' : 0;
-				ui.layout_next_row()!!;
-				ui.button("+")!!.mouse_press ? buffer[len++] = '+' : 0;
-				ui.button("-")!!.mouse_press ? buffer[len++] = '-' : 0;
-				ui.layout_next_row()!!;
-				ui.button(")")!!.mouse_press ? buffer[len++] = ')' : 0;
-				
-				// eval the expression with 'bc'
-				if (ui.button("=")!!.mouse_press || eval) {
-					char[128] out;
-					String y = string::tformat("echo '%s' | bc", (String)buffer[:len]);
-					String x = process::execute_stdout_to_buffer(out[:128], (String[]){"sh", "-c", y}) ?? "";
-					buffer[:x.len] = x[..];
-					len = x.len;
-				}
-		*/
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+			ui.button("x")!!.mouse_press ? buffer[len++] = '*' : 0;
+			ui.button("/")!!.mouse_press ? buffer[len++] = '/' : 0;
+			ui.button("+")!!.mouse_press ? buffer[len++] = '+' : 0;
+			ui.button(")")!!.mouse_press ? buffer[len++] = ')' : 0;
+		}!!;
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+			ui.button("C")!!.mouse_press ? len = 0 : 0;
+			ui.button("D")!!.mouse_press ? len-- : 0;
+			ui.button("-")!!.mouse_press ? buffer[len++] = '-' : 0;
+			
+			// eval the expression with 'bc'
+			if (ui.button("=")!!.mouse_press || eval) {
+				char[128] out;
+				String y = string::tformat("echo '%s' | bc", (String)buffer[:len]);
+				String x = process::execute_stdout_to_buffer(out[:128], (String[]){"sh", "-c", y}) ?? "";
+				buffer[:x.len] = x[..];
+				len = x.len;
+			}
+		}!!;
 	}!!;
 }
