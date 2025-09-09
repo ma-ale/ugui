@@ -343,6 +343,7 @@ fn void calculator(ugui::Ctx* ui)
 	case "/": nextcase;
 	case "(": nextcase;
 	case ")": nextcase;
+	case ".": nextcase;
 	case "0": nextcase;
 	case "1": nextcase;
 	case "2": nextcase;
@@ -367,7 +368,7 @@ fn void calculator(ugui::Ctx* ui)
 	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
 
 		ui.@div(ugui::@grow(), ugui::@exact(100), ROW, RIGHT) {
-			ui.button("TODO")!!;
+			ui.text((String)buffer[:len])!!;
 		}!!;
 		ui.@div(ugui::@fit(), ugui::@fit(), ROW, TOP_LEFT) {
 			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {

@@ -40,7 +40,6 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		.x = icon_size.w + inner_pad, // text sizing is handled differently
 		.y = icon_size.h + inner_pad,
 	};
-	//elem.layout.w = @fit(min_size);
 	elem.layout.w = @fit(min_size);
 	elem.layout.h = @fit(min_size);
 	elem.layout.children.w = @exact(content_size.x);
@@ -82,7 +81,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
 	}
 	if (label != "") {
-		ctx.push_string(text_bounds, label, parent.div.z_index, style.fg, true)!;
+		ctx.layout_string(label, text_bounds, CENTER, parent.div.z_index, style.fg)!;
 	}
 	return elem.events;
 }

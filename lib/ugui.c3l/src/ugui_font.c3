@@ -218,121 +218,6 @@ fn int Font.line_height(&font) => (int)(font.ascender - font.descender + (float)
 
 const uint TAB_SIZE = 4;
 
-// TODO: change the name
-// TODO: reorder to make smaller
-struct TextInfo {
-	Font* font;
-	Rect bounds;
-	String text;
-	usz off;
-	Size width, height;
-	
-	// current glyph info
-	Point origin;
-	Rect glyph_bounds;
-	Rect glyph_uv;
-	
-	// cursor info
-	usz cursor_idx;
-	Point cursor_pos;
-	
-	// current text bounds
-	Rect text_bounds;
-}
-
-<*
-@require f != null
-*>
-fn void TextInfo.init(&self, Font* f, String s, Rect bounds = RECT_MAX)
-{
-	*self = {};
-	self.font = f;
-	self.text = s;
-	self.bounds = bounds;
-	self.origin = bounds.position();
-	self.text_bounds = { .x = bounds.x, .y = bounds.y };
-}
-
-fn void TextInfo.reset(&self)
-{
-	TextInfo old = *self;
-	self.init(old.font, old.text, old.bounds);
-}
-
-fn bool? TextInfo.place_glyph(&self, bool reflow)
-{
-	if (self.off >= self.text.len) {
-		return false;
-	}
-	if (!self.origin.in_rect(self.bounds)) {
-		return false;
-	}
-
-	short baseline = (short)self.font.ascender;
-	short line_height = (short)self.font.ascender - (short)self.font.descender;
-	short line_gap = (short)self.font.linegap;
-
-	Codepoint cp;
-	Glyph* gp;
-	usz x;
-	
-	cp = str_to_codepoint(self.text[self.off..], &x);
-	if (cp == 0) return false;
-	self.off += x;
-
-	if (ascii::is_cntrl((char)cp) == false) {
-		gp = self.font.get_glyph(cp)!;
-		self.glyph_uv = {
-			.x = gp.u,
-			.y = gp.v,
-			.w = gp.w,
-			.h = gp.h,
-		};
-		self.glyph_bounds = {
-			.x = self.origin.x + gp.ox,
-			.y = self.origin.y + gp.oy + baseline,
-			.w = gp.w,
-			.h = gp.h,
-		};
-		// try to wrap the text if the charcater goes outside of the bounds
-		if (reflow && !self.bounds.contains(self.glyph_bounds)) {
-			self.origin.y += line_height + line_gap;
-			self.glyph_bounds.y += line_height + line_gap;
-
-			self.origin.x = self.bounds.x;
-			self.glyph_bounds.x = self.bounds.x;
-		}
-
-		// handle tab
-		if (cp == '\t') {
-			self.origin.x += gp.adv*TAB_SIZE;
-		} else {
-			self.origin.x += gp.adv;
-		}
-
-	} else if (cp == '\n'){
-		self.origin.y += line_height + line_gap;
-		self.origin.x = self.bounds.x;
-	}
-
-	self.text_bounds = containing_rect(self.text_bounds, self.glyph_bounds);
-
-	if (self.off == self.cursor_idx) {
-		self.cursor_pos = self.origin;
-	}
-
-	return true;
-}
-
-fn Rect? Ctx.get_text_bounds(&ctx, String text)
-{
-	TextInfo ti;
-	ti.init(&ctx.font, text);
-	while (ti.place_glyph(false)!);
-	return ti.text_bounds;
-}
-
-
 struct TextSize {
 	Size width, height;
 	int area;
@@ -345,6 +230,8 @@ struct TextSize {
 // height.max: the height of the string with each word broken up by a new line
 fn TextSize? Ctx.measure_string(&ctx, String text)
 {
+	if (text == "") return (TextSize){};
+
 	Font* font = &ctx.font;
 	short baseline = (short)font.ascender;
 	short line_height = (short)font.line_height();
@@ -411,4 +298,135 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 	ts.area = bounds.w * bounds.h;
 
 	return ts;
+}
+
+fn void? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_index, Color hue)
+{
+	if (text.len == 0 || bounds.w <= 0 || bounds.h <= 0) return;
+	ctx.push_scissor(bounds, z_index)!;
+
+	Font* font = &ctx.font;
+	Id texture_id = font.id;
+	short baseline = (short)font.ascender;
+	short line_height = (short)font.line_height();
+	short line_gap = (short)font.linegap;
+	short space_width = font.get_glyph(' ').adv!;
+	short tab_width = space_width * TAB_SIZE;
+
+	Point origin = bounds.position();
+
+	// measure string height inside the bounds to center it vertically
+	// FIXME: this is fast but it just gives back the height in LINES, most lines have only short
+	//        characters which would result in a lower height
+	int string_height = line_height;
+	foreach (c: text) {
+		string_height += (line_height + line_gap) * (int)(c == '\n');
+	}
+
+	switch (anchor) {
+	case TOP_LEFT: nextcase;
+	case TOP: nextcase;
+	case TOP_RIGHT:
+		origin.y += 0;
+	case LEFT: nextcase;
+	case CENTER: nextcase;
+	case RIGHT:
+		origin.y += (short)(bounds.h - string_height)/2;
+	case BOTTOM_LEFT: nextcase;
+	case BOTTOM: nextcase;
+	case BOTTOM_RIGHT:
+		origin.y += (short)(bounds.h - string_height);
+	}
+
+	// measure the line until it exits the bounds or the string ends
+	usz line_start, line_end;
+	do {
+		int line_width;
+		Point o = {.x = bounds.x, .y = bounds.y};
+		
+		Codepoint cp;
+		isz off = line_start;
+		for ITER: (usz x; (cp = str_to_codepoint(text[off..], &x)) != 0; off += x) {
+			Glyph* gp = font.get_glyph(cp)!;
+
+			switch {
+			case cp == '\n':
+				break ITER;
+			case cp == '\t':
+				o.x += tab_width;
+			case ascii::is_cntrl((char)cp):
+				break;
+			default:
+				Rect b = {
+					.x = o.x + gp.ox,
+					.y = o.y + gp.oy + baseline,
+					.w = gp.w,
+					.h = gp.h,
+				};
+
+				if (b.x + b.w > bounds.x + bounds.w) {
+					break ITER;
+				}
+				o.x += gp.adv;
+				line_width += gp.adv;
+			}
+		}
+		line_end = off;
+		if (line_end == line_start) break;
+		
+		// with the line width calculate the right origin and layout the line
+		switch (anchor) {
+		case TOP_LEFT: nextcase;
+		case LEFT: nextcase;
+		case BOTTOM_LEFT:
+			// TODO: we didn't need to measure the line width with this alignment
+			origin.x += 0;
+		case TOP: nextcase;
+		case CENTER: nextcase;
+		case BOTTOM:
+			origin.x += (short)(bounds.w - line_width)/2+1;
+		case TOP_RIGHT: nextcase;
+		case RIGHT: nextcase;
+		case BOTTOM_RIGHT:
+			origin.x += (short)(bounds.w - line_width);
+		}
+
+		// see the fixme when measuring the height
+		//ctx.push_rect({.x = origin.x,.y=origin.y,.w=(short)line_width,.h=(short)string_height}, z_index, &&(Style){.bg=0xff000042u.@to_rgba()})!;
+		String line = text[line_start:line_end-line_start];
+		off = 0;
+		for (usz x; (cp = str_to_codepoint(line[off..], &x)) != 0 && off < line.len; off += x) {
+			Glyph* gp = font.get_glyph(cp)!;
+
+			// update the text bounds
+			switch {
+			case cp == '\t':
+				origin.x += tab_width;
+			case ascii::is_cntrl((char)cp):
+				break;
+			default:
+				Rect b = {
+					.x = origin.x + gp.ox,
+					.y = origin.y + gp.oy + baseline,
+					.w = gp.w,
+					.h = gp.h
+				};
+				Rect uv = {
+					.x = gp.u,
+					.y = gp.v,
+					.w = gp.w,
+					.h = gp.h
+				};
+				ctx.push_sprite(b, uv, texture_id, z_index, hue)!;
+				//ctx.push_rect(b, z_index, &&(Style){.bg=0x0000ff66u.@to_rgba()})!;
+				origin.x += gp.adv;
+			}
+			
+		}
+		// done with the line
+		line_start = line_end;
+		origin.y += line_height + line_gap; 
+	} while(line_end < text.len);
+	
+	ctx.reset_scissor(z_index)!;
 }

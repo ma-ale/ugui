@@ -163,32 +163,6 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_i
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
-// TODO: do not return the WHOLE TextInfo but instead something smaller
-fn TextInfo? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue, bool reflow = false)
-{
-	if (text.len == 0) {
-		return {};
-	}
-
-	ctx.push_scissor(bounds, z_index)!;
-
-	Id texture_id = ctx.font.id;  // or ctx.font.atlas.id
-	Rect text_bounds = {bounds.x, bounds.y, 0, 0};
-
-	TextInfo ti;
-	ti.init(&ctx.font, (String)text, bounds);
-
-	while (ti.place_glyph(reflow)!) {
-		if (!cull_rect(ti.glyph_bounds, bounds)) {
-			ctx.push_sprite(ti.glyph_bounds, ti.glyph_uv, texture_id, z_index, hue)!;
-		}
-	}
-
-	ctx.reset_scissor(z_index)!;
-
-	return ti;
-}
-
 fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
 {
 	Cmd up = {
