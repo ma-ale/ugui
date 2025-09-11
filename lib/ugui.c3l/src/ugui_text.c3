@@ -3,15 +3,14 @@ module ugui;
 import std::io;
 
 struct ElemText {
-	String str;
 	usz cursor; // cursor offset
 	Id hash;
-	Rect bounds;
+	TextSize size;
 }
 
-macro Ctx.text_unbounded(&ctx, String text, ...)
-	=> ctx.text_unbounded_id(@compute_id($vasplat), text);
-fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
+macro Ctx.text(&ctx, String text, ...)
+	=> ctx.text_id(@compute_id($vasplat), text);
+fn void? Ctx.text_id(&ctx, Id id, String text)
 {
 	id = ctx.gen_id(id)!;
 
@@ -21,18 +20,22 @@ fn void? Ctx.text_unbounded_id(&ctx, Id id, String text)
 
 	Id text_hash = text.hash();
 	if (elem.flags.is_new || elem.text.hash != text_hash) {
-		elem.text.bounds = ctx.get_text_bounds(text)!;
+		elem.text.size = ctx.measure_string(text)!;
 	}
-	elem.text.str = text;
 	elem.text.hash = text_hash;
 
-	// 2. Layout
-	elem.bounds = ctx.layout_element(parent, elem.text.bounds, style);
-	if (elem.bounds.is_null()) { return; }
+	elem.layout.w = @fit(style.size);
+	elem.layout.h = @fit(style.size);
+	elem.layout.text = elem.text.size;
+	elem.layout.content_offset = style.margin + style.border + style.padding;
 
-	ctx.push_string(elem.bounds, text, parent.div.z_index, style.fg)!;
+	update_parent_grow(elem, parent);
+	update_parent_size(elem, parent);
+
+	ctx.layout_string(text, elem.bounds.pad(elem.layout.content_offset), TOP_LEFT, parent.div.z_index, style.fg)!;
 }
 
+/*
 macro Ctx.text_box(&ctx, Rect size, char[] text, usz* text_len, ...)
 	=> ctx.text_box_id(@compute_id($vasplat), size, text, text_len);
 fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_len)
@@ -77,3 +80,4 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Rect size, char[] text, usz* text_le
 
 	return elem.events;
 }
+*/

@@ -25,6 +25,7 @@ alias IdTableEntry = map::Entry{Key, usz};
 const usz CACHE_NCYCLES = (usz)(SIZE * 2.0/3.0);
 
 struct Cache {
+	Allocator allocator;
 	BitArr present, used;
 	IdTable table;
 	Value[] pool;
@@ -43,19 +44,20 @@ macro Cache.cycle(&cache) @private {
 	}
 }
 
-fn void? Cache.init(&cache)
+fn void? Cache.init(&cache, Allocator allocator)
 {
-	cache.table.init(allocator::heap(), capacity: SIZE);
+	cache.allocator = allocator;
+	cache.table.init(allocator, capacity: SIZE);
 	// FIXME: this shit is SLOW
 	foreach (idx, bit : cache.used) { cache.used[idx] = false; }
 	foreach (idx, bit : cache.present) { cache.present[idx] = false; }
-	cache.pool = mem::new_array(Value, SIZE);
+	cache.pool = allocator::new_array(allocator, Value, SIZE);
 }
 
 fn void Cache.free(&cache)
 {
 	(void)cache.table.free();
-	(void)mem::free(cache.pool);
+	(void)allocator::free(cache.allocator, cache.pool);
 }
 
 fn Value*? Cache.search(&cache, Key id)

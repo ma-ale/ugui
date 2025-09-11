@@ -6,6 +6,7 @@ import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
 import std::ascii;
+import std::core::mem::allocator;
 import sdlrenderer::ren;
 import sdl3::sdl;
 
@@ -58,8 +59,13 @@ const char[*] STYLESHEET_PATH = "resources/style.css";
 
 fn int main(String[] args)
 {
+	ArenaAllocator arena;
+	char[] mem = mem::new_array(char, 1024*1024);
+	defer (void)mem::free(mem);
+	arena.init(mem);
+
 	ugui::Ctx ui;
-	ui.init()!!;
+	ui.init(&arena)!!;
 	defer ui.free();
 
 	ren::Renderer ren;
@@ -199,33 +205,31 @@ fn int main(String[] args)
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
 const String APPLICATION = "calculator";
-$if APPLICATION == "debug":
+$switch APPLICATION:
+$case "debug":
 		debug_app(&ui);
-$endif
-$if APPLICATION == "calculator":
+$case "calculator":
 		calculator(&ui);
-$endif
+$endswitch
 
 		// Timings counter
 		TimeStats dts = draw_times.get_stats();
 		TimeStats uts = ui_times.get_stats();
 
+/*
 		ui.layout_set_floating()!!;
-		// FIXME: I cannot anchor shit to the bottom of the screen
-		ui.div_begin({0, ui.height-150, -300, 150})!!;
-		{
+		ui.@div({0, ui.height-150, -300, 150}) {
 			ui.layout_set_column()!!;
 			ui.text_unbounded(string::tformat("frame %d, fps = %.2f", frame, fps))!!;
 			ui.text_unbounded(string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 			ui.text_unbounded(string::tformat("%s %s", mod.lctrl, (String)ui.input.keyboard.text[:ui.input.keyboard.text_len]))!!;
-		};
-		ui.div_end()!!;
+		}!!;
+*/
 
 		ui.frame_end()!!;
 		/* End UI Handling */
 		ui_times.push(clock.mark());
 		//ui_times.print_stats();
-
 
 		/* Start UI Drawing */
 		ren.begin_render(true);
@@ -249,6 +253,7 @@ $endif
 	return 0;
 }
 
+/*
 fn void debug_app(ugui::Ctx* ui)
 {
 	static bool toggle;
@@ -287,13 +292,12 @@ fn void debug_app(ugui::Ctx* ui)
 		ui.checkbox("", {}, &check, "tick")!!;
 		ui.checkbox("", {}, &check)!!;
 		ui.toggle("", {}, &toggle)!!;
+		
+		ui.sprite("tux")!!;
+		static char[128] text_box = "ciao mamma";
+		static usz text_len = "ciao mamma".len;
+		ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
 	};
-	ui.sprite("tux")!!;
-	
-	static char[128] text_box = "ciao mamma";
-	static usz text_len = "ciao mamma".len;
-	ui.text_box({0,0,200,200}, text_box[..], &text_len)!!;
-
 	ui.div_end()!!;
 
 	ui.div_begin(ugui::DIV_FILL, scroll_x: true, scroll_y: true)!!;
@@ -321,39 +325,93 @@ fn void debug_app(ugui::Ctx* ui)
 	};
 	ui.div_end()!!;
 }
+*/
+
+import std::os::process;
 
 fn void calculator(ugui::Ctx* ui)
 {
-	ui.div_begin(ugui::DIV_FILL)!!;
+	static char[128] buffer;
+	static usz len;
+	bool eval;
+	
+	// keyboard input
+	switch(ui.get_keys()) {
+	case "+": nextcase;
+	case "-": nextcase;
+	case "*": nextcase;
+	case "/": nextcase;
+	case "(": nextcase;
+	case ")": nextcase;
+	case ".": nextcase;
+	case "0": nextcase;
+	case "1": nextcase;
+	case "2": nextcase;
+	case "3": nextcase;
+	case "4": nextcase;
+	case "5": nextcase;
+	case "6": nextcase;
+	case "7": nextcase;
+	case "8": nextcase;
+	case "9":
+		buffer[len++] = ui.get_keys()[0];
+	case "\n":
+		eval = true;
+	case "c":
+		len = 0;
+	case "d":
+		len--;
+	}
 
-	ui.layout_set_row()!!;
-	ui.div_begin({0,0,-300,50})!!;
-	ui.text_unbounded("80085")!!;
-	ui.div_end()!!;
-	ui.layout_next_row()!!;
+	// ui input/output
+	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) { // center everything on the screen
+	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
+
+		ui.@div(ugui::@grow(), ugui::@exact(100), ROW, RIGHT) {
+			ui.text((String)buffer[:len])!!;
+		}!!;
+		ui.@div(ugui::@fit(), ugui::@fit(), ROW, TOP_LEFT) {
+			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+				ui.button("7")!!.mouse_press ? buffer[len++] = '7' : 0;
+				ui.button("4")!!.mouse_press ? buffer[len++] = '4' : 0;
+				ui.button("1")!!.mouse_press ? buffer[len++] = '1' : 0;
+				ui.button("0")!!.mouse_press ? buffer[len++] = '0' : 0;
+			}!!;
+			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+				ui.button("8")!!.mouse_press ? buffer[len++] = '8' : 0;
+				ui.button("5")!!.mouse_press ? buffer[len++] = '5' : 0;
+				ui.button("2")!!.mouse_press ? buffer[len++] = '2' : 0;
+				ui.button(".")!!.mouse_press ? buffer[len++] = '.' : 0;
+			}!!;
+			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+				ui.button("9")!!.mouse_press ? buffer[len++] = '9' : 0;
+				ui.button("6")!!.mouse_press ? buffer[len++] = '6' : 0;
+				ui.button("3")!!.mouse_press ? buffer[len++] = '3' : 0;
+				ui.button("(")!!.mouse_press ? buffer[len++] = '(' : 0;
+			}!!;
 	
-	ui.button("7")!!;
-	ui.button("8")!!;
-	ui.button("9")!!;
-	ui.layout_next_row()!!;
-	ui.button("4")!!;
-	ui.button("5")!!;
-	ui.button("6")!!;
-	ui.layout_next_row()!!;
-	ui.button("3")!!;
-	ui.button("2")!!;
-	ui.button("1")!!;
-	ui.layout_next_row()!!;
-	ui.button(".")!!;
-	ui.button("0")!!;
-	ui.button("")!!;
-	
-	ui.layout_next_column()!!;
-	ui.layout_set_column()!!;
-	ui.button("+")!!;
-	ui.button("-")!!;
-	ui.button("*")!!;
-	ui.button("/")!!;
-	
-	ui.div_end()!!;
+			ui.@div(ugui::@exact(10), ugui::@exact(10)) {}!!;
+			
+			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+				ui.button("x")!!.mouse_press ? buffer[len++] = '*' : 0;
+				ui.button("/")!!.mouse_press ? buffer[len++] = '/' : 0;
+				ui.button("+")!!.mouse_press ? buffer[len++] = '+' : 0;
+				ui.button(")")!!.mouse_press ? buffer[len++] = ')' : 0;
+			}!!;
+			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
+				ui.button("C")!!.mouse_press ? len = 0 : 0;
+				ui.button("D")!!.mouse_press ? len-- : 0;
+				ui.button("-")!!.mouse_press ? buffer[len++] = '-' : 0;
+				
+				// eval the expression with 'bc'
+				if (ui.button("=")!!.mouse_press || eval) {
+					char[128] out;
+					String y = string::tformat("echo '%s' | bc", (String)buffer[:len]);
+					String x = process::execute_stdout_to_buffer(out[:128], (String[]){"sh", "-c", y}) ?? "";
+					buffer[:x.len] = x[..];
+					len = x.len;
+				}
+			}!!;
+		}!!;
+	}!!; }!!;
 }

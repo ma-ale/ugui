@@ -44,7 +44,7 @@ fn void? SpriteAtlas.init(&this, String name, AtlasType type, ushort width, usho
 
 	this.id = name.hash();
 	this.atlas.new(this.id, AtlasType.ATLAS_R8G8B8A8, width, height)!;
-	this.sprites.init(allocator::heap(), capacity: SRITES_PER_ATLAS);
+	this.sprites.init(allocator::mem, capacity: SRITES_PER_ATLAS);
 	this.should_update = false;
 }
 
@@ -104,13 +104,14 @@ fn void? Ctx.import_sprite_file_qoi(&ctx, String name, String path, SpriteType t
 {
 	QOIDesc desc;
 
-	char[] pixels = qoi::read(allocator::heap(), path, &desc, QOIChannels.RGBA)!;
+	char[] pixels = qoi::read(allocator::mem, path, &desc, QOIChannels.RGBA)!;
 	defer mem::free(pixels);
 
 	ctx.sprite_atlas.insert(name, type, pixels, (ushort)desc.width, (ushort)desc.height, (ushort)desc.width)!;
 }
 
 
+/*
 macro Ctx.sprite(&ctx, String name, Point off = {0,0}, ...)
 	=> ctx.sprite_id(@compute_id($vasplat), name, off);
 fn void? Ctx.sprite_id(&ctx, Id id, String name, Point off)
@@ -151,3 +152,4 @@ fn void? Ctx.draw_sprite_raw(&ctx, String name, Rect bounds, bool center = false
 	
 	return ctx.push_sprite(bounds, sprite.uv(), tex_id, parent.div.z_index, type: sprite.type)!;
 }
+*/

@@ -5,7 +5,7 @@
 [x] Port font system from C to C3 (rewrite1)
 [ ] Update ARCHITECTURE.md
 [ ] Write a README.md
-[ ] Use an arena allocator for cache
+[x] Use an arena allocator for cache
 [ ] Do not redraw if there was no update (no layout and no draw)
 [ ] Do command buffer damage tracking based on a context grid (see rxi writeup)
 [x] Better handling of the active and focused widgets, try
@@ -44,24 +44,34 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Fix how padding is applied in push_rect. In CSS padding is applied between the border and the
     content, the background color is applied starting from the border. Right now push_rect() offsets
     the background rect by both border and padding
-[ ] Investigate why the debug pointer (cyan rectangle) disappears... 
+[x] Investigate why the debug pointer (cyan rectangle) disappears... 
 
 ## Layout
 
 [x] Flexbox
-[ ] Center elements to the row/column
+[x] Center elements to the row/column
 [x] Text wrapping / reflow
 [x] Implement a better and unified way to place a glyph and get the cursor position, maybe with a struct
 [ ] Correct whitespace handling in text (\t \r etc)
-[ ] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
+[x] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
     instead of the curren multi-frame approach.
-[ ] Implement column/row sizing (min, max)
+[x] Implement column/row sizing (min, max)
+[x] Implement a way to size the element as the current row/column size
+    *   +-------------+
+    *   |             |
+    *   +-------------+
+    *   +--+
+    *   |  |
+    *   +--+
+    *   <------------->
+    *     column size
+    See the calculator example for why it is useful
 [ ] Find a way to concile pixel measurements to the mm ones used in css, for example in min/max sizing
     of elements
-[ ] Center elements to div (center children_bounds to the center of the div bounds and shift the origin accordingly)
+[x] Center elements to div (center children_bounds to the center of the div bounds and shift the origin accordingly)
 [x] Use containing_rect() in position_element() to skip some computing and semplify the function
 [x] Rename position_element() to layout_element()
-[ ] Make functions to mark rows/columns as full, to fix the calculator demo
+[x] Make functions to mark rows/columns as full, to fix the calculator demo
 
 ## Input
 

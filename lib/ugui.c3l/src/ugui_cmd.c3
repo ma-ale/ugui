@@ -58,7 +58,26 @@ fn int Cmd.compare_to(Cmd a, Cmd b)
 // implement the Printable interface
 fn usz? Cmd.to_format(Cmd* cmd, Formatter *f) @dynamic
 {
-	return f.printf("Cmd{ type: %s, z_index: %d }", cmd.type, cmd.z_index);
+	usz ret;
+	
+	ret += f.printf("Cmd{ type: %s, z_index: %d, ", cmd.type, cmd.z_index)!;
+	switch (cmd.type) {
+	case CMD_RECT:
+		ret += f.print("CmdRect")!;
+		ret += io::struct_to_format(cmd.rect, f, false)!;
+	case CMD_SCISSOR:
+		ret += f.print("CmdScissor")!;
+		ret += io::struct_to_format(cmd.scissor, f, false)!;
+	case CMD_SPRITE:
+		ret += f.print("CmdSprite")!;
+		ret += io::struct_to_format(cmd.sprite, f, false)!;
+	case CMD_UPDATE_ATLAS:
+		ret += f.print("CmdUpdateAtlas")!;
+		ret += io::struct_to_format(cmd.update_atlas, f, false)!;
+	}
+	
+	ret += f.print("}")!;
+	return ret;
 }
 
 macro bool cull_rect(Rect rect, Rect clip = {0,0,short.max,short.max})
@@ -77,7 +96,13 @@ macro Ctx.push_cmd(&ctx, Cmd *cmd, int z_index)
 	case CMD_SPRITE: rect = cmd.sprite.rect;
 	default: return ctx.cmd_queue.enqueue(cmd);
 	}
-	if (cull_rect(rect, ctx.div_scissor)) return;
+	if (cull_rect(rect, ctx.div_scissor)) {
+//		io::print("NOPE: ");
+//		io::print(cmd.rect.rect);
+//		io::printn(cmd.z_index);
+//		unreachable();
+		return;
+	}
 	return ctx.cmd_queue.enqueue(cmd);
 }
 
@@ -89,6 +114,8 @@ fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
 	};
 	ctx.push_cmd(&sc, z_index)!;
 }
+
+fn void? Ctx.reset_scissor(&ctx, int z_index) => ctx.push_cmd(&&(Cmd){.type=CMD_SCISSOR,.scissor.rect=ctx.div_scissor}, z_index)!;
 
 fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 {
@@ -119,7 +146,6 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 		.rect.color = bg,
 		.rect.radius = radius,
 	};
-	if (cull_rect(cmd.rect.rect, ctx.div_scissor)) return;
 	ctx.push_cmd(&cmd, z_index)!;
 }
 
@@ -135,32 +161,6 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_i
 		.sprite.hue = hue,
 	};
 	ctx.push_cmd(&cmd, z_index)!;
-}
-
-// TODO: do not return the WHOLE TextInfo but instead something smaller
-fn TextInfo? Ctx.push_string(&ctx, Rect bounds, char[] text, int z_index, Color hue, bool reflow = false)
-{
-	if (text.len == 0) {
-		return {};
-	}
-
-	ctx.push_scissor(bounds, z_index)!;
-
-	Id texture_id = ctx.font.id;  // or ctx.font.atlas.id
-	Rect text_bounds = {bounds.x, bounds.y, 0, 0};
-
-	TextInfo ti;
-	ti.init(&ctx.font, (String)text, bounds);
-
-	while (ti.place_glyph(reflow)!) {
-		if (!cull_rect(ti.glyph_bounds, bounds)) {
-			ctx.push_sprite(ti.glyph_bounds, ti.glyph_uv, texture_id, z_index, hue)!;
-		}
-	}
-	
-	ctx.push_scissor({}, z_index)!;
-
-	return ti;
 }
 
 fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
