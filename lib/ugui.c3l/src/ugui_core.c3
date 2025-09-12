@@ -165,10 +165,9 @@ macro Id @compute_id(...)
 // resets all flags except is_new which is set accordingly
 fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
 {
-	Elem empty_elem;
 	bool is_new;
 	Elem* elem;
-	elem = ctx.cache.get_or_insert(&empty_elem, id, &is_new)!;
+	elem = ctx.cache.get_or_insert(&&(Elem){}, id, &is_new)!;
 	elem.flags = (ElemFlags)0;
 	elem.flags.is_new = is_new;
 	elem.id = id;

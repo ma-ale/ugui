@@ -161,7 +161,7 @@ fn void? Ctx.div_end(&ctx)
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
 	Elem* parent = ctx.get_parent()!;
 	ctx.div_scissor = parent.bounds;
-	ctx.push_scissor(parent.bounds, elem.div.z_index)!;
+	ctx.reset_scissor(elem.div.z_index)!;
 
 	update_parent_size(elem, parent);
 }

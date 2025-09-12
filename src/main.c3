@@ -360,7 +360,7 @@ fn void calculator(ugui::Ctx* ui)
 	case "c":
 		len = 0;
 	case "d":
-		len--;
+		if (len > 0) len--;
 	}
 
 	// ui input/output
@@ -389,9 +389,7 @@ fn void calculator(ugui::Ctx* ui)
 				ui.button("3")!!.mouse_press ? buffer[len++] = '3' : 0;
 				ui.button("(")!!.mouse_press ? buffer[len++] = '(' : 0;
 			}!!;
-	
 			ui.@div(ugui::@exact(10), ugui::@exact(10)) {}!!;
-			
 			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 				ui.button("x")!!.mouse_press ? buffer[len++] = '*' : 0;
 				ui.button("/")!!.mouse_press ? buffer[len++] = '/' : 0;
@@ -400,7 +398,7 @@ fn void calculator(ugui::Ctx* ui)
 			}!!;
 			ui.@div(ugui::@fit(), ugui::@fit(), COLUMN) {
 				ui.button("C")!!.mouse_press ? len = 0 : 0;
-				ui.button("D")!!.mouse_press ? len-- : 0;
+				ui.button("D")!!.mouse_press ? len > 0 ? len-- : 0 : 0;
 				ui.button("-")!!.mouse_press ? buffer[len++] = '-' : 0;
 				
 				// eval the expression with 'bc'
@@ -413,5 +411,12 @@ fn void calculator(ugui::Ctx* ui)
 				}
 			}!!;
 		}!!;
+		
+		ui.@div(ugui::@grow(), ugui::@grow(), anchor: CENTER) {		
+			static bool state;
+			ui.checkbox("boolean", &state, "tick")!!;
+			ui.sprite("tux")!!;
+		}!!;
+
 	}!!; }!!;
 }
