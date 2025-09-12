@@ -9,10 +9,6 @@ module cache{Key, Value, SIZE};
  * the elements that were not recently used.
  */
 
-// FIXME: this module should really allocate all resources on an arena or temp
-//        allocator, since all memory allocations are connected and freeing
-//        happens at the same time
-
 import std::core::mem;
 import std::core::mem::allocator;
 import std::collections::bitset;
@@ -79,6 +75,7 @@ fn Value*? Cache.search(&cache, Key id)
 	}
 
 	/* HIT, set as recently used */
+	//io::printfn("HIT: %d [%d]", entry.value, entry.key);
 	cache.used[entry.value] = true;
 	return &(cache.pool[entry.value]);
 }
@@ -99,16 +96,19 @@ fn void Cache.remove(&cache, Key id)
 /* If there is no free space left then just return the first position */
 fn usz Cache.get_free_spot(&cache) @private
 {
+	// TODO: in the upgrade to c3 1.7.5 use @bitsof()
 	const BITS = $typeof(cache.present.data[0]).sizeof*8;
 	foreach (idx, d: cache.present.data) {
-		if (d.clz() != BITS) {
-			return idx*BITS + BITS-d.clz();
+		if (d != $typeof(d).max) {
+			usz spot = idx*BITS + BITS-d.clz();
+			if (cache.used[spot]) unreachable("free spot is not actually free: %d", spot);
+			return spot;
 		}
 	}
 	return 0;
 }
 
-fn Value*? Cache.insert_at(&cache, Value *g, Key id, usz index) @private
+fn Value*? Cache.insert_at(&cache, Value* g, Key id, usz index) @private
 {
 	// TODO: verify index, g and id
 	Value* spot;
