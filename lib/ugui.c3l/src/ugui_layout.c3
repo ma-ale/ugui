@@ -22,7 +22,7 @@ enum Anchor {
 
 struct Layout {
 	Size w, h; // size of the CONTENT, does not include margin, border and padding
-	struct children { // the children size includes the children's margin/border/pading 
+	struct children { // the children size includes the children's margin/border/pading
 		Size w, h;
 	}
 	TextSize text;
@@ -36,71 +36,59 @@ struct Layout {
 	Rect content_offset; // combined effect of margin, border and padding
 }
 
-// Total width of a layout element, complete with margin, border and padding
-macro Size Layout.total_width(&el)
-{
-	Rect min = (Rect){.w = el.w.min, .h = el.h.min}.expand(el.content_offset);
-	Rect max = (Rect){.w = el.w.max, .h = el.h.max}.expand(el.content_offset);
-	return {.min = min.w, .max = max.w};
-}
-
-// Total height of a layout element, complete with margin, border and padding
-macro Size Layout.total_height(&el)
-{
-	Rect min = (Rect){.w = el.w.min, .h = el.h.min}.expand(el.content_offset);
-	Rect max = (Rect){.w = el.w.max, .h = el.h.max}.expand(el.content_offset);
-	return {.min = min.h, .max = max.h};
-}
-
 // Returns the width and height of a @FIT() element based on it's wanted size (min/max)
 // and the content size, this function is used to both update the parent's children size and
 // give the dimensions of a fit element
 // TODO: test and cleanup this function
 macro Point Layout.get_dimensions(&el)
 {
+	Point dim;
 	// if the direction is ROW then the text is placed horizontally with the children
 	if (el.dir == ROW) {
 		Size content_width = el.children.w + el.text.width;
 		Size width = el.w.combine(content_width);
 		short final_width = width.greater();
-	
+
 		short text_height;
 		if (el.text.area != 0) {
 			short text_width = (@exact(final_width) - el.children.w).combine(el.text.width).min;
 			text_height = @exact((short)(el.text.area / text_width)).combine(el.text.height).min;
 		}
-	
+
 		Size content_height = el.children.h.comb_max(@exact(text_height));
 		Size height = el.h.combine(content_height);
 		short final_height = height.greater();
-	
-		Point dim = {
+
+		dim = {
 			.x = final_width + el.content_offset.x + el.content_offset.w,
 			.y = final_height + el.content_offset.y + el.content_offset.h,
 		};
-		return dim;
 	} else {
 	// if the direction is COLUMN the text and children are one on top of the other
 		Size content_width = el.children.w.comb_max(el.text.width);
 		Size width = el.w.combine(content_width);
 		short final_width = width.greater();
-	
+
 		short text_height;
 		if (el.text.area != 0) {
 			short text_width = @exact(final_width).combine(el.text.width).min;
 			text_height = @exact((short)(el.text.area / text_width)).combine(el.text.height).min;
 		}
-	
+
 		Size content_height = el.children.h + @exact(text_height);
 		Size height = el.h.combine(content_height);
 		short final_height = height.greater();
-	
-		Point dim = {
+
+		dim = {
 			.x = final_width + el.content_offset.x + el.content_offset.w,
 			.y = final_height + el.content_offset.y + el.content_offset.h,
 		};
-		return dim;
 	}
+
+	// GROSS HACK FOR EXACT DIMENSIONS
+	if (el.w.@is_exact()) dim.x = el.w.min + el.content_offset.x + el.content_offset.w;
+	if (el.h.@is_exact()) dim.y = el.h.min + el.content_offset.y + el.content_offset.h;
+	return dim;
 }
 
 // The content space of the element
@@ -112,7 +100,7 @@ macro Point Elem.content_space(&e)
 	};
  }
 
-// Update the parent element's grow children counter 
+// Update the parent element's grow children counter
 fn void update_parent_grow(Elem* child, Elem* parent)
 {
 	switch (parent.layout.dir) {
@@ -127,8 +115,8 @@ fn void update_parent_grow(Elem* child, Elem* parent)
 fn void update_parent_size(Elem* child, Elem* parent)
 {
 	Layout* cl = &child.layout;
-	Layout* pl = &parent.layout; 
-	
+	Layout* pl = &parent.layout;
+
 	Point child_size = cl.get_dimensions();
 
 	switch (pl.dir) {
@@ -174,35 +162,10 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 {
 	Layout* el = &e.layout;
 	Layout* pl = &p.layout;
-	
+
 	Point elem_dimensions = el.get_dimensions();
-
-	short text_min_height;
-	// ASSIGN WIDTH
-	switch {
-	case el.w.@is_exact():
-		// if width is exact then assign it to the bounds
-		e.bounds.w = el.total_width().min;
-	case el.w.@is_grow():
-		// done in another pass
-		break;
-	case el.w.@is_fit(): // fit the element's children
-		e.bounds.w = elem_dimensions.x;
-	default: unreachable("width is not exact, grow or fit");
-	}
-
-	// ASSIGN HEIGHT
-	switch {
-	case el.h.@is_exact():
-		// if width is exact then assign it to the bounds and add border and paddign
-		e.bounds.h = el.total_height().min;
-	case el.h.@is_grow():
-		break;
-		// done in another pass
-	case el.h.@is_fit(): // fit the element's children
-		e.bounds.h = elem_dimensions.y;
-	default: unreachable("width is not exact, grow or fit");
-	}
+	e.bounds.w = elem_dimensions.x;
+	e.bounds.h = elem_dimensions.y;
 
 	switch (pl.dir) {
 	case ROW:
@@ -218,7 +181,7 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 	if (e.layout.w.@is_grow()) {
 		if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().x - p.layout.occupied) / p.layout.grow_children);
-			// the space slot accounts for the total size, while the element bounds does not account 
+			// the space slot accounts for the total size, while the element bounds does not account
 			// for the margin
 			e.bounds.w = slot;
 			p.layout.grow_children--;
@@ -227,7 +190,7 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 			e.bounds.w = p.content_space().x;
 		}
 	}
-	
+
 	// HEIGHT
 	if (e.layout.h.@is_grow()) {
 		if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
@@ -372,7 +335,7 @@ fn void Ctx.layout_element_tree(&ctx)
 				resolve_grow_elements(c, p);
 			}
 		}
-		
+
 		// RESOLVE CHILDREN PLACEMENT
 		ch_cur = 0;
 		ch = ctx.tree.children_it(current, &ch_cur)!!;
