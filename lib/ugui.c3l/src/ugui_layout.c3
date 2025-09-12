@@ -55,27 +55,52 @@ macro Size Layout.total_height(&el)
 // Returns the width and height of a @FIT() element based on it's wanted size (min/max)
 // and the content size, this function is used to both update the parent's children size and
 // give the dimensions of a fit element
+// TODO: test and cleanup this function
 macro Point Layout.get_dimensions(&el)
 {
-	Size content_width = el.children.w + el.text.width;
-	Size width = el.w.combine(content_width);
-	short final_width = width.greater();
-
-	short text_height;
-	if (el.text.area != 0) {
-		short text_width = (@exact(final_width) - el.children.w).combine(el.text.width).min;
-		text_height = @exact((short)(el.text.area / text_width)).combine(el.text.height).min;
+	// if the direction is ROW then the text is placed horizontally with the children
+	if (el.dir == ROW) {
+		Size content_width = el.children.w + el.text.width;
+		Size width = el.w.combine(content_width);
+		short final_width = width.greater();
+	
+		short text_height;
+		if (el.text.area != 0) {
+			short text_width = (@exact(final_width) - el.children.w).combine(el.text.width).min;
+			text_height = @exact((short)(el.text.area / text_width)).combine(el.text.height).min;
+		}
+	
+		Size content_height = el.children.h.comb_max(@exact(text_height));
+		Size height = el.h.combine(content_height);
+		short final_height = height.greater();
+	
+		Point dim = {
+			.x = final_width + el.content_offset.x + el.content_offset.w,
+			.y = final_height + el.content_offset.y + el.content_offset.h,
+		};
+		return dim;
+	} else {
+	// if the direction is COLUMN the text and children are one on top of the other
+		Size content_width = el.children.w.comb_max(el.text.width);
+		Size width = el.w.combine(content_width);
+		short final_width = width.greater();
+	
+		short text_height;
+		if (el.text.area != 0) {
+			short text_width = @exact(final_width).combine(el.text.width).min;
+			text_height = @exact((short)(el.text.area / text_width)).combine(el.text.height).min;
+		}
+	
+		Size content_height = el.children.h + @exact(text_height);
+		Size height = el.h.combine(content_height);
+		short final_height = height.greater();
+	
+		Point dim = {
+			.x = final_width + el.content_offset.x + el.content_offset.w,
+			.y = final_height + el.content_offset.y + el.content_offset.h,
+		};
+		return dim;
 	}
-
-	Size content_height = el.children.h + @exact(text_height);
-	Size height = el.h.combine(content_height);
-	short final_height = height.greater();
-
-	Point dim = {
-		.x = final_width + el.content_offset.x + el.content_offset.w,
-		.y = final_height + el.content_offset.y + el.content_offset.h,
-	};
-	return dim;
 }
 
 // The content space of the element
