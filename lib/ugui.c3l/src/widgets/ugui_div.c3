@@ -32,7 +32,7 @@ macro Ctx.@div(&ctx,
 {
 	ctx.div_begin(width, height, dir, anchor, scroll_x, scroll_y, $vasplat)!;
 	@body();
-	ctx.div_end()!;
+	return ctx.div_end()!;
 }
 
 macro Ctx.div_begin(&ctx,
@@ -92,7 +92,7 @@ fn void? Ctx.div_begin_id(&ctx,
 	// TODO: check resizeable
 }
 
-fn void? Ctx.div_end(&ctx)
+fn Id? Ctx.div_end(&ctx)
 {
 	Elem* elem = ctx.get_active_div()!;
 
@@ -136,4 +136,6 @@ fn void? Ctx.div_end(&ctx)
 	ctx.reset_scissor(elem.div.z_index)!;
 
 	update_parent_size(elem, parent);
+
+	return elem.id;
 }
