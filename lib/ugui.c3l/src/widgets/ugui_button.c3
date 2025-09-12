@@ -16,14 +16,14 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	Elem *parent = ctx.get_parent()!;
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 	Style* style = ctx.styles.get_style(@str_hash("button"));
-	
+
 	Sprite* sprite = icon != "" ? ctx.sprite_atlas.get(icon)! : &&(Sprite){};
 	Rect icon_size = sprite.rect();
-	
-	ushort min_size = style.size; 
+
+	ushort min_size = style.size;
 	ushort half_lh = (ushort)(ctx.font.line_height() / 2);
 	ushort inner_pad = label != "" && icon != "" ? half_lh : 0;
-	/*    
+	/*
 	 * +--------------------------------------+
 	 * |   +--------+                         |
 	 * |   |        |   +-----------------+   |
@@ -105,7 +105,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 	 * +-------------------------|-------|---+
 	 *                           |<----->| style.size
 	 */
-	
+
 	elem.layout.w = @fit(style.size);
 	elem.layout.h = @fit(style.size);
 	elem.layout.children.w = @exact(style.size + inner_pad);
@@ -139,7 +139,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 	s.secondary = style.secondary;
 	s.border = style.border;
 	s.radius = style.radius;
-	
+
 	ctx.layout_string(description, text_bounds, CENTER, parent.div.z_index, style.fg)!;
 	if (tick_sprite != "") {
 		ctx.push_rect(check_bounds, parent.div.z_index, &s)!;
@@ -158,11 +158,9 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 	}
 }
 
-/*
-// FIXME: this should be inside the style
-macro Ctx.toggle(&ctx, String desc, Point off, bool* active)
-	=> ctx.toggle_id(@compute_id($vasplat), desc, off, active);
-fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
+macro Ctx.toggle(&ctx, String desc, bool* active)
+	=> ctx.toggle_id(@compute_id($vasplat), desc, active);
+fn void? Ctx.toggle_id(&ctx, Id id, String description, bool* active)
 {
 	id = ctx.gen_id(id)!;
 
@@ -170,22 +168,61 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, Point off, bool* active)
 	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
 	Style* style = ctx.styles.get_style(@str_hash("toggle"));
 
-	Rect size = {off.x, off.y, style.size*2, style.size};
-	elem.bounds = ctx.layout_element(parent, size, style);
+	short inner_pad = description != "" ? style.size/2 : 0;
+	/*
+	 *                       |< >| style.size/2
+	 * +---------------------|---|-----------------+
+	 * |                     |    .-----------. ---|--
+	 * |   +-----------------+   ' #####       '   | ^
+	 * |   |   description   |   | #####       |   | style.size
+	 * |   +-----------------+   . #####       .   | v
+	 * |                          '-----------' ---|--
+	 * +-------------------------|-------------|---+
+	 *                           |<----->| style.size*2
+	 */
 
-	// if the bounds are null the element is outside the div view,
-	//  no interaction should occur so just return
-	if (elem.bounds.is_null()) return;
+	elem.layout.w = @fit(style.size*2);
+	elem.layout.h = @fit(style.size);
+	elem.layout.children.w = @exact(style.size*2 + inner_pad);
+	elem.layout.children.h = @exact(style.size);
+	elem.layout.text = ctx.measure_string(description)!;
+	elem.layout.content_offset = style.margin + style.border + style.padding;
+
+	update_parent_grow(elem, parent);
+	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);
 	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
-	// Draw the button
-	// FIXME: THIS IS SHIT
-	ctx.push_rect(elem.bounds, parent.div.z_index, style)!;
-	Rect t = elem.bounds.add({*active ? (style.size+3) : +3, +3, -style.size-6, -6});
-	Style s = *style;
-	s.bg = s.primary;
-	s.margin = s.border = s.padding = {};
-	ctx.push_rect(t, parent.div.z_index, &s)!;
+	Rect content_bounds = elem.bounds.pad(elem.layout.content_offset);
+	Rect text_bounds = {
+		.x = content_bounds.x,
+		.y = content_bounds.y,
+		.w = content_bounds.w - inner_pad - style.size*2,
+		.h = content_bounds.h
+	};
+	Rect toggle_bounds = {
+		.x = content_bounds.x + text_bounds.w + inner_pad,
+		.y = content_bounds.y + (content_bounds.h - style.size)/2,
+		.w = style.size*2,
+		.h = style.size,
+	};
+	Rect toggle = {
+		.x = toggle_bounds.x + (*active ? style.size : 0),
+		.y = toggle_bounds.y,
+		.w = style.size,
+		.h = style.size
+	};
+
+	Style s;
+	s.bg = style.bg;
+	s.secondary = style.secondary;
+	s.border = style.border;
+	s.radius = style.radius;
+	ctx.layout_string(description, text_bounds, CENTER, parent.div.z_index, style.fg)!;
+	ctx.push_rect(toggle_bounds, parent.div.z_index, &s)!;
+	s.bg = style.primary;
+	s.border = {};
+	ctx.push_rect(toggle.pad(style.border), parent.div.z_index, &s)!;
+
 }

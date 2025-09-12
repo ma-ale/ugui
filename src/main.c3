@@ -414,10 +414,11 @@ fn void calculator(ugui::Ctx* ui)
 			static bool state;
 			ui.checkbox("boolean", &state, "tick")!!;
 			ui.sprite("tux")!!;
+			ui.toggle("lmao", &state)!!;
 		}!!;
-		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
+		ui.@div(ugui::@grow(), ugui::@exact(50), anchor: CENTER, scroll_y: true) {
 			static float f;
-			ui.slider_hor(ugui::@grow(), ugui::@exact(20), &f)!!;
+			ui.slider_hor(ugui::@exact(100), ugui::@exact(20), &f)!!;
 			ui.slider_ver(ugui::@exact(20), ugui::@exact(100), &f)!!;
 		}!!;
 

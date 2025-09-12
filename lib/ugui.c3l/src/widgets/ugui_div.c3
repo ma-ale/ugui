@@ -26,7 +26,7 @@ macro Ctx.@div(&ctx,
                LayoutDirection dir = ROW,
                Anchor anchor = TOP_LEFT,
                bool scroll_x = false, bool scroll_y = false,
-               ...; 
+               ...;
                @body()
               )
 {
@@ -80,7 +80,7 @@ fn void? Ctx.div_begin_id(&ctx,
 		.anchor = anchor,
 		.content_offset = style.margin + style.border + style.padding,
 	};
-	
+
 	// update parent grow children
 	update_parent_grow(elem, parent);
 
@@ -96,20 +96,10 @@ fn void? Ctx.div_end(&ctx)
 {
 	Elem* elem = ctx.get_active_div()!;
 
-/* FIXME: Redo slider functionality
-	Rect cb = elem.div.pcb;
-	// children bounds bottom-right corner
-	Point cbc = {
-		.x = cb.x + cb.w,
-		.y = cb.y + cb.h,
-	};
-	// div bounds bottom-right corner
-	Point bc = {
-		.x = elem.bounds.x + elem.bounds.w,
-		.y = elem.bounds.y + elem.bounds.h,
-	};
-
+/* FIXME: this needs the absolute positioning to work
 	// set the scrollbar flag, is used in layout
+	Point cbc = elem.children_bounds.bottom_right();
+	Point bc = elem.bounds.bottom_right();
 	// horizontal overflow
 	elem.div.scroll_x.on = cbc.x > bc.x && elem.div.scroll_x.enabled;
 	// vertical overflow
@@ -127,16 +117,7 @@ fn void? Ctx.div_end(&ctx)
 			elem.div.scroll_y.value += ctx.input.mouse.scroll.y * 0.07f;
 			elem.div.scroll_y.value = math::clamp(elem.div.scroll_y.value, 0.0f, 1.0f);
 		}
-		Rect vslider = {
-			.x = elem.bounds.x + elem.bounds.w - wdim,
-			.y = elem.bounds.y,
-			.w = wdim,
-			.h = elem.bounds.h - hdim,
-		};
-		Layout prev_l = elem.div.layout;
-		elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_ver_id(vsid_raw, vslider, &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
-		elem.div.layout = prev_l;
+		ctx.slider_ver_id(vsid_raw, @exact(wdim), @exact(elem.bounds.h - hdim), &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
 	}
 
 	if (elem.div.scroll_x.on) {
@@ -144,16 +125,7 @@ fn void? Ctx.div_end(&ctx)
 			elem.div.scroll_x.value += ctx.input.mouse.scroll.x * 0.07f;
 			elem.div.scroll_x.value = math::clamp(elem.div.scroll_x.value, 0.0f, 1.0f);
 		}
-		Rect hslider = {
-			.x = elem.bounds.x,
-			.y = elem.bounds.y + elem.bounds.h - hdim,
-			.w = elem.bounds.w - wdim,
-			.h = hdim,
-		};
-		Layout prev_l = elem.div.layout;
-		elem.div.layout = LAYOUT_ABSOLUTE;
-		ctx.slider_hor_id(hsid_raw, hslider, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
-		elem.div.layout = prev_l;
+		ctx.slider_hor_id(hsid_raw, @exact(elem.bounds.w - wdim), @exact(hdim), &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
 	}
 */
 

@@ -131,7 +131,7 @@ fn Elem*? Ctx.get_parent(&ctx)
 	Elem*? parent = ctx.cache.search(parent_id);
 	if (catch parent) return parent;
 	if (parent.type != ETYPE_DIV) return WRONG_ELEMENT_TYPE?;
-	return parent; 
+	return parent;
 }
 
 macro @bits(#a) => $typeof(#a).sizeof*8;
