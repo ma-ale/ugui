@@ -73,54 +73,51 @@ fn int main(String[] args)
 	defer ren.free();
 	ui.input_window_size(800, 600)!!;
 
-	//
-	// FONT LOADING
-	//
-	{
-		// import font in the ui context
-		ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
-		
-		// create the rendering pipeline
-		ren.font_atlas_id = ui.get_font_id("font1");
-		ren.load_spirv_shader_from_file("UGUI_PIPELINE_FONT", SPRITE_VS_PATH, FONT_FS_PATH, 1, 0);
-		ren.create_pipeline("UGUI_PIPELINE_FONT", SPRITE);
-		
-		// send the atlas to the gpu
-		Atlas* font_atlas = ui.get_font_atlas("font1")!!;
-		ren.new_texture("font1", JUST_ALPHA, font_atlas.buffer, font_atlas.width, font_atlas.height);
-	}
+	// ========================================================================================== //
+	// FONT LOADING                                                                               //
+	// ========================================================================================== //
+	// import font in the ui context
+	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
 
-	//
-	// ICON LOADING
-	//
-	{
-		// create the atlas and upload some icons
-		ui.sprite_atlas_create("icons", AtlasType.ATLAS_R8G8B8A8, 512, 512)!!;
-		ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
-		ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
-		
-		// create the rendering pipelines
-		ren.sprite_atlas_id = ui.get_sprite_atlas_id("icons");
-		// normal sprite pipeline
-		ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE", SPRITE_VS_PATH, SPRITE_FS_PATH, 1, 0);
-		ren.create_pipeline("UGUI_PIPELINE_SPRITE", SPRITE);
-		// msdf sprite pipeline
-		ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE_MSDF", SPRITE_VS_PATH, MSDF_FS_PATH, 1, 0);
-		ren.create_pipeline("UGUI_PIPELINE_SPRITE_MSDF", SPRITE);
-	
-		// upload the atlas to the gpu
-		Atlas atlas = ui.sprite_atlas.atlas;
-		ren.new_texture("icons", FULL_COLOR, atlas.buffer, atlas.width, atlas.height);
-	}
+	// create the rendering pipeline
+	ren.font_atlas_id = ui.get_font_id("font1");
+	ren.load_spirv_shader_from_file("UGUI_PIPELINE_FONT", SPRITE_VS_PATH, FONT_FS_PATH, 1, 0);
+	ren.create_pipeline("UGUI_PIPELINE_FONT", SPRITE);
 
-	//
-	// RECT PIPELINE
-	//
+	// send the atlas to the gpu
+	Atlas* font_atlas = ui.get_font_atlas("font1")!!;
+	ren.new_texture("font1", JUST_ALPHA, font_atlas.buffer, font_atlas.width, font_atlas.height);
+
+	// ========================================================================================== //
+	// ICON LOADING                                                                               //
+	// ========================================================================================== //
+	// create the atlas and upload some icons
+	ui.sprite_atlas_create("icons", AtlasType.ATLAS_R8G8B8A8, 512, 512)!!;
+	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
+	ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
+
+	// create the rendering pipelines
+	ren.sprite_atlas_id = ui.get_sprite_atlas_id("icons");
+	// normal sprite pipeline
+	ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE", SPRITE_VS_PATH, SPRITE_FS_PATH, 1, 0);
+	ren.create_pipeline("UGUI_PIPELINE_SPRITE", SPRITE);
+	// msdf sprite pipeline
+	ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE_MSDF", SPRITE_VS_PATH, MSDF_FS_PATH, 1, 0);
+	ren.create_pipeline("UGUI_PIPELINE_SPRITE_MSDF", SPRITE);
+
+	// upload the atlas to the gpu
+	Atlas atlas = ui.sprite_atlas.atlas;
+	ren.new_texture("icons", FULL_COLOR, atlas.buffer, atlas.width, atlas.height);
+
+	// ========================================================================================== //
+	// RECT PIPELINE                                                                              //
+	// ========================================================================================== //
 	ren.load_spirv_shader_from_file("UGUI_PIPELINE_RECT", RECT_VS_PATH, RECT_FS_PATH, 0, 0);
 	ren.create_pipeline("UGUI_PIPELINE_RECT", RECT);
 
-
-	// CSS INPUT
+	// ========================================================================================== //
+	// CSS INPUT                                                                                  //
+	// ========================================================================================== //
 	io::printfn("imported %d styles", ui.import_style_from_file(STYLESHEET_PATH));
 
 	isz frame;
@@ -132,9 +129,9 @@ fn int main(String[] args)
 	Times draw_times;
 
 
-	//
-	// MAIN LOOP
-	//
+	// ========================================================================================== //
+	// MAIN LOOP                                                                                  //
+	// ========================================================================================== //
 	sdl::start_text_input(ren.win);
 
 	sdl::Event e;
@@ -145,10 +142,10 @@ fn int main(String[] args)
 		clock.mark();
 		fps_clock.mark();
 		sleep_clock.mark();
-		
+
 		do {
 			switch (e.type) {
-			case EVENT_QUIT: 
+			case EVENT_QUIT:
 				quit = true;
 			case EVENT_KEY_UP: nextcase;
 			case EVENT_KEY_DOWN:
@@ -156,15 +153,15 @@ fn int main(String[] args)
 				mod.lctrl = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
 				mod.bkspc = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
 
-				// pressing ctrl+key or alt+key does not generate a character as such no 
-				// TEXT_INPUT event is generated. When those keys are pressed we have to 
+				// pressing ctrl+key or alt+key does not generate a character as such no
+				// TEXT_INPUT event is generated. When those keys are pressed we have to
 				// do manual text input, bummer
 				if (e.type == EVENT_KEY_DOWN && (mod.lctrl || mod.rctrl)) {
 					if (ascii::is_alnum_m((uint)e.key.key)) {
 						ui.input_char((char)e.key.key);
 					}
 				}
-				
+
 				if (e.type == EVENT_KEY_DOWN && e.key.key == K_RETURN) ui.input_char('\n');
 
 			case EVENT_TEXT_INPUT:
@@ -235,7 +232,7 @@ $endswitch
 		ren.begin_render(true);
 
 		ren.render_ugui(&ui.cmd_queue);
-		
+
 		ren.end_render();
 
 		draw_times.push(clock.mark());
@@ -245,7 +242,7 @@ $endswitch
 		// wait for the next event, timeout after 100ms
 
 		sdl::wait_event_timeout(&e, (int)(100.0-sleep_clock.mark().to_ms()-0.5));
-				
+
 		fps = 1.0 / fps_clock.mark().to_sec();
 		frame++;
 	}
@@ -292,7 +289,7 @@ fn void debug_app(ugui::Ctx* ui)
 		ui.checkbox("", {}, &check, "tick")!!;
 		ui.checkbox("", {}, &check)!!;
 		ui.toggle("", {}, &toggle)!!;
-		
+
 		ui.sprite("tux")!!;
 		static char[128] text_box = "ciao mamma";
 		static usz text_len = "ciao mamma".len;
@@ -334,7 +331,7 @@ fn void calculator(ugui::Ctx* ui)
 	static char[128] buffer;
 	static usz len;
 	bool eval;
-	
+
 	// keyboard input
 	switch(ui.get_keys()) {
 	case "+": nextcase;
@@ -367,6 +364,7 @@ fn void calculator(ugui::Ctx* ui)
 	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) { // center everything on the screen
 	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
 
+		ui.@div(ugui::@grow(), ugui::@fit(), ROW, CENTER) {ui.text("SHITTY AHH CALCULATOR")!!;}!!;
 		ui.@div(ugui::@grow(), ugui::@exact(100), ROW, RIGHT) {
 			ui.text((String)buffer[:len])!!;
 		}!!;
@@ -400,7 +398,7 @@ fn void calculator(ugui::Ctx* ui)
 				ui.button("C")!!.mouse_press ? len = 0 : 0;
 				ui.button("D")!!.mouse_press ? len > 0 ? len-- : 0 : 0;
 				ui.button("-")!!.mouse_press ? buffer[len++] = '-' : 0;
-				
+
 				// eval the expression with 'bc'
 				if (ui.button("=")!!.mouse_press || eval) {
 					char[128] out;
@@ -411,11 +409,16 @@ fn void calculator(ugui::Ctx* ui)
 				}
 			}!!;
 		}!!;
-		
-		ui.@div(ugui::@grow(), ugui::@grow(), anchor: CENTER) {		
+
+		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
 			static bool state;
 			ui.checkbox("boolean", &state, "tick")!!;
 			ui.sprite("tux")!!;
+		}!!;
+		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
+			static float f;
+			ui.slider_hor(ugui::@grow(), ugui::@exact(20), &f)!!;
+			ui.slider_ver(ugui::@exact(20), ugui::@exact(100), &f)!!;
 		}!!;
 
 	}!!; }!!;

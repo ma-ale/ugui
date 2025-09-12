@@ -13,13 +13,12 @@ struct ElemSlider {
  * |    |#####|                     |
  * +----+-----+---------------------+
  */
-/*
-macro Ctx.slider_hor(&ctx, Rect size, float* value, float hpercent = 0.25, ...)
-	=> ctx.slider_hor_id(@compute_id($vasplat), size, value, hpercent);
+macro Ctx.slider_hor(&ctx, Size w, Size h, float* value, float hpercent = 0.25, ...)
+	=> ctx.slider_hor_id(@compute_id($vasplat), w, h, value, hpercent);
 <*
 @require value != null
 *>
-fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpercent = 0.25)
+fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Size w, Size h, float* value, float hpercent = 0.25)
 {
 	id = ctx.gen_id(id)!;
 
@@ -27,10 +26,14 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 	Elem* elem = ctx.get_elem(id, ETYPE_SLIDER)!;
 	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
-	// 2. Layout
-	elem.bounds = ctx.layout_element(parent, size, style);
-	if (elem.bounds.is_null()) return {};
-	Rect content_bounds = elem.content_bounds(style);
+	elem.layout.w = w;
+	elem.layout.h = h;
+	elem.layout.content_offset = style.margin + style.border + style.padding;
+	update_parent_grow(elem, parent);
+	update_parent_size(elem, parent);
+
+	Rect bg_bounds = elem.bounds.pad(style.margin);
+	Rect content_bounds = elem.bounds.pad(style.margin + style.border + style.padding);
 
 	// handle width
 	short hw = (short)(content_bounds.w * hpercent);
@@ -55,7 +58,7 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 	Style s = *style;
 	Rect padding = s.padding;
 	s.padding = {};
-	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
+	ctx.push_rect(bg_bounds, parent.div.z_index, &s)!;
 	s.bg = s.primary;
 	s.padding = padding;
 	s.border = {};
@@ -63,7 +66,6 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
 
 	return elem.events;
 }
-*/
 
 
 /*
@@ -78,10 +80,9 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Rect size, float* value, float hpe
  * |  |
  * +--+
  */
-/*
-macro Ctx.slider_ver(&ctx, Rect size, float* value, float hpercent = 0.25, ...)
-	=> ctx.slider_ver_id(@compute_id($vasplat), size, value, hpercent);
-fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpercent = 0.25)
+macro Ctx.slider_ver(&ctx, Size w, Size h, float* value, float hpercent = 0.25, ...)
+	=> ctx.slider_ver_id(@compute_id($vasplat), w, h, value, hpercent);
+fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Size w, Size h, float* value, float hpercent = 0.25)
 {
 	id = ctx.gen_id(id)!;
 
@@ -89,17 +90,15 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
 	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
-	// 1. Fill the element fields
-	if (elem.flags.is_new) {
-		elem.type = ETYPE_SLIDER;
-	} else if (elem.type != ETYPE_SLIDER) {
-		return WRONG_ELEMENT_TYPE?;
-	}
+	elem.layout.w = w;
+	elem.layout.h = h;
+	elem.layout.content_offset = style.margin + style.border + style.padding;
+	update_parent_grow(elem, parent);
+	update_parent_size(elem, parent);
 
 	// 2. Layout
-	elem.bounds = ctx.layout_element(parent, size, style);
-	if (elem.bounds.is_null()) return {};
-	Rect content_bounds = elem.content_bounds(style);
+	Rect bg_bounds = elem.bounds.pad(style.margin);
+	Rect content_bounds = elem.bounds.pad(style.margin + style.border + style.padding);
 
 	// handle height
 	short hh = (short)(content_bounds.h * hpercent);
@@ -124,7 +123,7 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 	Style s = *style;
 	Rect padding = s.padding;
 	s.padding = {};
-	ctx.push_rect(elem.bounds, parent.div.z_index, &s)!;
+	ctx.push_rect(bg_bounds, parent.div.z_index, &s)!;
 	s.bg = s.primary;
 	s.padding = padding;
 	s.border = {};
@@ -136,4 +135,3 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Rect size, float* value, float hpe
 macro short calc_slider(short off, short dim, float value) => (short)off + (short)(dim * value);
 macro float calc_value(short off, short mouse, short dim, short slider)
 	=> math::clamp((float)(mouse-off-slider/2)/(float)(dim-slider), 0.0f, 1.0f);
-*/
