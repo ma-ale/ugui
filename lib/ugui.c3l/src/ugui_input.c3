@@ -13,6 +13,9 @@ bitstruct InputEvents : uint {
 	bool mouse_scroll : 4; // mouse scroll wheel. x or y
 	bool text_input   : 5;
 	bool mod_key      : 6;
+	bool key_press    : 7;
+	bool key_release  : 8;
+	bool key_repeat   : 9;
 }
 
 bitstruct MouseButtons : uint {
@@ -156,6 +159,21 @@ fn void Ctx.input_mouse_wheel(&ctx, short x, short y, float scale = 1.0)
 	ctx.input.events.mouse_scroll = x !=0 || y != 0;
 }
 
+fn void Ctx.input_key_press(&ctx)
+{
+	ctx.input.events.key_press = true;
+}
+
+fn void Ctx.input_key_release(&ctx)
+{
+	ctx.input.events.key_release = true;
+}
+
+fn void Ctx.input_key_repeat(&ctx)
+{
+	ctx.input.events.key_repeat = true;
+}
+
 // append utf-8 encoded text to the context text input
 fn void Ctx.input_text_utf8(&ctx, char[] text)
 {
@@ -196,6 +214,7 @@ fn void Ctx.input_char(&ctx, char c)
 }
 
 fn String Ctx.get_keys(&ctx) => (String)ctx.input.keyboard.text[:ctx.input.keyboard.text_len];
+fn ModKeys Ctx.get_mod(&ctx) => ctx.input.keyboard.modkeys;
 
 // Modifier keys, like control or backspace
 // TODO: make this call repetible to input modkeys one by one

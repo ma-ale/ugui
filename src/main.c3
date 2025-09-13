@@ -120,6 +120,13 @@ fn int main(String[] args)
 	// ========================================================================================== //
 	io::printfn("imported %d styles", ui.import_style_from_file(STYLESHEET_PATH));
 
+	// ========================================================================================== //
+	// OTHER VARIABLES                                                                            //
+	// ========================================================================================== //
+	TextEdit te;
+	te.buffer = mem::new_array(char, 256);
+	defer mem::free(te.buffer);
+
 	isz frame;
 	double fps;
 	time::Clock clock;
@@ -127,7 +134,6 @@ fn int main(String[] args)
 	time::Clock sleep_clock;
 	Times ui_times;
 	Times draw_times;
-
 
 	// ========================================================================================== //
 	// MAIN LOOP                                                                                  //
@@ -147,11 +153,21 @@ fn int main(String[] args)
 			switch (e.type) {
 			case EVENT_QUIT:
 				quit = true;
-			case EVENT_KEY_UP: nextcase;
+			case EVENT_KEY_UP: 
+				ui.input_key_release();
+				nextcase;
 			case EVENT_KEY_DOWN:
+				ui.input_key_press();
+				if (e.key.repeat) ui.input_key_repeat();
+
 				mod.rctrl = e.key.key == K_RCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.rctrl;
 				mod.lctrl = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
 				mod.bkspc = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
+				mod.del   = e.key.key == K_DELETE ? !!(e.type == EVENT_KEY_DOWN) : mod.del;
+				mod.up    = e.key.key == K_UP ? !!(e.type == EVENT_KEY_DOWN) : mod.up;
+				mod.down  = e.key.key == K_DOWN ? !!(e.type == EVENT_KEY_DOWN) : mod.down;
+				mod.left  = e.key.key == K_LEFT ? !!(e.type == EVENT_KEY_DOWN) : mod.left;
+				mod.right = e.key.key == K_RIGHT ? !!(e.type == EVENT_KEY_DOWN) : mod.right;
 
 				// pressing ctrl+key or alt+key does not generate a character as such no
 				// TEXT_INPUT event is generated. When those keys are pressed we have to
@@ -206,7 +222,7 @@ $switch APPLICATION:
 $case "debug":
 		debug_app(&ui);
 $case "calculator":
-		calculator(&ui);
+		calculator(&ui, &te);
 $endswitch
 
 		// Timings counter
@@ -326,7 +342,7 @@ fn void debug_app(ugui::Ctx* ui)
 
 import std::os::process;
 
-fn void calculator(ugui::Ctx* ui)
+fn void calculator(ugui::Ctx* ui, TextEdit* te)
 {
 	static char[128] buffer;
 	static usz len;
@@ -420,6 +436,9 @@ fn void calculator(ugui::Ctx* ui)
 			static float f;
 			ui.slider_hor(ugui::@exact(100), ugui::@exact(20), &f)!!;
 			ui.slider_ver(ugui::@exact(20), ugui::@exact(100), &f)!!;
+		}!!;
+		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER, scroll_y: true) {
+			ui.text_box(ugui::@grow(), ugui::@exact(100), te)!!;
 		}!!;
 
 	}!!; }!!;

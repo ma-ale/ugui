@@ -38,13 +38,14 @@ bitstruct ElemFlags : uint {
 bitstruct ElemEvents : uint {
 	bool key_press     : 0;
 	bool key_release   : 1;
-	bool key_hold      : 2;
+	bool key_repeat    : 2;
 	bool mouse_hover   : 3;
 	bool mouse_press   : 4;
 	bool mouse_release : 5;
 	bool mouse_hold    : 6;
 	bool update        : 7;
 	bool text_input    : 8;
+	bool has_focus     : 9;
 }
 
 // element structure
@@ -334,7 +335,7 @@ macro bool Ctx.elem_focus(&ctx, Elem *elem)
 fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
 	bool hover = ctx.is_hovered(elem);
-	bool focus = ctx.focus_id == elem.id || (hover && ctx.is_mouse_pressed(BTN_LEFT));
+	bool focus = ctx.elem_focus(elem) || (hover && ctx.is_mouse_pressed(BTN_LEFT));
 
 	if (ctx.is_mouse_pressed(BTN_ANY) && !hover){
 		focus = false;
@@ -345,11 +346,15 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 	if (focus) { ctx.focus_id = elem.id; }
 
 	ElemEvents ev = {
-		.mouse_hover = hover,
-		.mouse_press = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
+		.has_focus     = focus,
+		.mouse_hover   = hover,
+		.mouse_press   = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
 		.mouse_release = hover && focus && ctx.is_mouse_released(BTN_ANY),
-		.mouse_hold = hover && focus && ctx.is_mouse_down(BTN_ANY),
-		.text_input = focus && (ctx.input.keyboard.text_len || ctx.input.keyboard.modkeys & KMOD_TXT),
+		.mouse_hold    = hover && focus && ctx.is_mouse_down(BTN_ANY),
+		.key_press     = focus && ctx.input.events.key_press,
+		.key_release   = focus && ctx.input.events.key_release,
+		.key_repeat    = focus && ctx.input.events.key_repeat,
+		.text_input    = focus && (ctx.input.keyboard.text_len || ctx.input.keyboard.modkeys & KMOD_TXT),
 	};
 	return ev;
 }

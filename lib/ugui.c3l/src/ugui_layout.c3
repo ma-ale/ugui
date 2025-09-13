@@ -88,6 +88,12 @@ macro Point Layout.get_dimensions(&el)
 	// GROSS HACK FOR EXACT DIMENSIONS
 	if (el.w.@is_exact()) dim.x = el.w.min + el.content_offset.x + el.content_offset.w;
 	if (el.h.@is_exact()) dim.y = el.h.min + el.content_offset.y + el.content_offset.h;
+	
+	// GROSS HACK FOR GROW DIMENSIONS
+	// FIXME: does this always work?
+	if (el.w.@is_grow()) dim.x = 0;
+	if (el.h.@is_grow()) dim.y = 0;
+	
 	return dim;
 }
 

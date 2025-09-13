@@ -61,3 +61,14 @@ slider {
 	secondary: #458588ff;
 	accent: #fabd2fff;
 }
+
+text-box {
+	bg: #4a4543ff;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+	border: 1;
+	padding: 4;
+	margin: 2;
+}
