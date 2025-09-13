@@ -69,15 +69,13 @@ const MouseButtons BTN_5      = {.btn_5      = true};
 
 const ModKeys KEY_ANY = (ModKeys)(ModKeys.inner.max);
 
-fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String keys)
+fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String ...keys)
 {
 	bool is_mod = (bool)(ctx.input.keyboard.modkeys & mod);
 	bool is_keys = true;
-	String haystack = (String)ctx.input.keyboard.text[0..ctx.input.keyboard.text_len];
-	char[2] needle;
-	foreach (c: keys) {
-		needle[0] = c;
-		is_keys = is_keys && haystack.contains((String)needle[..]);
+	String haystack = (String)ctx.get_keys();
+	foreach (needle: keys) {
+		is_keys = is_keys && haystack.contains(needle);
 	}
 	return is_mod && is_keys;
 }
