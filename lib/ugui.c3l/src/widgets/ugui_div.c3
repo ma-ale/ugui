@@ -68,10 +68,6 @@ fn void? Ctx.div_begin_id(&ctx,
 	elem.div.scroll_size = slider_style.size ? slider_style.size : (style.size ? style.size : DEFAULT_STYLE.size);
 	elem.div.z_index = parent.div.z_index + 1;
 
-	// update the ctx scissor
-	ctx.div_scissor = elem.bounds;
-	ctx.push_scissor(elem.bounds, elem.div.z_index)!;
-
 	// update layout with correct info
 	elem.layout = {
 		.w = width,
@@ -81,10 +77,11 @@ fn void? Ctx.div_begin_id(&ctx,
 		.content_offset = style.margin + style.border + style.padding,
 	};
 
-	// update parent grow children
-	update_parent_grow(elem, parent);
-
 	ctx.push_rect(elem.bounds.pad(style.margin), elem.div.z_index, style)!;
+
+	// update the ctx scissor, it HAS to be after drawing the background
+	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
+	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.div.z_index)!;
 
 	elem.events = ctx.get_elem_events(elem);
 
@@ -132,7 +129,7 @@ fn Id? Ctx.div_end(&ctx)
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
 	Elem* parent = ctx.get_parent()!;
-	ctx.div_scissor = parent.bounds;
+	ctx.div_scissor = parent.bounds.pad(parent.layout.content_offset);
 	ctx.reset_scissor(elem.div.z_index)!;
 
 	update_parent_size(elem, parent);

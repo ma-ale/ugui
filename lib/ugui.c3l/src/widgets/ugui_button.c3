@@ -44,7 +44,6 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	elem.layout.text = ctx.measure_string(label)!;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
 
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);
@@ -113,7 +112,6 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 	elem.layout.text = ctx.measure_string(description)!;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
 
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);
@@ -188,7 +186,6 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, bool* active)
 	elem.layout.text = ctx.measure_string(description)!;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
 
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);

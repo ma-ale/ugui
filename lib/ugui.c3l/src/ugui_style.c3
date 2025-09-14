@@ -24,9 +24,9 @@ const Style DEFAULT_STYLE = {
 	.margin  = {2, 2, 2, 2},
 	.border  = {2, 2, 2, 2},
 	.padding = {1, 1, 1, 1},
-	.radius  = 12,
+	.radius  = 0,
 	.size    = 16,
-	
+
 	.bg = 0x282828ffu.@to_rgba(),
 	.fg = 0xfbf1c7ffu.@to_rgba(),
 	.primary = 0xcc241dffu.@to_rgba(),
@@ -60,7 +60,7 @@ fn int StyleMap.import_style_string(&map, String text)
 	Parser p;
 	p.lex.text = text;
 	int added;
-	
+
 	while (p.parse_style() == true) {
 		added++;
 		// set the default style correctly
@@ -79,7 +79,7 @@ fn int Ctx.import_style_from_file(&ctx, String path)
 	text = mem::new_array(char, size);
 	file::load_buffer(path, text)!!;
 	defer mem::free(text);
-	
+
 	int added = ctx.import_style_from_string((String)text);
 	return added;
 }
@@ -102,7 +102,7 @@ fn int Ctx.import_style_from_file(&ctx, String path)
  * The field "style name" will be hashed and the hash used as the id int the style map.
  * Fields may be excluded, each excluded field is set to zero.
  * The default unit is pixels, but millimeters is also available. The parser function accepts a scale
- * factor that has to be obtained with the window manager functions. 
+ * factor that has to be obtained with the window manager functions.
 */
 
 module ugui::css;
@@ -188,7 +188,7 @@ fn Token Lexer.next_token(&lex)
 	// skip whitespace
 	while (ascii::is_space_m(lex.peep())) {
 		if (lex.advance() == 0) return {.type = EOF};
-		if (lex.off >= lex.text.len) return {.type = EOF}; 
+		if (lex.off >= lex.text.len) return {.type = EOF};
 	}
 	t.off = lex.off;
 
@@ -216,7 +216,7 @@ fn Token Lexer.next_token(&lex)
 			t.type = INVALID;
 			break;
 		}
-		
+
 		char[10] hex_str = (char[])"0x";
 		hex_str[2..] = lex.text[hex_start..lex.off-1];
 		uint? color_hex = ((String)hex_str[..]).to_uint();
@@ -225,21 +225,21 @@ fn Token Lexer.next_token(&lex)
 			break;
 		}
 		t.color = color_hex.to_rgba();
-	
+
 	case ascii::is_alpha_m(lex.peep()): // identifier
 		t.type = IDENTIFIER;
 		while (ascii::is_alnum_m(lex.peep()) || lex.peep() == '-' || lex.peep() == '_') {
 			if (lex.advance() == 0) { t.type = INVALID; break; }
 		}
 		t.text = lex.text[t.off..lex.off-1];
-	
+
 	case ascii::is_digit_m(lex.peep()): // number
 		t.type = NUMBER;
 		t.unit = PIXELS;
 		// find the end of the number
 		usz end;
 		while (ascii::is_alnum_m(lex.peep()) || lex.peep() == '+' || lex.peep() == '-' || lex.peep() == '.') {
-			if (lex.advance() == 0) { t.type = INVALID; break; } 
+			if (lex.advance() == 0) { t.type = INVALID; break; }
 		}
 		end = lex.off;
 		if (end - t.off > 2) {
@@ -261,7 +261,7 @@ fn Token Lexer.next_token(&lex)
 		t.value = value;
 		t.text = lex.text[t.off..lex.off-1];
 	}
-	
+
 	if (t.type == INVALID) {
 		io::eprintfn("CSS Lexing ERROR at %d:%d: '%s' is not a valid token", t.line, t.col, lex.text[t.off..lex.off]);
 	}
@@ -288,7 +288,7 @@ struct Parser {
 macro bool Parser.expect(&p, Token* t, TokenType type)
 {
 	*t = p.lex.next_token();
-	if (t.type == type) return true; 
+	if (t.type == type) return true;
 	io::eprintfn("CSS parsing error at %d:%d: expected %s but got %s", t.line, t.col, type, t.type);
 	return false;
 }
@@ -298,22 +298,22 @@ fn bool Parser.parse_style(&p)
 	Token t;
 	p.style = {};
 	p.style_id = 0;
-	
+
 	// style name
 	if (p.expect(&t, IDENTIFIER) == false) return false;
 	p.style_id = t.text.hash();
 
 	// style body
 	if (p.expect(&t, LCURLY) == false) return false;
-	
+
 	while (true) {
 		if (p.parse_property() == false) return false;
 		t = p.lex.peep_token();
 		if (t.type != IDENTIFIER) break;
 	}
-	
+
 	if (p.expect(&t, RCURLY) == false) return false;
-	
+
 	return true;
 }
 
@@ -372,7 +372,7 @@ fn bool Parser.parse_property(&p)
 			return false;
 		}
 		p.style.radius = (ushort)r;
-		
+
 	case "size":
 		short s;
 		if (p.parse_number(&s) == false) return false;
@@ -412,9 +412,9 @@ fn bool Parser.parse_size(&p, Rect* r)
 {
 	short x;
 	Token t;
-	
+
 	if (p.parse_number(&x) == false) return false;
-	
+
 	t = p.lex.peep_token();
 	if (t.type == NUMBER) {
 		// we got another number so we expect three more

@@ -19,7 +19,6 @@ fn void? Ctx.sprite_id(&ctx, Id id, String name)
 	elem.layout.w = elem.layout.children.w = @exact(sprite.w);
 	elem.layout.h = elem.layout.children.h = @exact(sprite.h);
 
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	Id tex_id = ctx.sprite_atlas.id;

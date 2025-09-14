@@ -29,7 +29,6 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Size w, Size h, float* value, floa
 	elem.layout.w = w;
 	elem.layout.h = h;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	Rect bg_bounds = elem.bounds.pad(style.margin);
@@ -93,7 +92,6 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Size w, Size h, float* value, floa
 	elem.layout.w = w;
 	elem.layout.h = h;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	// 2. Layout

@@ -308,7 +308,8 @@ $if DEBUG == 1:
 $endif
 
 	// sort the command buffer by the z-index
-	ctx.cmd_queue.sort()!;
+	// FIXME: sorting the buffer fucks with scissor commands that have to be kept in place
+	//ctx.cmd_queue.sort()!;
 
 //	foreach (i, c: ctx.cmd_queue) {
 //		io::printf("[%d]: ", i);

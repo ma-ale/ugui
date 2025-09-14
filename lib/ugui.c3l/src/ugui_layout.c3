@@ -88,12 +88,12 @@ macro Point Layout.get_dimensions(&el)
 	// GROSS HACK FOR EXACT DIMENSIONS
 	if (el.w.@is_exact()) dim.x = el.w.min + el.content_offset.x + el.content_offset.w;
 	if (el.h.@is_exact()) dim.y = el.h.min + el.content_offset.y + el.content_offset.h;
-	
+
 	// GROSS HACK FOR GROW DIMENSIONS
 	// FIXME: does this always work?
 	if (el.w.@is_grow()) dim.x = 0;
 	if (el.h.@is_grow()) dim.y = 0;
-	
+
 	return dim;
 }
 
@@ -105,17 +105,6 @@ macro Point Elem.content_space(&e)
 		.y = e.bounds.h - e.layout.content_offset.y - e.layout.content_offset.h,
 	};
  }
-
-// Update the parent element's grow children counter
-fn void update_parent_grow(Elem* child, Elem* parent)
-{
-	switch (parent.layout.dir) {
-	case ROW:
-		if (child.layout.w.@is_grow()) parent.layout.grow_children++;
-	case COLUMN:
-		if (child.layout.h.@is_grow()) parent.layout.grow_children++;
-	}
-}
 
 // Update the parent element's children size
 fn void update_parent_size(Elem* child, Elem* parent)
@@ -129,9 +118,11 @@ fn void update_parent_size(Elem* child, Elem* parent)
 	case ROW: // on rows grow the ch width by the child width and only grow ch height if it exceeds
 		pl.children.w += @exact(child_size.x);
 		pl.children.h = pl.children.h.comb_max(@exact(child_size.y));
+		if (child.layout.w.@is_grow()) parent.layout.grow_children++;
 	case COLUMN: // do the opposite on column
 		pl.children.w = pl.children.w.comb_max(@exact(child_size.x));
 		pl.children.h += @exact(child_size.y);
+		if (child.layout.h.@is_grow()) parent.layout.grow_children++;
 	}
 }
 
@@ -187,8 +178,6 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 	if (e.layout.w.@is_grow()) {
 		if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().x - p.layout.occupied) / p.layout.grow_children);
-			// the space slot accounts for the total size, while the element bounds does not account
-			// for the margin
 			e.bounds.w = slot;
 			p.layout.grow_children--;
 			p.layout.occupied += slot;
@@ -216,8 +205,8 @@ fn void resolve_placement(Elem* c, Elem* p)
 	Layout* cl = &c.layout;
 
 	Point off = {
-		.x = p.bounds.x + pl.origin.x,
-		.y = p.bounds.y + pl.origin.y,
+		.x = p.bounds.x + pl.origin.x + pl.content_offset.x,
+		.y = p.bounds.y + pl.origin.y + pl.content_offset.y,
 	};
 
 	switch (pl.anchor) {
@@ -226,7 +215,7 @@ fn void resolve_placement(Elem* c, Elem* p)
 		c.bounds.y = off.y;
 	case LEFT:
 		c.bounds.x = off.x;
-		c.bounds.y = off.y + p.bounds.h/2;
+		c.bounds.y = off.y + p.content_space().y/2;
 		if (pl.dir == COLUMN) {
 			c.bounds.y -= pl.occupied/2;
 		} else if (pl.dir == ROW) {
@@ -234,15 +223,15 @@ fn void resolve_placement(Elem* c, Elem* p)
 		}
 	case BOTTOM_LEFT:
 		c.bounds.x = off.x;
-		c.bounds.y = off.y + p.bounds.h ;
+		c.bounds.y = off.y + p.content_space().y ;
 		if (pl.dir == COLUMN) {
 			c.bounds.y -= pl.occupied;
 		} else if (pl.dir == ROW) {
 			c.bounds.y -= c.bounds.h;
 		}
 	case BOTTOM:
-		c.bounds.x = off.x + p.bounds.w/2;
-		c.bounds.y = off.y + p.bounds.h;
+		c.bounds.x = off.x + p.content_space().x/2;
+		c.bounds.y = off.y + p.content_space().y;
 		if (pl.dir == COLUMN) {
 			c.bounds.y -= pl.occupied;
 			c.bounds.x -= c.bounds.w/2;
@@ -251,8 +240,8 @@ fn void resolve_placement(Elem* c, Elem* p)
 			c.bounds.x -= pl.occupied/2;
 		}
 	case BOTTOM_RIGHT:
-		c.bounds.x = off.x + p.bounds.w;
-		c.bounds.y = off.y + p.bounds.h;
+		c.bounds.x = off.x + p.content_space().x;
+		c.bounds.y = off.y + p.content_space().y;
 		if (pl.dir == COLUMN) {
 			c.bounds.y -= pl.occupied;
 			c.bounds.x -= c.bounds.w;
@@ -261,8 +250,8 @@ fn void resolve_placement(Elem* c, Elem* p)
 			c.bounds.x -= pl.occupied;
 		}
 	case RIGHT:
-		c.bounds.x = off.x + p.bounds.w;
-		c.bounds.y = off.y + p.bounds.h/2;
+		c.bounds.x = off.x + p.content_space().x;
+		c.bounds.y = off.y + p.content_space().y/2;
 		if (pl.dir == COLUMN) {
 			c.bounds.y -= pl.occupied/2;
 			c.bounds.x -= c.bounds.w;
@@ -271,7 +260,7 @@ fn void resolve_placement(Elem* c, Elem* p)
 			c.bounds.x -= pl.occupied;
 		}
 	case TOP_RIGHT:
-		c.bounds.x = off.x + p.bounds.w;
+		c.bounds.x = off.x + p.content_space().x;
 		c.bounds.y = off.y;
 		if (pl.dir == COLUMN) {
 			c.bounds.x -= c.bounds.w;
@@ -279,7 +268,7 @@ fn void resolve_placement(Elem* c, Elem* p)
 			c.bounds.x -= pl.occupied;
 		}
 	case TOP:
-		c.bounds.x = off.x + p.bounds.w/2;
+		c.bounds.x = off.x + p.content_space().x/2;
 		c.bounds.y = off.y;
 		if (pl.dir == COLUMN) {
 			c.bounds.x -= c.bounds.w/2;
@@ -287,8 +276,8 @@ fn void resolve_placement(Elem* c, Elem* p)
 			c.bounds.x -= pl.occupied/2;
 		}
 	case CENTER:
-		c.bounds.x = off.x + p.bounds.w/2;
-		c.bounds.y = off.y + p.bounds.h/2;
+		c.bounds.x = off.x + p.content_space().x/2;
+		c.bounds.y = off.y + p.content_space().y/2;
 		if (pl.dir == COLUMN) {
 			c.bounds.x -= c.bounds.w/2;
 			c.bounds.y -= pl.occupied/2;
@@ -314,9 +303,7 @@ fn void Ctx.layout_element_tree(&ctx)
 	isz current = ctx.tree.level_order_it(0, &cursor)!!;
 	for (; current >= 0; current = ctx.tree.level_order_it(0, &cursor)!!) {
 		Elem* p = ctx.find_elem(ctx.tree.get(current))!!;
-		// offset the origin by the margin
-		p.layout.origin.x = p.layout.content_offset.x;
-		p.layout.origin.y = p.layout.content_offset.y;
+		//if (ctx.tree.is_root(current)!!) p = &&{};
 
 		// RESOLVE KNOWN DIMENSIONS
 		isz ch_cur = 0;
@@ -349,7 +336,7 @@ fn void Ctx.layout_element_tree(&ctx)
 			Elem* c = ctx.find_elem(ctx.tree.get(ch))!!;
 			if (ctx.tree.is_root(ch)!!) {
 				resolve_placement(p, &&{});
-				update_children_bounds(c, p);
+				update_children_bounds(p, &&{});
 			} else {
 				resolve_placement(c, p);
 				update_children_bounds(c, p);

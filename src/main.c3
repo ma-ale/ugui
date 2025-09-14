@@ -153,7 +153,7 @@ fn int main(String[] args)
 			switch (e.type) {
 			case EVENT_QUIT:
 				quit = true;
-			case EVENT_KEY_UP: 
+			case EVENT_KEY_UP:
 				ui.input_key_release();
 				nextcase;
 			case EVENT_KEY_DOWN:

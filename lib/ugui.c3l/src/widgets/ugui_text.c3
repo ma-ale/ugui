@@ -29,7 +29,6 @@ fn void? Ctx.text_id(&ctx, Id id, String text)
 	elem.layout.text = elem.text.size;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
 
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	ctx.layout_string(text, elem.bounds.pad(elem.layout.content_offset), TOP_LEFT, parent.div.z_index, style.fg)!;
@@ -47,7 +46,7 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te)
 	Style* style = ctx.styles.get_style(@str_hash("text-box"));
 
 	elem.text.te = te;
-	
+
 	Id text_hash = te.to_string().hash();
 	if (elem.flags.is_new || elem.text.hash != text_hash) {
 		elem.text.size = ctx.measure_string(te.to_string())!;
@@ -59,17 +58,17 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te)
 	elem.layout.text = elem.text.size;
 	elem.layout.content_offset = style.margin + style.border + style.padding;
 
-	update_parent_grow(elem, parent);
 	update_parent_size(elem, parent);
 
 	// check input and update the text
 	elem.events = ctx.get_elem_events(elem);
-	
+
 	if (elem.events.text_input || elem.events.key_press) {
 		ctx.text_edit(elem.text.te);
 	}
 
 	// draw the box
+
 	Rect bg_bounds = elem.bounds.pad(style.margin);
 	Rect text_bounds = elem.bounds.pad(elem.layout.content_offset);
 	ctx.push_rect(bg_bounds, parent.div.z_index, style)!;
