@@ -47,13 +47,8 @@ fn TimeStats Times.get_stats(&times)
 }
 
 
-const char[*] MSDF_FS_PATH = "resources/shaders/compiled/msdf.frag.spv";
-const char[*] SPRITE_FS_PATH = "resources/shaders/compiled/sprite.frag.spv";
-const char[*] FONT_FS_PATH = "resources/shaders/compiled/font.frag.spv";
-const char[*] RECT_FS_PATH = "resources/shaders/compiled/rect.frag.spv";
-
-const char[*] SPRITE_VS_PATH = "resources/shaders/compiled/sprite.vert.spv";
-const char[*] RECT_VS_PATH = "resources/shaders/compiled/rect.vert.spv";
+const char[*] VS_PATH = "resources/shaders/compiled/ugui.vert.spv";
+const char[*] FS_PATH = "resources/shaders/compiled/ugui.frag.spv";
 
 const char[*] STYLESHEET_PATH = "resources/style.css";
 
@@ -79,10 +74,8 @@ fn int main(String[] args)
 	// import font in the ui context
 	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
 
-	// create the rendering pipeline
+	// set the renderer's font atlas
 	ren.font_atlas_id = ui.get_font_id("font1");
-	ren.load_spirv_shader_from_file("UGUI_PIPELINE_FONT", SPRITE_VS_PATH, FONT_FS_PATH, 1, 0);
-	ren.create_pipeline("UGUI_PIPELINE_FONT", SPRITE);
 
 	// send the atlas to the gpu
 	Atlas* font_atlas = ui.get_font_atlas("font1")!!;
@@ -96,24 +89,18 @@ fn int main(String[] args)
 	ui.import_sprite_file_qoi("tux", "resources/tux.qoi")!!;
 	ui.import_sprite_file_qoi("tick", "resources/tick_sdf.qoi", SpriteType.SPRITE_MSDF)!!;
 
-	// create the rendering pipelines
+	// set the renderer's sprite atlas
 	ren.sprite_atlas_id = ui.get_sprite_atlas_id("icons");
-	// normal sprite pipeline
-	ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE", SPRITE_VS_PATH, SPRITE_FS_PATH, 1, 0);
-	ren.create_pipeline("UGUI_PIPELINE_SPRITE", SPRITE);
-	// msdf sprite pipeline
-	ren.load_spirv_shader_from_file("UGUI_PIPELINE_SPRITE_MSDF", SPRITE_VS_PATH, MSDF_FS_PATH, 1, 0);
-	ren.create_pipeline("UGUI_PIPELINE_SPRITE_MSDF", SPRITE);
 
 	// upload the atlas to the gpu
 	Atlas atlas = ui.sprite_atlas.atlas;
 	ren.new_texture("icons", FULL_COLOR, atlas.buffer, atlas.width, atlas.height);
 
 	// ========================================================================================== //
-	// RECT PIPELINE                                                                              //
+	// PIPELINE SETUP                                                                             //
 	// ========================================================================================== //
-	ren.load_spirv_shader_from_file("UGUI_PIPELINE_RECT", RECT_VS_PATH, RECT_FS_PATH, 0, 0);
-	ren.create_pipeline("UGUI_PIPELINE_RECT", RECT);
+	ren.load_spirv_shader_from_file("UGUI_PIPELINE", VS_PATH, FS_PATH, 2, 0);
+	ren.create_pipeline("UGUI_PIPELINE", RECT);
 
 	// ========================================================================================== //
 	// CSS INPUT                                                                                  //
