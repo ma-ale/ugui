@@ -76,14 +76,11 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te)
 	cur = ctx.layout_string(elem.text.te.to_string(), text_bounds, TOP_LEFT, parent.div.z_index, style.fg, elem.text.te.cursor)!;
 
 	// draw the cursor if the element has focus
+	cur.w = 2;
 	if (elem.events.has_focus) {
-		cur.w = 2;
-		// FIXME: gross hack for when text is empty
-		if (cur.x == 0 && cur.y == 0) {
-			cur.x = text_bounds.x;
-			cur.y = text_bounds.y;
-		}
+		ctx.push_scissor(text_bounds, parent.div.z_index)!;
 		ctx.push_rect(cur, parent.div.z_index, &&(Style){.bg = style.fg})!;
+		ctx.reset_scissor(parent.div.z_index)!;
 	}
 	return elem.events;
 }

@@ -309,8 +309,17 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 	short line_height = (short)font.line_height();
 	Rect cursor_rect = {.h = line_height};
 
-	if (text == "" || bounds.w <= 0 || bounds.h <= 0) return cursor_rect;
+	if (bounds.w <= 0 || bounds.h <= 0) return cursor_rect;
 	ctx.push_scissor(bounds, z_index)!;
+
+	if (text == "") {
+		// when text is empty but we need to draw a cursor use a visually empty string
+		if (cursor >= 0) {
+			text = "\f";
+		} else {
+			return cursor_rect;
+		}
+	}
 
 	Id texture_id = font.id;
 	short baseline = (short)font.ascender;
@@ -356,6 +365,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 
 			switch {
 			case cp == '\n':
+				off += x;
 				break ITER;
 			case cp == '\t':
 				o.x += tab_width;
@@ -377,28 +387,42 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 			}
 		}
 		line_end = off;
-		if (line_end == line_start) break;
+		if (line_end == line_start) unreachable("something went wrong in measuring the line");
 		
 		// with the line width calculate the right origin and layout the line
 		origin.x = bounds.x;
+		short next_line_x = bounds.x; // the x coordinate of the origin if the line_width is zero
 		switch (anchor) {
 		case TOP_LEFT: nextcase;
 		case LEFT: nextcase;
 		case BOTTOM_LEFT:
 			// TODO: we didn't need to measure the line width with this alignment
 			origin.x += 0;
+			next_line_x += 0;
 		case TOP: nextcase;
 		case CENTER: nextcase;
 		case BOTTOM:
 			origin.x += (short)(bounds.w - line_width)/2+1;
+			next_line_x += bounds.w/2;
 		case TOP_RIGHT: nextcase;
 		case RIGHT: nextcase;
 		case BOTTOM_RIGHT:
 			origin.x += (short)(bounds.w - line_width);
+			next_line_x += bounds.w;
 		}
 
-		cursor_rect.x = origin.x;
-		cursor_rect.y = origin.y;
+		// reset the cursor to the line
+		if (line_start <= cursor && cursor <= line_end) {
+			cursor_rect.x = origin.x;
+			cursor_rect.y = origin.y;
+			cursor_rect.w = 0;
+			if (cursor && text[cursor-1] == '\n') {
+				cursor_rect.x = next_line_x;
+				cursor_rect.y += line_height;
+			}
+		}
+		
+		Point line_origin = origin;
 
 		// see the fixme when measuring the height
 		//ctx.push_rect({.x = origin.x,.y=origin.y,.w=(short)line_width,.h=(short)string_height}, z_index, &&(Style){.bg=0xff000042u.@to_rgba()})!;
@@ -407,7 +431,6 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 		for (usz x; (cp = str_to_codepoint(line[off..], &x)) != 0 && off < line.len; off += x) {
 			Glyph* gp = font.get_glyph(cp)!;
 
-			// update the text bounds
 			switch {
 			case cp == '\t':
 				origin.x += tab_width;
@@ -428,16 +451,17 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 				};
 				ctx.push_sprite(b, uv, texture_id, z_index, hue)!;
 				//ctx.push_rect(b, z_index, &&(Style){.bg=0x0000ff66u.@to_rgba()})!;
-				
-				if (line_start + off < cursor) {
-					cursor_rect.x = origin.x + gp.adv;
-					cursor_rect.y = origin.y;
-					cursor_rect.w = gp.adv;
-				}
-				
+
 				origin.x += gp.adv;
 			}
+			
+			if (line_start + off < cursor && text[cursor-1] != '\n') {
+				cursor_rect.x = origin.x;
+				cursor_rect.y = origin.y;
+				cursor_rect.w = gp.adv;
+			}
 		}
+
 		// done with the line
 		line_start = line_end;
 		origin.y += line_height + line_gap; 

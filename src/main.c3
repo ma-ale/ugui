@@ -356,7 +356,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 	case "9":
 		buffer[len++] = ui.get_keys()[0];
 	case "\n":
-		eval = true;
+		eval = len != 0;
 	case "c":
 		len = 0;
 	case "d":
