@@ -31,8 +31,12 @@ struct Layout {
 	struct origin {
 		short x, y;
 	}
-	LayoutDirection dir;
-	Anchor anchor;
+	// false: the element is laid out according to the parent
+	// true: the element is laid out separate from all other children and the relative position to
+	//       the parent is the .origin field
+	bool absolute;
+	LayoutDirection dir; // the direction the children are laid out
+	Anchor anchor;       // how the children are positioned
 	Rect content_offset; // combined effect of margin, border and padding
 }
 
@@ -112,6 +116,9 @@ fn void update_parent_size(Elem* child, Elem* parent)
 	Layout* cl = &child.layout;
 	Layout* pl = &parent.layout;
 
+	// if the element has absolute position do not update the parent
+	if (cl.absolute) return;
+
 	Point child_size = cl.get_dimensions();
 
 	switch (pl.dir) {
@@ -163,6 +170,9 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 	Point elem_dimensions = el.get_dimensions();
 	e.bounds.w = elem_dimensions.x;
 	e.bounds.h = elem_dimensions.y;
+	
+	// if the element has absolute position do not update the parent
+	if (el.absolute) return;
 
 	switch (pl.dir) {
 	case ROW:
@@ -208,6 +218,13 @@ fn void resolve_placement(Elem* c, Elem* p)
 		.x = p.bounds.x + pl.origin.x + pl.content_offset.x,
 		.y = p.bounds.y + pl.origin.y + pl.content_offset.y,
 	};
+
+	// if the element has absolute position assign the origin and do not update the parent
+	if (cl.absolute) {
+		c.bounds.x = p.bounds.x + pl.content_offset.x + cl.origin.x;
+		c.bounds.y = p.bounds.x + pl.content_offset.x + cl.origin.y;
+		return;
+	}
 
 	switch (pl.anchor) {
 	case TOP_LEFT:

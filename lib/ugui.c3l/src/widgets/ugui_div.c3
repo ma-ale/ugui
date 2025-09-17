@@ -25,12 +25,13 @@ macro Ctx.@div(&ctx,
                Size width = @grow, Size height = @grow,
                LayoutDirection dir = ROW,
                Anchor anchor = TOP_LEFT,
+               bool absolute = false, Point off = {},
                bool scroll_x = false, bool scroll_y = false,
                ...;
                @body()
               )
 {
-	ctx.div_begin(width, height, dir, anchor, scroll_x, scroll_y, $vasplat)!;
+	ctx.div_begin(width, height, dir, anchor, absolute, off, scroll_x, scroll_y, $vasplat)!;
 	@body();
 	return ctx.div_end()!;
 }
@@ -39,11 +40,12 @@ macro Ctx.div_begin(&ctx,
                     Size width = @grow(), Size height = @grow(),
                     LayoutDirection dir = ROW,
                     Anchor anchor = TOP_LEFT,
+                    bool absolute = false, Point off = {}, 
                     bool scroll_x = false, bool scroll_y = false,
                     ...
                    )
 {
-	return ctx.div_begin_id(@compute_id($vasplat), width, height, dir, anchor, scroll_x, scroll_y);
+	return ctx.div_begin_id(@compute_id($vasplat), width, height, dir, anchor, absolute, off, scroll_x, scroll_y);
 }
 
 fn void? Ctx.div_begin_id(&ctx,
@@ -51,6 +53,7 @@ fn void? Ctx.div_begin_id(&ctx,
                           Size width, Size height,
                           LayoutDirection dir,
                           Anchor anchor,
+                          bool absolute, Point off,
                           bool scroll_x, bool scroll_y
                          )
 {
@@ -75,7 +78,12 @@ fn void? Ctx.div_begin_id(&ctx,
 		.dir = dir,
 		.anchor = anchor,
 		.content_offset = style.margin + style.border + style.padding,
+		.absolute = absolute,
 	};
+	if (absolute) {
+		elem.layout.origin.x = off.x;
+		elem.layout.origin.y = off.y;
+	}
 
 	ctx.push_rect(elem.bounds.pad(style.margin), elem.div.z_index, style)!;
 
