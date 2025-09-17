@@ -52,6 +52,9 @@ const char[*] FS_PATH = "resources/shaders/compiled/ugui.frag.spv";
 
 const char[*] STYLESHEET_PATH = "resources/style.css";
 
+const bool LIMIT_FPS = false;
+const bool VSYNC = false;
+
 fn int main(String[] args)
 {
 	ArenaAllocator arena;
@@ -64,7 +67,7 @@ fn int main(String[] args)
 	defer ui.free();
 
 	ren::Renderer ren;
-	ren.init("Ugui Test", 800, 600, true);
+	ren.init("Ugui Test", 800, 600, VSYNC);
 	defer ren.free();
 	ui.input_window_size(800, 600)!!;
 
@@ -238,8 +241,8 @@ $endswitch
 		/* End Drawing */
 
 		// wait for the next event, timeout after 100ms
-
-		sdl::wait_event_timeout(&e, (int)(100.0-sleep_clock.mark().to_ms()-0.5));
+		int timeout = LIMIT_FPS ? (int)(100.0-sleep_clock.mark().to_ms()-0.5) : 0;
+		sdl::wait_event_timeout(&e, timeout);
 
 		fps = 1.0 / fps_clock.mark().to_sec();
 		frame++;
