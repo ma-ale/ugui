@@ -8,6 +8,10 @@ struct ElemText {
 	TextEdit* te;
 }
 
+/* Layout some text without bounds.
+ * There is a limitation where the current frame bounds are based on the last frame, this is usually
+ * not a problem but it is in the situation where the text changes almost all frames.
+ */
 macro Ctx.text(&ctx, String text, ...)
 	=> ctx.text_id(@compute_id($vasplat), text);
 fn void? Ctx.text_id(&ctx, Id id, String text)

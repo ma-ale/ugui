@@ -52,8 +52,8 @@ const char[*] FS_PATH = "resources/shaders/compiled/ugui.frag.spv";
 
 const char[*] STYLESHEET_PATH = "resources/style.css";
 
-const bool LIMIT_FPS = false;
-const bool VSYNC = false;
+const bool LIMIT_FPS = true;
+const bool VSYNC = true;
 
 fn int main(String[] args)
 {

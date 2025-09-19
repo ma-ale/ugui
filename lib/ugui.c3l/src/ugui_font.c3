@@ -253,7 +253,7 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 	for (; cp != 0; cp = str_to_codepoint(text[off..], &x)) {
 		off += x;
 		Glyph* gp = font.get_glyph(cp)!;
-		
+
 		// update the text bounds
 		switch {
 		case cp == '\n':
@@ -273,7 +273,7 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 			bounds = containing_rect(bounds, b);
 			origin.x += gp.adv;
 		}
-		
+
 		// update the word width
 		switch {
 		case ascii::is_space((char)cp):
@@ -303,6 +303,8 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 // layout a string inside a bounding box, following the given alignment (anchor).
 // returns the position of the cursor, the returned height is the line height and the width is the last
 // character's advance value
+// TODO: implement a "reflow" flag to toggle reflow if a character goes out of bounds
+// TODO: also return the total bounds of the laid out string
 fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_index, Color hue, isz cursor = -1)
 {
 	Font* font = &ctx.font;
@@ -357,7 +359,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 	do {
 		int line_width;
 		Point o = {.x = bounds.x, .y = bounds.y};
-		
+
 		Codepoint cp;
 		isz off = line_start;
 		for ITER: (usz x; (cp = str_to_codepoint(text[off..], &x)) != 0; off += x) {
@@ -388,7 +390,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 		}
 		line_end = off;
 		if (line_end == line_start) unreachable("something went wrong in measuring the line");
-		
+
 		// with the line width calculate the right origin and layout the line
 		origin.x = bounds.x;
 		short next_line_x = bounds.x; // the x coordinate of the origin if the line_width is zero
@@ -421,7 +423,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 				cursor_rect.y += line_height;
 			}
 		}
-		
+
 		Point line_origin = origin;
 
 		// see the fixme when measuring the height
@@ -454,7 +456,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 
 				origin.x += gp.adv;
 			}
-			
+
 			if (line_start + off < cursor && text[cursor-1] != '\n') {
 				cursor_rect.x = origin.x;
 				cursor_rect.y = origin.y;
@@ -464,10 +466,10 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 
 		// done with the line
 		line_start = line_end;
-		origin.y += line_height + line_gap; 
+		origin.y += line_height + line_gap;
 	} while(line_end < text.len);
-	
+
 	ctx.reset_scissor(z_index)!;
-	
+
 	return cursor_rect;
 }
