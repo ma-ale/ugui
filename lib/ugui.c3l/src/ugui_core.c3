@@ -1,6 +1,6 @@
 module ugui;
 
-import vtree;
+import mtree;
 import cache;
 import fifo;
 
@@ -51,7 +51,7 @@ bitstruct ElemEvents : uint {
 // element structure
 struct Elem {
 	Id id;
-	isz tree_idx;
+	int tree_idx;
 	ElemFlags flags;
 	ElemEvents events;
 	Rect bounds;
@@ -69,7 +69,7 @@ struct Elem {
 
 
 // relationships between elements are stored in a tree, it stores just the ids
-alias IdTree = vtree::VTree{Id};
+alias IdTree = mtree::MTree{Id};
 
 // elements themselves are kept in a cache
 const uint MAX_ELEMENTS = 256;
@@ -122,13 +122,13 @@ struct Ctx {
 	Id focus_id;
 
 	Rect div_scissor; // the current div bounds used for scissor test
-	isz active_div; // tree node indicating the current active div
+	int active_div; // tree node indicating the current active div
 }
 
 // return a pointer to the parent of the current active div
 fn Elem*? Ctx.get_parent(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div)!;
+	Id parent_id = ctx.tree.get(ctx.active_div);
 	Elem*? parent = ctx.cache.search(parent_id);
 	if (catch parent) return parent;
 	if (parent.type != ETYPE_DIV) return WRONG_ELEMENT_TYPE?;
@@ -144,7 +144,7 @@ const uint GOLDEN_RATIO = 0x9E3779B9;
 fn Id? Ctx.gen_id(&ctx, Id id2)
 {
 	// FIXME: this is SHIT
-	Id id1 = ctx.tree.get(ctx.active_div)!;
+	Id id1 = ctx.tree.get(ctx.active_div);
 	// Mix the two IDs non-linearly
 	Id mixed = id1 ^ id2.rotate_left(13);
 	mixed ^= id1.rotate_left(7);
@@ -178,7 +178,7 @@ fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
 	} else {
 		elem.type = type;
 	}
-	elem.tree_idx = ctx.tree.add(id, ctx.active_div)!;
+	elem.tree_idx = ctx.tree.add(ctx.active_div, id);
 	return elem;
 }
 
@@ -196,13 +196,13 @@ macro Elem* Ctx.find_elem(&ctx, Id id)
 
 fn Elem*? Ctx.get_active_div(&ctx)
 {
-	Id id = ctx.tree.get(ctx.active_div)!;
+	Id id = ctx.tree.get(ctx.active_div);
 	return ctx.cache.search(id);
 }
 
 fn void? Ctx.init(&ctx, Allocator allocator)
 {
-	ctx.tree.init(MAX_ELEMENTS, allocator)!;
+	ctx.tree.init(MAX_ELEMENTS, allocator);
 	defer catch { (void)ctx.tree.free(); }
 
 	ctx.cache.init(allocator)!;

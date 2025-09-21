@@ -316,18 +316,16 @@ fn void resolve_placement(Elem* c, Elem* p)
 
 fn void Ctx.layout_element_tree(&ctx)
 {
-	isz cursor = -1;
-	isz current = ctx.tree.level_order_it(0, &cursor)!!;
-	for (; current >= 0; current = ctx.tree.level_order_it(0, &cursor)!!) {
-		Elem* p = ctx.find_elem(ctx.tree.get(current))!!;
+	int current;
+	for (int n; (current = ctx.tree.level_order_it(0, n)) >= 0; n++) {
+		Elem* p = ctx.find_elem(ctx.tree.get(current));
 		//if (ctx.tree.is_root(current)!!) p = &&{};
 
+		int ch;
 		// RESOLVE KNOWN DIMENSIONS
-		isz ch_cur = 0;
-		isz ch = ctx.tree.children_it(current, &ch_cur)!!;
-		for (; ch >= 0; ch = ctx.tree.children_it(current, &ch_cur)!!) {
-			Elem* c = ctx.find_elem(ctx.tree.get(ch))!!;
-			if (ctx.tree.is_root(ch)!!) {
+		for (int i; (ch = ctx.tree.children_it(current, i)) >= 0; i++) {
+			Elem* c = ctx.find_elem(ctx.tree.get(ch));
+			if (ctx.tree.is_root(ch)) {
 				resolve_dimensions(p, &&{});
 			} else {
 				resolve_dimensions(c, p);
@@ -335,11 +333,9 @@ fn void Ctx.layout_element_tree(&ctx)
 		}
 
 		// RESOLVE GROW CHILDREN
-		ch_cur = 0;
-		ch = ctx.tree.children_it(current, &ch_cur)!!;
-		for (; ch >= 0; ch = ctx.tree.children_it(current, &ch_cur)!!) {
-			Elem* c = ctx.find_elem(ctx.tree.get(ch))!!;
-			if (ctx.tree.is_root(ch)!!) {
+		for (int i; (ch = ctx.tree.children_it(current, i)) >= 0; i++) {
+			Elem* c = ctx.find_elem(ctx.tree.get(ch));
+			if (ctx.tree.is_root(ch)) {
 				resolve_grow_elements(p, &&{});
 			} else {
 				resolve_grow_elements(c, p);
@@ -347,11 +343,9 @@ fn void Ctx.layout_element_tree(&ctx)
 		}
 
 		// RESOLVE CHILDREN PLACEMENT
-		ch_cur = 0;
-		ch = ctx.tree.children_it(current, &ch_cur)!!;
-		for (; ch >= 0; ch = ctx.tree.children_it(current, &ch_cur)!!) {
-			Elem* c = ctx.find_elem(ctx.tree.get(ch))!!;
-			if (ctx.tree.is_root(ch)!!) {
+		for (int i; (ch = ctx.tree.children_it(current, i)) >= 0; i++) {
+			Elem* c = ctx.find_elem(ctx.tree.get(ch));
+			if (ctx.tree.is_root(ch)) {
 				resolve_placement(p, &&{});
 				update_children_bounds(p, &&{});
 			} else {

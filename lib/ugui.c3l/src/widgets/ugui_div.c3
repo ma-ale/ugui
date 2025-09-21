@@ -135,7 +135,7 @@ fn Id? Ctx.div_end(&ctx)
 */
 
 	// the active_div returns to the parent of the current one
-	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
+	ctx.active_div = ctx.tree.parentof(ctx.active_div);
 	Elem* parent = ctx.get_parent()!;
 	ctx.div_scissor = parent.bounds.pad(parent.layout.content_offset);
 	ctx.reset_scissor(elem.div.z_index)!;
