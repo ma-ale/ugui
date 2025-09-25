@@ -58,7 +58,7 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 				free += how_many;
 			}
 		}
-		
+
 		// handle arrow keys
 		if (mod.left) {
 			if (te.cursor > 0) {
@@ -75,10 +75,27 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 			}
 		}
 		if (mod.up) {
-			// TODO
+			// back up to previous line
+			if (te.cursor > 0) {
+				usz curr_line_start = te.until_cursor().rindex_of_char('\n') ?? 0;
+				usz prev_line_start = curr_line_start ? te.until_cursor()[..curr_line_start-1].rindex_of_char('\n') ?? 0 : 0;
+				usz curr_line_off = te.cursor - curr_line_start;
+				usz prev_line_len = curr_line_start - prev_line_start;
+				te.cursor = prev_line_start + min(curr_line_off-1, prev_line_len);
+				after = te.chars - te.cursor;
+			}
 		}
 		if (mod.down) {
-			// TODO
+			// down to the next line
+			if (after > 0) {
+				usz curr_line_start = te.until_cursor().rindex_of_char('\n') ?? 0;
+				usz curr_line_off = te.cursor - curr_line_start;
+				usz next_line_start = te.from_cursor().index_of_char('\n') + te.cursor + 1 ?? te.chars;
+				usz next_line_end = ((String)te.buffer[next_line_start..]).index_of_char('\n') + next_line_start ?? te.chars;
+				usz next_line_len = next_line_end - next_line_start;
+				te.cursor = next_line_start + min(curr_line_off, next_line_len);
+				after = te.chars - te.cursor;
+			}
 		}
 	}
 
