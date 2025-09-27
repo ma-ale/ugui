@@ -414,18 +414,11 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 			next_line_x += bounds.w;
 		}
 
-		// reset the cursor to the line
 		if (line_start <= cursor && cursor <= line_end) {
 			cursor_rect.x = origin.x;
 			cursor_rect.y = origin.y;
 			cursor_rect.w = 0;
-			if (cursor && text[cursor-1] == '\n') {
-				cursor_rect.x = next_line_x;
-				cursor_rect.y += line_height;
-			}
 		}
-
-		Point line_origin = origin;
 
 		// see the fixme when measuring the height
 		//ctx.push_rect({.x = origin.x,.y=origin.y,.w=(short)line_width,.h=(short)string_height}, z_index, &&(Style){.bg=0xff000042u.@to_rgba()})!;
@@ -454,21 +447,25 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 				};
 				ctx.push_sprite(b, uv, texture_id, z_index, hue)!;
 				//ctx.push_rect(b, z_index, &&(Style){.bg=0x0000ff66u.@to_rgba()})!;
-
 				origin.x += gp.adv;
 			}
-
-			if (line_start + off < cursor && text[cursor-1] != '\n') {
+			
+			if (line_start + off + x == cursor) {
 				cursor_rect.x = origin.x;
-				cursor_rect.y = origin.y;
-				cursor_rect.w = gp.adv;
 			}
 		}
 
 		// done with the line
 		line_start = line_end;
 		origin.y += line_height + line_gap;
+		
+		if (cursor == text.len && text[^1] == '\n') {
+			cursor_rect.x = next_line_x;
+			cursor_rect.y = origin.y;
+		}
+
 	} while(line_end < text.len);
+	
 
 	ctx.reset_scissor(z_index)!;
 
