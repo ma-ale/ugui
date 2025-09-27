@@ -39,9 +39,9 @@ fn void? Ctx.text_id(&ctx, Id id, String text)
 }
 
 
-macro Ctx.text_box(&ctx, Size w, Size h, TextEdit* te, ...)
-	=> ctx.text_box_id(@compute_id($vasplat), w, h, te);
-fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te)
+macro Ctx.text_box(&ctx, Size w, Size h, TextEdit* te, Anchor text_alignment = TOP_LEFT, ...)
+	=> ctx.text_box_id(@compute_id($vasplat), w, h, te, text_alignment);
+fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor text_alignment)
 {
 	id = ctx.gen_id(id)!;
 
@@ -77,10 +77,11 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te)
 	Rect text_bounds = elem.bounds.pad(elem.layout.content_offset);
 	ctx.push_rect(bg_bounds, parent.div.z_index, style)!;
 	Rect cur;
-	cur = ctx.layout_string(elem.text.te.to_string(), text_bounds, TOP_LEFT, parent.div.z_index, style.fg, elem.text.te.cursor)!;
+	cur = ctx.layout_string(elem.text.te.to_string(), text_bounds, text_alignment, parent.div.z_index, style.fg, elem.text.te.cursor)!;
 
 	// draw the cursor if the element has focus
 	cur.w = 2;
+	cur.x -= 2;
 	if (elem.events.has_focus) {
 		ctx.push_scissor(text_bounds, parent.div.z_index)!;
 		ctx.push_rect(cur, parent.div.z_index, &&(Style){.bg = style.fg})!;

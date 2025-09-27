@@ -423,7 +423,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.slider_ver(ugui::@exact(20), ugui::@exact(100), &f)!!;
 		}!!;
 		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER, scroll_y: true) {
-			ui.text_box(ugui::@grow(), ugui::@exact(100), te)!!;
+			ui.text_box(ugui::@grow(), ugui::@exact(100), te, RIGHT)!!;
 		}!!;
 
 	}!!; }!!;
