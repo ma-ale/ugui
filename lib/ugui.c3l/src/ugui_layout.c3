@@ -186,7 +186,9 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 {
 	// WIDTH
 	if (e.layout.w.@is_grow()) {
-		if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
+		if (e.layout.absolute) { // absolute children do not need to share space
+			e.bounds.w = p.content_space().x;
+		} else if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().x - p.layout.occupied) / p.layout.grow_children);
 			e.bounds.w = slot;
 			p.layout.grow_children--;
@@ -198,7 +200,9 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 
 	// HEIGHT
 	if (e.layout.h.@is_grow()) {
-		if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
+		if (e.layout.absolute) { // absolute children do not need to share space
+			e.bounds.h = p.content_space().y;
+		} else if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().y - p.layout.occupied) / p.layout.grow_children);
 			e.bounds.h = slot;
 			p.layout.grow_children--;
