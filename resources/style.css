@@ -1,4 +1,4 @@
-default {
+div {
 	bg: #282828ff;
 	fg: #fbf1c7ff;
 	primary: #cc241dff;
@@ -62,6 +62,17 @@ slider {
 	secondary: #458588ff;
 	accent: #fabd2fff;
 }
+
+scrollbar {
+	padding: 2;
+	size: 8;
+	bg: #45858842;
+	fg: #fbf1c7ff;
+	primary: #cc241dff;
+	secondary: #458588ff;
+	accent: #fabd2fff;
+}
+
 
 text-box {
 	bg: #4a4543ff;

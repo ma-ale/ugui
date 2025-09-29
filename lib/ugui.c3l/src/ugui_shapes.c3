@@ -124,7 +124,7 @@ macro Rect Rect.min(Rect a, Rect b)
 }
 
 // Offset a rect by a point
-macro Rect Rect.off(Rect r, Point p)
+macro Rect Rect.off(Rect r, Point p) @operator_s(+)
 {
 	return {
 		.x = r.x + p.x,
@@ -260,4 +260,4 @@ macro Size Size.combine(a, Size b) => {.min = max(a.min, b.min), .max = min(a.ma
 macro Size Size.comb_max(a, Size b) => {.min = max(a.min, b.min), .max = max(a.max, b.max)};
 macro Size Size.comb_min(a, Size b) => {.min = min(a.min, b.min), .max = min(a.max, b.max)};
 
-macro short Size.greater(a) => a.min > a.max ? a.min : a.max; 
+macro short Size.greater(a) => a.min > a.max ? a.min : a.max;

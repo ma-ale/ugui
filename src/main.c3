@@ -150,14 +150,16 @@ fn int main(String[] args)
 				ui.input_key_press();
 				if (e.key.repeat) ui.input_key_repeat();
 
-				mod.rctrl = e.key.key == K_RCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.rctrl;
-				mod.lctrl = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
-				mod.bkspc = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
-				mod.del   = e.key.key == K_DELETE ? !!(e.type == EVENT_KEY_DOWN) : mod.del;
-				mod.up    = e.key.key == K_UP ? !!(e.type == EVENT_KEY_DOWN) : mod.up;
-				mod.down  = e.key.key == K_DOWN ? !!(e.type == EVENT_KEY_DOWN) : mod.down;
-				mod.left  = e.key.key == K_LEFT ? !!(e.type == EVENT_KEY_DOWN) : mod.left;
-				mod.right = e.key.key == K_RIGHT ? !!(e.type == EVENT_KEY_DOWN) : mod.right;
+				mod.rctrl  = e.key.key == K_RCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.rctrl;
+				mod.lctrl  = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
+				mod.rshift = e.key.key == K_RSHIFT ? !!(e.type == EVENT_KEY_DOWN) : mod.rshift;
+				mod.lshift = e.key.key == K_LSHIFT ? !!(e.type == EVENT_KEY_DOWN) : mod.lshift;
+				mod.bkspc  = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
+				mod.del    = e.key.key == K_DELETE ? !!(e.type == EVENT_KEY_DOWN) : mod.del;
+				mod.up     = e.key.key == K_UP ? !!(e.type == EVENT_KEY_DOWN) : mod.up;
+				mod.down   = e.key.key == K_DOWN ? !!(e.type == EVENT_KEY_DOWN) : mod.down;
+				mod.left   = e.key.key == K_LEFT ? !!(e.type == EVENT_KEY_DOWN) : mod.left;
+				mod.right  = e.key.key == K_RIGHT ? !!(e.type == EVENT_KEY_DOWN) : mod.right;
 
 				// pressing ctrl+key or alt+key does not generate a character as such no
 				// TEXT_INPUT event is generated. When those keys are pressed we have to
@@ -207,7 +209,7 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
-const String APPLICATION = "calculator";
+const String APPLICATION = "debug";
 $switch APPLICATION:
 $case "debug":
 		debug_app(&ui);
@@ -219,7 +221,7 @@ $endswitch
 		TimeStats dts = draw_times.get_stats();
 		TimeStats uts = ui_times.get_stats();
 
-		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT, true) {
+		ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT, absolute: true, off: {10, 10}) {
 			ui.text(string::tformat("frame %d, fps = %.2f", frame, fps))!!;
 			ui.text(string::tformat("ui avg: %s\ndraw avg: %s\nTOT: %s", uts.avg, dts.avg, uts.avg+dts.avg))!!;
 		}!!;
@@ -249,6 +251,25 @@ $endswitch
 	}
 
 	return 0;
+}
+
+fn void debug_app(ugui::Ctx* ui)
+{
+	static LayoutDirection d = ROW;
+	ui.@div(ugui::@grow(), ugui::@grow(), anchor: CENTER) {
+		ui.@div(ugui::@exact(300), ugui::@exact(300), d, scroll_x: true, scroll_y: true) {
+			if (ui.button("one")!!.mouse_release) d = COLUMN;
+			if (ui.button("two")!!.mouse_release) d = ROW;
+			ui.button("three")!!;
+			ui.button("four")!!;
+			ui.button("five")!!;
+			ui.button("six")!!;
+			ui.button("seven")!!;
+			ui.button("eight")!!;
+			ui.button("nine")!!;
+			ui.button("ten")!!;
+		}!!;
+	}!!;
 }
 
 /*
@@ -410,7 +431,6 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 				}
 			}!!;
 		}!!;
-
 		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
 			static bool state;
 			ui.checkbox("boolean", &state, "tick")!!;
@@ -422,9 +442,8 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.slider_hor(ugui::@exact(100), ugui::@exact(20), &f)!!;
 			ui.slider_ver(ugui::@exact(20), ugui::@exact(100), &f)!!;
 		}!!;
-		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER, scroll_y: true) {
+		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
 			ui.text_box(ugui::@grow(), ugui::@exact(100), te, RIGHT)!!;
 		}!!;
-
 	}!!; }!!;
 }
