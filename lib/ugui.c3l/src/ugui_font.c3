@@ -363,6 +363,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 
 		Codepoint cp;
 		isz off = line_start;
+		short first_off;
 		for ITER: (usz x; (cp = str_to_codepoint(text[off..], &x)) != 0; off += x) {
 			Glyph* gp = font.get_glyph(cp)!;
 
@@ -375,6 +376,8 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 			case ascii::is_cntrl((char)cp):
 				break;
 			default:
+				if (off == line_start) first_off = gp.ox;
+
 				Rect b = {
 					.x = o.x + gp.ox,
 					.y = o.y + gp.oy + baseline,
@@ -393,7 +396,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 		if (line_end == line_start) unreachable("something went wrong in measuring the line");
 
 		// with the line width calculate the right origin and layout the line
-		origin.x = bounds.x;
+		origin.x = bounds.x - first_off;
 		short next_line_x = bounds.x; // the x coordinate of the origin if the line_width is zero
 		switch (anchor) {
 		case TOP_LEFT: nextcase;
@@ -446,7 +449,6 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 					.h = gp.h
 				};
 				ctx.push_sprite(b, uv, texture_id, z_index, hue)!;
-				//ctx.push_rect(b, z_index, &&(Style){.bg=0x0000ff66u.@to_rgba()})!;
 				origin.x += gp.adv;
 			}
 			
