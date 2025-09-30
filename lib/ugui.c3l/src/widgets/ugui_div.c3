@@ -15,7 +15,6 @@ struct ElemDiv {
 		bool on;
 		float value;
 	}
-	ushort scroll_size;
 	int z_index;
 }
 
@@ -55,7 +54,7 @@ macro Ctx.div_begin(&ctx,
                     Size width = @grow(), Size height = @grow(),
                     LayoutDirection dir = ROW,
                     Anchor anchor = TOP_LEFT,
-                    bool absolute = false, Point off = {}, 
+                    bool absolute = false, Point off = {},
                     bool scroll_x = false, bool scroll_y = false,
                     ...
                    )
@@ -78,12 +77,10 @@ fn void? Ctx.div_begin_id(&ctx,
 	Elem* parent = ctx.get_parent()!;
 	ctx.active_div = elem.tree_idx;
 
-	Style* style = ctx.styles.get_style(@str_hash("default"));
-	Style* slider_style = ctx.styles.get_style(@str_hash("slider"));
+	Style* style = ctx.styles.get_style(@str_hash("div"));
 
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
-	elem.div.scroll_size = slider_style.size ? slider_style.size : (style.size ? style.size : DEFAULT_STYLE.size);
 	elem.div.z_index = parent.div.z_index + 1;
 
 	// update layout with correct info
@@ -115,8 +112,9 @@ fn void? Ctx.div_begin_id(&ctx,
 fn Id? Ctx.div_end(&ctx)
 {
 	Elem* elem = ctx.get_active_div()!;
+	Style* style = ctx.styles.get_style(@str_hash("div"));
+	Rect bounds = elem.bounds.pad(style.margin + style.border);
 
-/* FIXME: this needs the absolute positioning to work
 	// set the scrollbar flag, is used in layout
 	Point cbc = elem.children_bounds.bottom_right();
 	Point bc = elem.bounds.bottom_right();
@@ -127,27 +125,36 @@ fn Id? Ctx.div_end(&ctx)
 
 	Id hsid_raw = @str_hash("div_scrollbar_horizontal");
 	Id vsid_raw = @str_hash("div_scrollbar_vertical");
-	Id hsid_real = ctx.gen_id(@str_hash("div_scrollbar_horizontal"))!;
-	Id vsid_real = ctx.gen_id(@str_hash("div_scrollbar_vertical"))!;
-	short wdim = elem.div.scroll_y.on ? (ctx.focus_id == vsid_real || ctx.is_hovered(ctx.find_elem(vsid_real)) ? elem.div.scroll_size*2 : elem.div.scroll_size) : 0;
-	short hdim = elem.div.scroll_x.on ? (ctx.focus_id == hsid_real || ctx.is_hovered(ctx.find_elem(hsid_real)) ? elem.div.scroll_size*2 : elem.div.scroll_size) : 0;
+	Id hsid_real = ctx.gen_id(hsid_raw)!;
+	Id vsid_real = ctx.gen_id(vsid_raw)!;
 
 	if (elem.div.scroll_y.on) {
-		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id) {
+		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id && !(ctx.get_mod() & KMOD_SHIFT)) {
 			elem.div.scroll_y.value += ctx.input.mouse.scroll.y * 0.07f;
 			elem.div.scroll_y.value = math::clamp(elem.div.scroll_y.value, 0.0f, 1.0f);
 		}
-		ctx.slider_ver_id(vsid_raw, @exact(wdim), @exact(elem.bounds.h - hdim), &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
+		ctx.scrollbar(vsid_raw, &elem.div.scroll_y.value, max((float)bc.y / cbc.y, (float)0.15))!;
+		elem.layout.scroll_offset.y = (short)(elem.div.scroll_y.value*(float)(elem.children_bounds.h-elem.bounds.h));
+	} else {
+		elem.div.scroll_y.value = 0;
 	}
+
 
 	if (elem.div.scroll_x.on) {
 		if (ctx.input.events.mouse_scroll && ctx.hover_id == elem.id) {
-			elem.div.scroll_x.value += ctx.input.mouse.scroll.x * 0.07f;
-			elem.div.scroll_x.value = math::clamp(elem.div.scroll_x.value, 0.0f, 1.0f);
+			if (ctx.get_mod() & KMOD_SHIFT) { // horizontal scroll with shift
+				elem.div.scroll_x.value += ctx.input.mouse.scroll.y * 0.07f;
+				elem.div.scroll_x.value = math::clamp(elem.div.scroll_x.value, 0.0f, 1.0f);
+			} else {
+				elem.div.scroll_x.value += ctx.input.mouse.scroll.x * 0.07f;
+				elem.div.scroll_x.value = math::clamp(elem.div.scroll_x.value, 0.0f, 1.0f);
+			}
 		}
-		ctx.slider_hor_id(hsid_raw, @exact(elem.bounds.w - wdim), @exact(hdim), &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15))!;
+		ctx.scrollbar(vsid_raw, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15), false)!;
+		elem.layout.scroll_offset.x = (short)(elem.div.scroll_x.value*(float)(elem.children_bounds.w-elem.bounds.w));
+	} else {
+		elem.div.scroll_x.value = 0;
 	}
-*/
 
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div);

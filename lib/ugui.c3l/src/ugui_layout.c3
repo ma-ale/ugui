@@ -28,9 +28,8 @@ struct Layout {
 	TextSize text;
 	ushort grow_children;
 	short occupied;
-	struct origin {
-		short x, y;
-	}
+	Point origin;
+	Point scroll_offset;
 	// false: the element is laid out according to the parent
 	// true: the element is laid out separate from all other children and the relative position to
 	//       the parent is the .origin field
@@ -108,7 +107,7 @@ macro Point Elem.content_space(&e)
 		.x = e.bounds.w - e.layout.content_offset.x - e.layout.content_offset.w,
 		.y = e.bounds.h - e.layout.content_offset.y - e.layout.content_offset.h,
 	};
- }
+}
 
 // Update the parent element's children size
 fn void update_parent_size(Elem* child, Elem* parent)
@@ -135,31 +134,11 @@ fn void update_parent_size(Elem* child, Elem* parent)
 
 fn void update_children_bounds(Elem* child, Elem* parent)
 {
-	parent.children_bounds = containing_rect(child.bounds, parent.bounds);
+	if (child.layout.absolute) return;
+	parent.children_bounds = containing_rect(child.bounds + parent.layout.scroll_offset, parent.bounds);
 }
 
 macro Rect Elem.content_bounds(&elem) => elem.bounds.pad(elem.layout.content_offset);
-
-/*
-macro Rect Elem.get_view(&elem)
-{
-	Rect off;
-	if (elem.div.scroll_x.enabled && elem.div.scroll_x.on) {
-		off.x = (short)((float)(elem.div.pcb.w - elem.bounds.w) * elem.div.scroll_x.value);
-		off.w = -elem.div.scroll_size;
-	}
-	if (elem.div.scroll_y.enabled && elem.div.scroll_y.on) {
-		off.y = (short)((float)(elem.div.pcb.h - elem.bounds.h) * elem.div.scroll_y.value);
-		off.h = -elem.div.scroll_size;
-	}
-	return elem.bounds.add(off);
-}
-
-macro Point Elem.get_view_off(&elem)
-{
-	return elem.get_view().sub(elem.bounds).position();
-}
-*/
 
 // Assign the width and height of an element in the directions that it doesn't need to grow
 fn void resolve_dimensions(Elem* e, Elem* p)
@@ -170,7 +149,7 @@ fn void resolve_dimensions(Elem* e, Elem* p)
 	Point elem_dimensions = el.get_dimensions();
 	e.bounds.w = elem_dimensions.x;
 	e.bounds.h = elem_dimensions.y;
-	
+
 	// if the element has absolute position do not update the parent
 	if (el.absolute) return;
 
@@ -186,7 +165,9 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 {
 	// WIDTH
 	if (e.layout.w.@is_grow()) {
-		if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
+		if (e.layout.absolute) { // absolute children do not need to share space
+			e.bounds.w = p.content_space().x;
+		} else if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().x - p.layout.occupied) / p.layout.grow_children);
 			e.bounds.w = slot;
 			p.layout.grow_children--;
@@ -198,7 +179,9 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 
 	// HEIGHT
 	if (e.layout.h.@is_grow()) {
-		if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
+		if (e.layout.absolute) { // absolute children do not need to share space
+			e.bounds.h = p.content_space().y;
+		} else if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
 			short slot = (short)((p.content_space().y - p.layout.occupied) / p.layout.grow_children);
 			e.bounds.h = slot;
 			p.layout.grow_children--;
@@ -319,7 +302,7 @@ fn void Ctx.layout_element_tree(&ctx)
 	int current;
 	for (int n; (current = ctx.tree.level_order_it(0, n)) >= 0; n++) {
 		Elem* p = ctx.find_elem(ctx.tree.get(current));
-		//if (ctx.tree.is_root(current)!!) p = &&{};
+		p.layout.origin = -p.layout.scroll_offset;
 
 		int ch;
 		// RESOLVE KNOWN DIMENSIONS
