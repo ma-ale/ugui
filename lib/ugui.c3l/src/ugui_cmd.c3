@@ -177,3 +177,5 @@ fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
 	ctx.push_cmd(&up, -1)!;
 }
 
+macro Ctx.dbg_rect(&ctx, Rect r, uint c = 0xff000042u) => ctx.push_rect(r, int.max, &&(Style){.bg=c.to_rgba()})!!;
+
