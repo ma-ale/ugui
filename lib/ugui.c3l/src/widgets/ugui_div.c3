@@ -20,6 +20,21 @@ struct ElemDiv {
 }
 
 
+macro Ctx.@row(&ctx, Anchor anchor = TOP_LEFT, ...; @body())
+{
+	ctx.@div(@fit(), @fit(), ROW, anchor: anchor) {
+		@body();
+	}!;
+}
+
+macro Ctx.@column(&ctx, Anchor anchor = TOP_LEFT, ...; @body())
+{
+	ctx.@div(@fit(), @fit(), COLUMN, anchor: anchor) {
+		@body();
+	}!;
+}
+
+
 // useful macro to start and end a div, capturing the trailing block
 macro Ctx.@div(&ctx,
                Size width = @grow, Size height = @grow,
