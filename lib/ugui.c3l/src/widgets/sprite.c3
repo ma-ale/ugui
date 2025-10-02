@@ -22,5 +22,5 @@ fn void? Ctx.sprite_id(&ctx, Id id, String name)
 	update_parent_size(elem, parent);
 
 	Id tex_id = ctx.sprite_atlas.id;
-	return ctx.push_sprite(elem.bounds, sprite.uv(), tex_id, parent.div.z_index, type: sprite.type)!;
+	return ctx.push_sprite(elem.bounds, sprite.uv(), tex_id, parent.z_index, type: sprite.type)!;
 }

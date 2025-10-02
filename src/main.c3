@@ -209,7 +209,7 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
-const String APPLICATION = "debug";
+const String APPLICATION = "calculator";
 $switch APPLICATION:
 $case "debug":
 		debug_app(&ui);
@@ -382,6 +382,20 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 		if (len > 0) len--;
 	}
 
+	static bool toggle;
+	static ugui::Point pos;
+	if (ui.is_mouse_released(ugui::BTN_RIGHT)) {
+		pos = ui.input.mouse.pos;
+		toggle = !toggle;
+	}
+	if (toggle) {
+		toggle = ui.popup_begin(pos, ugui::@fit(50), ugui::@fit(100), COLUMN)!!;
+			ui.button("Uno")!!;
+			ui.button("Due")!!;
+			ui.button("Tre")!!;
+			ui.button("Quattro")!!;
+		ui.div_end()!!;
+	}
 	// ui input/output
 	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) { // center everything on the screen
 	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
@@ -446,4 +460,5 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.text_box(ugui::@grow(), ugui::@exact(100), te, RIGHT)!!;
 		}!!;
 	}!!; }!!;
+
 }

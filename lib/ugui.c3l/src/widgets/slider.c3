@@ -57,11 +57,11 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Size w, Size h, float* value, floa
 	Style s = *style;
 	Rect padding = s.padding;
 	s.padding = {};
-	ctx.push_rect(bg_bounds, parent.div.z_index, &s)!;
+	ctx.push_rect(bg_bounds, parent.z_index, &s)!;
 	s.bg = s.primary;
 	s.padding = padding;
 	s.border = {};
-	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
+	ctx.push_rect(elem.slider.handle, parent.z_index, &s)!;
 
 	return elem.events;
 }
@@ -121,11 +121,11 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Size w, Size h, float* value, floa
 	Style s = *style;
 	Rect padding = s.padding;
 	s.padding = {};
-	ctx.push_rect(bg_bounds, parent.div.z_index, &s)!;
+	ctx.push_rect(bg_bounds, parent.z_index, &s)!;
 	s.bg = s.primary;
 	s.padding = padding;
 	s.border = {};
-	ctx.push_rect(elem.slider.handle, parent.div.z_index, &s)!;
+	ctx.push_rect(elem.slider.handle, parent.z_index, &s)!;
 
 	return elem.events;
 }
@@ -177,8 +177,8 @@ fn void? Ctx.scrollbar(&ctx, Id id, float *value, float handle_percent, bool ver
 
 
 	Rect bg_bounds = elem.bounds.pad(style.margin);
-	ctx.push_rect(bg_bounds, parent.div.z_index, style)!;
-	ctx.push_rect(elem.slider.handle, parent.div.z_index, &&(Style){.bg = style.primary, .radius = style.radius})!;
+	ctx.push_rect(bg_bounds, parent.z_index, style)!;
+	ctx.push_rect(elem.slider.handle, parent.z_index, &&(Style){.bg = style.primary, .radius = style.radius})!;
 }
 
 macro short calc_slider(short off, short dim, float value) => (short)off + (short)(dim * value);

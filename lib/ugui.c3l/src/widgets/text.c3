@@ -35,7 +35,7 @@ fn void? Ctx.text_id(&ctx, Id id, String text)
 
 	update_parent_size(elem, parent);
 
-	ctx.layout_string(text, elem.bounds.pad(elem.layout.content_offset), TOP_LEFT, parent.div.z_index, style.fg)!;
+	ctx.layout_string(text, elem.bounds.pad(elem.layout.content_offset), TOP_LEFT, parent.z_index, style.fg)!;
 }
 
 
@@ -75,17 +75,17 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 
 	Rect bg_bounds = elem.bounds.pad(style.margin);
 	Rect text_bounds = elem.bounds.pad(elem.layout.content_offset);
-	ctx.push_rect(bg_bounds, parent.div.z_index, style)!;
+	ctx.push_rect(bg_bounds, parent.z_index, style)!;
 	Rect cur;
-	cur = ctx.layout_string(elem.text.te.to_string(), text_bounds, text_alignment, parent.div.z_index, style.fg, elem.text.te.cursor)!;
+	cur = ctx.layout_string(elem.text.te.to_string(), text_bounds, text_alignment, parent.z_index, style.fg, elem.text.te.cursor)!;
 
 	// draw the cursor if the element has focus
 	cur.w = 2;
 	cur.x -= 2;
 	if (elem.events.has_focus) {
-		ctx.push_scissor(text_bounds, parent.div.z_index)!;
-		ctx.push_rect(cur, parent.div.z_index, &&(Style){.bg = style.fg})!;
-		ctx.reset_scissor(parent.div.z_index)!;
+		ctx.push_scissor(text_bounds, parent.z_index)!;
+		ctx.push_rect(cur, parent.z_index, &&(Style){.bg = style.fg})!;
+		ctx.reset_scissor(parent.z_index)!;
 	}
 	return elem.events;
 }

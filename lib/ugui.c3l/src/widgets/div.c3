@@ -15,7 +15,6 @@ struct ElemDiv {
 		bool on;
 		float value;
 	}
-	int z_index;
 }
 
 
@@ -81,8 +80,8 @@ fn void? Ctx.div_begin_id(&ctx,
 
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
-	elem.div.z_index = parent.div.z_index + 1;
-
+	if (ctx.input.z_index < elem.z_index) ctx.input.z_index = elem.z_index;
+	
 	// update layout with correct info
 	elem.layout = {
 		.w = width,
@@ -97,11 +96,11 @@ fn void? Ctx.div_begin_id(&ctx,
 		elem.layout.origin.y = off.y;
 	}
 
-	ctx.push_rect(elem.bounds.pad(style.margin), elem.div.z_index, style)!;
+	ctx.push_rect(elem.bounds.pad(style.margin), elem.z_index, style)!;
 
 	// update the ctx scissor, it HAS to be after drawing the background
 	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
-	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.div.z_index)!;
+	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.z_index)!;
 
 	elem.events = ctx.get_elem_events(elem);
 
@@ -160,9 +159,67 @@ fn Id? Ctx.div_end(&ctx)
 	ctx.active_div = ctx.tree.parentof(ctx.active_div);
 	Elem* parent = ctx.get_parent()!;
 	ctx.div_scissor = parent.bounds.pad(parent.layout.content_offset);
-	ctx.reset_scissor(elem.div.z_index)!;
+	ctx.reset_scissor(elem.z_index)!;
 
 	update_parent_size(elem, parent);
 
 	return elem.id;
+}
+
+macro bool? Ctx.popup_begin(&ctx, Point pos,
+                      Size width, Size height,
+                      LayoutDirection dir = ROW, Anchor anchor = TOP_LEFT, 
+                      bool scroll_x = false, bool scroll_y = false,
+                      ...
+                     )
+	=> ctx.popup_begin_id(@compute_id($vasplat), pos, width, height, dir, anchor, scroll_x, scroll_y);
+fn bool? Ctx.popup_begin_id(&ctx, 
+                       Id id, 
+                       Point pos, 
+                       Size width, Size height,
+                       LayoutDirection dir, Anchor anchor, 
+                       bool scroll_x, bool scroll_y
+                      )
+{
+	id = ctx.gen_id(id)!;
+
+	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
+	Elem* parent = ctx.find_elem(ctx.active_div); // pop-up parent is always root
+	ctx.active_div = elem.tree_idx;
+
+	Style* style = ctx.styles.get_style(@str_hash("popup"));
+
+	elem.div.scroll_x.enabled = scroll_x;
+	elem.div.scroll_y.enabled = scroll_y;
+	elem.z_index++;
+	if (ctx.input.z_index < elem.z_index) ctx.input.z_index = elem.z_index;
+
+	// update layout with correct info
+	elem.layout = {
+		.w = width,
+		.h = height,
+		.dir = dir,
+		.anchor = anchor,
+		.content_offset = style.margin + style.border + style.padding,
+		.absolute = true,
+		.origin.x = pos.x - parent.bounds.x,
+		.origin.y = pos.y - parent.bounds.y,
+	};
+
+	ctx.push_rect(elem.bounds.pad(style.margin), elem.z_index, style)!;
+
+	// update the ctx scissor, it HAS to be after drawing the background
+	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
+	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.z_index)!;
+
+	elem.events = ctx.get_elem_events(elem);
+	
+	// check close condition, mouse release anywhere outside the div bounds
+	if ((ctx.mouse_released() & BTN_ANY) && !elem.events.mouse_hover) {
+		return false;
+	}
+
+	// TODO: check active
+	// TODO: check resizeable
+	return true;
 }

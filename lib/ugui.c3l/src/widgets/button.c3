@@ -47,6 +47,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	update_parent_size(elem, parent);
 
 	elem.events = ctx.get_elem_events(elem);
+//	if (ctx.input.z_index == elem.z_index) println("true ", elem.z_index);
 	Rect content_bounds = elem.content_bounds();
 
 	Rect icon_bounds = {
@@ -72,12 +73,12 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 		s.bg = s.accent;
 	}
 
-	ctx.push_rect(elem.bounds.pad(style.margin), parent.div.z_index, &s)!;
+	ctx.push_rect(elem.bounds.pad(style.margin), parent.z_index, &s)!;
 	if (icon != "") {
-		ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.div.z_index, type: sprite.type)!;
+		ctx.push_sprite(icon_bounds, sprite.uv(), ctx.sprite_atlas.id, parent.z_index, type: sprite.type)!;
 	}
 	if (label != "") {
-		ctx.layout_string(label, text_bounds, CENTER, parent.div.z_index, style.fg)!;
+		ctx.layout_string(label, text_bounds, CENTER, parent.z_index, style.fg)!;
 	}
 	return elem.events;
 }
@@ -138,20 +139,20 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 	s.border = style.border;
 	s.radius = style.radius;
 
-	ctx.layout_string(description, text_bounds, CENTER, parent.div.z_index, style.fg)!;
+	ctx.layout_string(description, text_bounds, CENTER, parent.z_index, style.fg)!;
 	if (tick_sprite != "") {
-		ctx.push_rect(check_bounds, parent.div.z_index, &s)!;
+		ctx.push_rect(check_bounds, parent.z_index, &s)!;
 		if (*active) {
 			Sprite* sprite = ctx.sprite_atlas.get(tick_sprite)!;
 			Id tex_id = ctx.sprite_atlas.id;
-			ctx.push_sprite(sprite.rect().center_to(check_bounds), sprite.uv(), tex_id, parent.div.z_index, type: sprite.type)!;
+			ctx.push_sprite(sprite.rect().center_to(check_bounds), sprite.uv(), tex_id, parent.z_index, type: sprite.type)!;
 		}
 	} else {
 		if (*active) {
 			s.bg = style.primary;
-			ctx.push_rect(check_bounds, parent.div.z_index, &s)!;
+			ctx.push_rect(check_bounds, parent.z_index, &s)!;
 		} else {
-			ctx.push_rect(check_bounds, parent.div.z_index, &s)!;
+			ctx.push_rect(check_bounds, parent.z_index, &s)!;
 		}
 	}
 }
@@ -216,10 +217,10 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, bool* active)
 	s.secondary = style.secondary;
 	s.border = style.border;
 	s.radius = style.radius;
-	ctx.layout_string(description, text_bounds, CENTER, parent.div.z_index, style.fg)!;
-	ctx.push_rect(toggle_bounds, parent.div.z_index, &s)!;
+	ctx.layout_string(description, text_bounds, CENTER, parent.z_index, style.fg)!;
+	ctx.push_rect(toggle_bounds, parent.z_index, &s)!;
 	s.bg = style.primary;
 	s.border = {};
-	ctx.push_rect(toggle.pad(style.border), parent.div.z_index, &s)!;
+	ctx.push_rect(toggle.pad(style.border), parent.z_index, &s)!;
 
 }

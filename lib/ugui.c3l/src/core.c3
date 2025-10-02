@@ -58,6 +58,7 @@ struct Elem {
 	Rect children_bounds;
 	ElemType type;
 	Layout layout;
+	int z_index;
 	union {
 		ElemDiv div;
 		ElemButton button;
@@ -100,6 +101,7 @@ struct Ctx {
 	bool has_focus;
 	struct input {
 		InputEvents events;
+		int z_index; // the layer the input events need to be propageted to
 		struct mouse {
 			Point pos, delta;
 			// mouse_down:      bitmap of mouse buttons that are held
@@ -178,6 +180,11 @@ fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
 	} else {
 		elem.type = type;
 	}
+	// FIXME: this is crap
+	if (ctx.tree.is_used(ctx.active_div)) {
+		elem.z_index = ctx.get_active_div()!.z_index;
+	}
+
 	elem.tree_idx = ctx.tree.add(ctx.active_div, id);
 	return elem;
 }
@@ -242,10 +249,11 @@ fn void? Ctx.frame_begin(&ctx)
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
+	ctx.input.z_index = 0;
 	//elem.flags.has_focus = ctx.has_focus;
 
 	elem.bounds = {0, 0, ctx.width, ctx.height};
-	elem.div.z_index = 0;
+	elem.z_index = 0;
 	elem.div.scroll_x.enabled = false;
 	elem.div.scroll_y.enabled = false;
 	elem.layout.dir = ROW;
@@ -309,7 +317,8 @@ $endif
 
 	// sort the command buffer by the z-index
 	// FIXME: sorting the buffer fucks with scissor commands that have to be kept in place
-	//ctx.cmd_queue.sort()!;
+	// TODO: instead of sorting at the end perform ordered inserts into the command buffer
+	ctx.cmd_queue.sort()!;
 
 //	foreach (i, c: ctx.cmd_queue) {
 //		io::printf("[%d]: ", i);
@@ -335,6 +344,8 @@ macro bool Ctx.elem_focus(&ctx, Elem *elem)
 // FIXME: hacked together, please do better
 fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
+	if (ctx.input.z_index != elem.z_index) return {};
+
 	bool hover = ctx.is_hovered(elem);
 	bool focus = ctx.elem_focus(elem) || (hover && ctx.is_mouse_pressed(BTN_LEFT));
 
