@@ -72,8 +72,8 @@ fn void? Ctx.div_begin_id(&ctx,
 {
 	id = ctx.gen_id(id)!;
 
-	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
-	Elem* parent = ctx.get_parent()!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_DIV)!.unpack(&elem, &parent);
 	ctx.active_div = elem.tree_idx;
 
 	Style* style = ctx.styles.get_style(@str_hash("div"));
@@ -183,8 +183,8 @@ fn bool? Ctx.popup_begin_id(&ctx,
 {
 	id = ctx.gen_id(id)!;
 
-	Elem* elem = ctx.get_elem(id, ETYPE_DIV)!;
-	Elem* parent = ctx.find_elem(ctx.active_div); // pop-up parent is always root
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_DIV)!.unpack(&elem, &parent);
 	ctx.active_div = elem.tree_idx;
 
 	Style* style = ctx.styles.get_style(@str_hash("popup"));

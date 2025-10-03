@@ -6,8 +6,8 @@ macro Ctx.separator(&ctx, int width, int height, ...)
 fn void? Ctx.separator_id(&ctx, Id id, int width, int height)
 {
 	id = ctx.gen_id(id)!;
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_NONE)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_NONE)!.unpack(&elem, &parent);
 
 	elem.layout.w = @exact((short)width);
 	elem.layout.h = @exact((short)height);

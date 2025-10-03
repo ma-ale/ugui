@@ -22,8 +22,8 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Size w, Size h, float* value, floa
 {
 	id = ctx.gen_id(id)!;
 
-	Elem* parent = ctx.get_parent()!;
-	Elem* elem = ctx.get_elem(id, ETYPE_SLIDER)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_SLIDER)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
 	elem.layout.w = w;
@@ -85,8 +85,8 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Size w, Size h, float* value, floa
 {
 	id = ctx.gen_id(id)!;
 
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_SLIDER)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("slider"));
 
 	elem.layout.w = w;
@@ -135,8 +135,8 @@ fn void? Ctx.scrollbar(&ctx, Id id, float *value, float handle_percent, bool ver
 {
 	id = ctx.gen_id(id)!;
 
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_SLIDER)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_SLIDER)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("scrollbar"));
 
 	Rect pb = parent.bounds.pad(parent.layout.content_offset);

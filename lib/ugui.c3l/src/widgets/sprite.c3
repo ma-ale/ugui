@@ -9,8 +9,8 @@ macro Ctx.sprite(&ctx, String name, ...)
 fn void? Ctx.sprite_id(&ctx, Id id, String name)
 {
 	id = ctx.gen_id(id)!;
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_SPRITE)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_SPRITE)!.unpack(&elem, &parent);
 
 	Style* style = ctx.styles.get_style(@str_hash("sprite"));
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;

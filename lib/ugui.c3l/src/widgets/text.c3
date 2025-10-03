@@ -18,8 +18,8 @@ fn void? Ctx.text_id(&ctx, Id id, String text)
 {
 	id = ctx.gen_id(id)!;
 
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_TEXT)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("text"));
 
 	Id text_hash = text.hash();
@@ -45,8 +45,8 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 {
 	id = ctx.gen_id(id)!;
 
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_TEXT)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_TEXT)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("text-box"));
 
 	elem.text.te = te;

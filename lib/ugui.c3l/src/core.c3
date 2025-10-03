@@ -7,6 +7,7 @@ import fifo;
 import std::io;
 import std::core::string;
 import std::core::mem::allocator;
+import std::collections::pair;
 
 
 macro println(...)
@@ -67,6 +68,9 @@ struct Elem {
 		ElemSprite sprite;
 	}
 }
+
+// Tuple of Element pointers, used when it is useful to get both parent and child
+alias PElemTuple = pair::Pair{Elem*, Elem*};
 
 
 // relationships between elements are stored in a tree, it stores just the ids
@@ -130,10 +134,8 @@ struct Ctx {
 // return a pointer to the parent of the current active div
 fn Elem*? Ctx.get_parent(&ctx)
 {
-	Id parent_id = ctx.tree.get(ctx.active_div);
-	Elem*? parent = ctx.cache.search(parent_id);
-	if (catch parent) return parent;
-	if (parent.type != ETYPE_DIV) return WRONG_ELEMENT_TYPE?;
+	Id parent_id = ctx.tree[ctx.active_div]!;
+	Elem* parent = ctx.cache.search(parent_id)!;
 	return parent;
 }
 
@@ -146,7 +148,7 @@ const uint GOLDEN_RATIO = 0x9E3779B9;
 fn Id? Ctx.gen_id(&ctx, Id id2)
 {
 	// FIXME: this is SHIT
-	Id id1 = ctx.tree.get(ctx.active_div);
+	Id id1 = ctx.tree.get(ctx.active_div)!;
 	// Mix the two IDs non-linearly
 	Id mixed = id1 ^ id2.rotate_left(13);
 	mixed ^= id1.rotate_left(7);
@@ -166,10 +168,13 @@ macro Id @compute_id(...)
 
 // get or push an element from the cache, return a pointer to it
 // resets all flags except is_new which is set accordingly
-fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
+fn PElemTuple? Ctx.get_elem(&ctx, Id id, ElemType type)
 {
 	bool is_new;
+	Elem* parent;
 	Elem* elem;
+	parent = ctx.get_parent() ?? &&(Elem){};
+
 	elem = ctx.cache.get_or_insert(&&(Elem){}, id, &is_new)!;
 	elem.flags = (ElemFlags)0;
 	elem.flags.is_new = is_new;
@@ -180,13 +185,9 @@ fn Elem*? Ctx.get_elem(&ctx, Id id, ElemType type)
 	} else {
 		elem.type = type;
 	}
-	// FIXME: this is crap
-	if (ctx.tree.is_used(ctx.active_div)) {
-		elem.z_index = ctx.get_active_div()!.z_index;
-	}
-
+	elem.z_index = parent.z_index;
 	elem.tree_idx = ctx.tree.add(ctx.active_div, id);
-	return elem;
+	return {elem, parent};
 }
 
 // find an element, does not allocate a new one in cache
@@ -203,7 +204,7 @@ macro Elem* Ctx.find_elem(&ctx, Id id)
 
 fn Elem*? Ctx.get_active_div(&ctx)
 {
-	Id id = ctx.tree.get(ctx.active_div);
+	Id id = ctx.tree.get(ctx.active_div)!;
 	return ctx.cache.search(id);
 }
 
@@ -240,7 +241,7 @@ fn void? Ctx.frame_begin(&ctx)
 	// 1. Reset the active div
 	// 2. Get the root element from the cache and update it
 	ctx.active_div = 0;
-	Elem* elem = ctx.get_elem(ROOT_ID, ETYPE_DIV)!;
+	Elem* elem = ctx.get_elem(ROOT_ID, ETYPE_DIV)!.first;
 	ctx.active_div = elem.tree_idx;
 	// The root should have the updated flag only if the size of the window
 	// was changed between frasmes, this propagates an element size recalculation
@@ -279,7 +280,7 @@ fn void? Ctx.frame_end(&ctx)
 	}
 
 	// DO THE LAYOUT
-	ctx.layout_element_tree();
+	ctx.layout_element_tree()!;
 
 	// 1. clear the tree
 	ctx.tree.nuke();

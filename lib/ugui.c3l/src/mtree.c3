@@ -312,8 +312,12 @@ fn void MTree.prune(&tree, int parent)
 
 }
 
-<* @require tree.is_used(ref) *>
-fn Type MTree.get(&tree, int ref) => tree.elem_vec[ref];
+<* @require ref >= 0 , ref < tree.elem_vec.len *>
+fn Type? MTree.get(&tree, int ref) @operator([])
+{
+	if (tree.is_used(ref)) return tree.elem_vec[ref];
+	return NOT_FOUND?;
+}
 
 <* @require tree.is_used(ref) *>
 fn Type MTree.parentof(&tree, int ref) => tree.refs_vec[ref].parent;

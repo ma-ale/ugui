@@ -13,8 +13,8 @@ macro Ctx.button(&ctx, String label = "", String icon = "", ...)
 fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 {
 	id = ctx.gen_id(id)!;
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_BUTTON)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("button"));
 
 	Sprite* sprite = icon != "" ? ctx.sprite_atlas.get(icon)! : &&(Sprite){};
@@ -89,8 +89,8 @@ macro Ctx.checkbox(&ctx, String desc, bool* active, String tick_sprite = "", ...
 fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String tick_sprite)
 {
 	id = ctx.gen_id(id)!;
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_BUTTON)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("checkbox"));
 
 	short inner_pad = description != "" ? style.size/2 : 0;
@@ -163,8 +163,8 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, bool* active)
 {
 	id = ctx.gen_id(id)!;
 
-	Elem *parent = ctx.get_parent()!;
-	Elem *elem = ctx.get_elem(id, ETYPE_BUTTON)!;
+	Elem* parent, elem;
+	ctx.get_elem(id, ETYPE_BUTTON)!.unpack(&elem, &parent);
 	Style* style = ctx.styles.get_style(@str_hash("toggle"));
 
 	short inner_pad = description != "" ? style.size/2 : 0;
