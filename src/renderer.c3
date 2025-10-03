@@ -36,7 +36,6 @@ import ugui;
 // CONSTANTS                                                                                      //
 // ============================================================================================== //
 
-const int DEBUG = 1;
 const bool CYCLE = true;
 const int MAX_QUAD_BATCH = 2048;
 
@@ -147,7 +146,7 @@ struct Renderer {
 fn void Renderer.init(&self, ZString title, uint width, uint height, bool vsync)
 {
 	// set wayland hint automagically
-$if DEBUG == 0:
+$if $feature(RENDER_DEBUG) == false && $feature(USE_WAYLAND) == true:
 	bool has_wayland = false;
 	for (int i = 0; i < sdl::get_num_video_drivers(); i++) {
 		ZString driver = sdl::get_video_driver(i);

@@ -3,7 +3,7 @@
   "warnings": ["no-unused"],
   "dependency-search-paths": ["lib", "lib/vendor/libraries"],
   "dependencies": ["sdl3", "ugui"],
-  "features": [],
+  "features": ["DEBUG_POINTER"],
   "authors": ["Alessandro Mauri <ale@shitposting.expert>"],
   "version": "0.1.0",
   "sources": ["src/**"],
@@ -14,7 +14,6 @@
       "type": "executable"
     }
   },
-  "cpu": "native",
   "opt": "O0",
   "debug-info": "full"
 }

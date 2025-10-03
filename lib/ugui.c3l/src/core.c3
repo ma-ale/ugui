@@ -268,8 +268,6 @@ fn void? Ctx.frame_begin(&ctx)
 	// TODO: add a background color taken from a theme or config
 }
 
-const int DEBUG = 1;
-
 fn void? Ctx.frame_end(&ctx)
 {
 	// FIXME: this is not guaranteed to be root. the user might forget to close a div or some other element
@@ -300,7 +298,7 @@ fn void? Ctx.frame_end(&ctx)
 	}
 
 // debug
-$if DEBUG == 1:
+$if $feature(DEBUG_POINTER):
 	// draw mouse position
 	Cmd cmd = {
 		.type = CMD_RECT,
