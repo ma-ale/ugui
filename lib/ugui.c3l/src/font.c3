@@ -17,8 +17,9 @@ import std::ascii;
 alias Codepoint = uint;
 
 <*
-@require off != null
-@require str.ptr != null
+@require str.ptr != null: "string pointer must be non null"
+@param [in] str
+@param [&inout] off
 *>
 fn Codepoint str_to_codepoint(char[] str, usz* off)
 {
@@ -81,6 +82,12 @@ struct Font {
 	bool should_update; // should send update_atlas command, resets at frame_end()
 }
 
+<*
+@param [&inout] font
+@param [in] name
+@param [&in] path
+@require height > 0, scale > 0: "height and scale must be positive non-zero"
+*>
 fn void? Font.load(&font, String name, ZString path, uint height, float scale)
 {
 	font.table.init(allocator::mem, capacity: FONT_CACHED);
@@ -119,6 +126,9 @@ fn void? Font.load(&font, String name, ZString path, uint height, float scale)
 	}
 }
 
+<*
+@param [&inout] font
+*>
 fn Glyph*? Font.get_glyph(&font, Codepoint code)
 {
 	Glyph*? gp;
@@ -177,6 +187,9 @@ fn Glyph*? Font.get_glyph(&font, Codepoint code)
 	return font.table.get_ref(code);
 }
 
+<*
+@param [&inout] font
+*>
 fn void Font.free(&font)
 {
 	font.atlas.free();
@@ -189,17 +202,28 @@ fn void Font.free(&font)
 //                           FONT LOAD AND QUERY                                      //
 // ---------------------------------------------------------------------------------- //
 
+<*
+@param [&inout] ctx
+@param [in] name
+@param [&in] path
+@require height > 0, scale > 0: "height and scale must be positive non-zero"
+*>
 fn void? Ctx.load_font(&ctx, String name, ZString path, uint height, float scale = 1.0)
 {
 	return ctx.font.load(name, path, height, scale);
 }
 
+<*
+@param [&in] ctx
+@param [in] label
+*>
 // TODO: check if the font is present in the context
-fn Id Ctx.get_font_id(&ctx, String label)
-{
-	return (Id)label.hash();
-}
+fn Id Ctx.get_font_id(&ctx, String label) => (Id)label.hash();
 
+<*
+@param [&in] ctx
+@param [in] name
+*>
 fn Atlas*? Ctx.get_font_atlas(&ctx, String name)
 {
 	// TODO: use the font name, for now there is only one font
@@ -210,6 +234,7 @@ fn Atlas*? Ctx.get_font_atlas(&ctx, String name)
 	return &ctx.font.atlas;
 }
 
+<* @param [&in] font *>
 fn int Font.line_height(&font) => (int)(font.ascender - font.descender + (float)0.5);
 
 // ---------------------------------------------------------------------------------- //
@@ -229,6 +254,10 @@ struct TextSize {
 // width.max: the width of the string left as-is
 // height.min: the height of the string left as-is
 // height.max: the height of the string with each word broken up by a new line
+<*
+@param [&in] ctx
+@param [in] text
+*>
 fn TextSize? Ctx.measure_string(&ctx, String text)
 {
 	if (text == "") return (TextSize){};
@@ -306,6 +335,10 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 // character's advance value
 // TODO: implement a "reflow" flag to toggle reflow if a character goes out of bounds
 // TODO: also return the total bounds of the laid out string
+<*
+@param [&in] ctx
+@param [in] text
+*>
 fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_index, Color hue, isz cursor = -1)
 {
 	Font* font = &ctx.font;
