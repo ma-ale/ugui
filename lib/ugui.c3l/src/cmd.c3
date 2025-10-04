@@ -1,7 +1,7 @@
 module ugui;
 
-import std::ascii;
 import std::io;
+import std::collections::list;
 
 // command type
 enum CmdType {
@@ -49,6 +49,10 @@ struct Cmd (Printable) {
 	}
 }
 
+// command queue
+alias CmdQueue = list::List{Cmd};
+
+
 fn int Cmd.compare_to(Cmd a, Cmd b)
 {
 	if (a.z_index == b.z_index) return 0;
@@ -87,21 +91,21 @@ macro bool cull_rect(Rect rect, Rect clip = {0,0,short.max,short.max})
 }
 
 // FIXME: this whole thing could be done at compile time, maybe
-macro Ctx.push_cmd(&ctx, Cmd *cmd, int z_index)
+macro Ctx.push_cmd(&ctx, Cmd cmd, int z_index)
 {
 	cmd.z_index = z_index;
 	Rect rect;
 	switch (cmd.type) {
 	case CMD_RECT: rect = cmd.rect.rect;
 	case CMD_SPRITE: rect = cmd.sprite.rect;
-	default: return ctx.cmd_queue.enqueue(cmd);
+	default: return ctx.cmd_queue.push(cmd);
 	}
 	if (cull_rect(rect, ctx.div_scissor)) {
 //		println("NOPE: ", cmd.rect.rect, cmd.z_index);
 //		unreachable();
 		return;
 	}
-	return ctx.cmd_queue.enqueue(cmd);
+	return ctx.cmd_queue.push(cmd);
 }
 
 fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
@@ -110,10 +114,10 @@ fn void? Ctx.push_scissor(&ctx, Rect rect, int z_index)
 		.type = CMD_SCISSOR,
 		.scissor.rect = rect.intersection(ctx.div_scissor),
 	};
-	ctx.push_cmd(&sc, z_index)!;
+	ctx.push_cmd(sc, z_index);
 }
 
-fn void? Ctx.reset_scissor(&ctx, int z_index) => ctx.push_cmd(&&(Cmd){.type=CMD_SCISSOR,.scissor.rect=ctx.div_scissor}, z_index)!;
+fn void? Ctx.reset_scissor(&ctx, int z_index) => ctx.push_cmd({.type=CMD_SCISSOR,.scissor.rect=ctx.div_scissor}, z_index);
 
 fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 {
@@ -130,7 +134,7 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 			.rect.color = border_color,
 			.rect.radius = radius + border.x,
 		};
-		ctx.push_cmd(&cmd, z_index)!;
+		ctx.push_cmd(cmd, z_index);
 	}
 
 	Cmd cmd = {
@@ -144,7 +148,7 @@ fn void? Ctx.push_rect(&ctx, Rect rect, int z_index, Style* style)
 		.rect.color = bg,
 		.rect.radius = radius,
 	};
-	ctx.push_cmd(&cmd, z_index)!;
+	ctx.push_cmd(cmd, z_index);
 }
 
 // TODO: accept a Sprite* instead of all this shit
@@ -158,7 +162,7 @@ fn void? Ctx.push_sprite(&ctx, Rect bounds, Rect texture, Id texture_id, int z_i
 		.sprite.texture_id = texture_id,
 		.sprite.hue = hue,
 	};
-	ctx.push_cmd(&cmd, z_index)!;
+	ctx.push_cmd(cmd, z_index);
 }
 
 fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
@@ -174,7 +178,7 @@ fn void? Ctx.push_update_atlas(&ctx, Atlas* atlas)
 			},
 		};
 	// update the atlases before everything else
-	ctx.push_cmd(&up, -1)!;
+	ctx.push_cmd(up, -1);
 }
 
 macro Ctx.dbg_rect(&ctx, Rect r, uint c = 0xff000042u) => ctx.push_rect(r, int.max, &&(Style){.bg=c.to_rgba()})!!;

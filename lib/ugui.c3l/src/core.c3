@@ -69,28 +69,24 @@ struct Elem {
 	}
 }
 
+
+const uint MAX_ELEMENTS = 256;
+const uint MAX_COMMANDS = 2048;
+const uint STACK_STEP = 10;
+const uint ROOT_ID    = 1;
+const uint TEXT_MAX   = 64;
+
+
 // Tuple of Element pointers, used when it is useful to get both parent and child
 alias PElemTuple = pair::Pair{Elem*, Elem*};
-
 
 // relationships between elements are stored in a tree, it stores just the ids
 alias IdTree = mtree::MTree{Id};
 
 // elements themselves are kept in a cache
-const uint MAX_ELEMENTS = 256;
 alias ElemCache = cache::Cache{Id, Elem, MAX_ELEMENTS};
 
-alias CmdQueue = fifo::Fifo{Cmd};
-
 faultdef INVALID_SIZE, EVENT_UNSUPPORTED, WRONG_ELEMENT_TYPE, WRONG_ID;
-
-const Rect DIV_FILL = { .x = 0, .y = 0, .w = 0, .h = 0 };
-
-const uint STACK_STEP = 10;
-const uint MAX_ELEMS  = 128;
-const uint MAX_CMDS   = 2048;
-const uint ROOT_ID    = 1;
-const uint TEXT_MAX   = 64;
 
 struct Ctx {
 	IdTree tree;
@@ -216,7 +212,7 @@ fn void? Ctx.init(&ctx, Allocator allocator)
 	ctx.cache.init(allocator)!;
 	defer catch { (void)ctx.cache.free(); }
 
-	ctx.cmd_queue.init(MAX_CMDS, allocator)!;
+	ctx.cmd_queue.init(allocator::mem, MAX_COMMANDS);
 	defer catch { (void)ctx.cmd_queue.free(); }
 
 	ctx.styles.init(allocator);
@@ -311,13 +307,13 @@ $if $feature(DEBUG_POINTER):
 		},
 		.rect.color = 0xff00ffffu.to_rgba()
 	};
-	ctx.cmd_queue.enqueue(&cmd)!;
+	ctx.cmd_queue.push(cmd);
 $endif
 
 	// sort the command buffer by the z-index
 	// FIXME: sorting the buffer fucks with scissor commands that have to be kept in place
 	// TODO: instead of sorting at the end perform ordered inserts into the command buffer
-	ctx.cmd_queue.sort()!;
+	//ctx.cmd_queue.sort()!;
 
 //	foreach (i, c: ctx.cmd_queue) {
 //		io::printf("[%d]: ", i);

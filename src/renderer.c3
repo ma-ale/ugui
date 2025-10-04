@@ -990,7 +990,12 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 
 	uint calls = 0;
 	uint off;
-	for (Cmd* cmd; (cmd = queue.dequeue() ?? null) != null;) {
+	while (true) {
+		Cmd? cmd = queue.pop_first();
+		if (catch e = cmd) {
+			if (e != NO_MORE_ELEMENT) unreachable();
+			break;
+		}
 		switch (cmd.type) {
 		case CMD_UPDATE_ATLAS:
 			// TODO: verify the correct type
@@ -1011,7 +1016,7 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 			uint count = 1;
 			while (queue.len() != 0 && (queue.get(0).type == CMD_RECT || queue.get(0).type == CMD_SPRITE)) {
 				count++;
-				(void)queue.dequeue();
+				(void)queue.pop_first();
 			}
 			self.draw_quads(off, count);
 			off += count;
