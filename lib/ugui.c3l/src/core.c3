@@ -186,7 +186,7 @@ fn PElemTuple? Ctx.get_elem(&ctx, Id id, ElemType type)
 		elem.type = type;
 	}
 	elem.z_index = parent.z_index;
-	elem.tree_idx = ctx.tree.add(ctx.active_div, id);
+	elem.tree_idx = ctx.tree.add(ctx.active_div, id)!;
 	return {elem, parent};
 }
 

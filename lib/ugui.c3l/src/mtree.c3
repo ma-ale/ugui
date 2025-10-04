@@ -88,6 +88,7 @@ struct MTree {
 }
 
 
+<* @param [&inout] tree *>
 fn void MTree.init(&tree, usz size, Allocator allocator = mem)
 {
 	// round size to the nearest multiple of BITS
@@ -106,6 +107,7 @@ fn void MTree.init(&tree, usz size, Allocator allocator = mem)
 }
 
 
+<* @param [&inout] tree *>
 fn void MTree.free(&tree)
 {
 	tree.elements = 0;
@@ -116,7 +118,8 @@ fn void MTree.free(&tree)
 }
 
 
-fn int MTree.get_free_spot(&tree)
+<* @param [&inout] tree *>
+fn int? MTree.get_free_spot(&tree)
 {
 	foreach (idx, d: tree.used) {
 		if (d != $typeof(d).max) {
@@ -124,7 +127,7 @@ fn int MTree.get_free_spot(&tree)
 			return spot;
 		}
 	}
-	unreachable("no free spots left");
+	return CAPACITY_EXCEEDED?;
 }
 
 <* @require idx >= 0 *>
@@ -163,10 +166,13 @@ fn int MTree.last_node(&tree, int parent)
 }
 
 
-<* @require tree.elements == 0 || tree.is_used(parent) == true *>
-fn int MTree.add(&tree, int parent, Type t)
+<*
+@require tree.elements == 0 || tree.is_used(parent) == true
+@param [&inout] tree
+*>
+fn int? MTree.add(&tree, int parent, Type t)
 {
-	int idx = tree.get_free_spot();
+	int idx = tree.get_free_spot()!;
 	int subtree = idx / BITS;
 
 	tree.set_used(idx);
@@ -197,11 +203,11 @@ fn int MTree.add(&tree, int parent, Type t)
 	}
 	// on fail we need to create another parent node
 	if (!done) {
-		int new_next = tree.get_free_spot();
+		int new_next = tree.get_free_spot()!;
 		// if the new node does not land in the same subtree as the child we cannot do
 		// anything since the references are immutable
 		if (new_next/BITS != subtree) {
-			unreachable("cannot allocate new child for parent");
+			return CAPACITY_EXCEEDED?;
 		}
 		tree.set_used(new_next);
 		tree.elements++;
@@ -220,6 +226,7 @@ fn int MTree.add(&tree, int parent, Type t)
 
 // get the index of the n-th children of parent, -1 otherwise
 // usage: for (int i, c; (c = tree.children_it(parent, i)) >= 0; i++) { ... }
+<* @param [&in] tree *>
 fn int MTree.children_it(&tree, int parent, int n)
 {
 	int tot_children;
@@ -247,6 +254,7 @@ fn int MTree.children_it(&tree, int parent, int n)
 	return -1;
 }
 
+<* @param [&in] tree *>
 fn int MTree.children_num(&tree, int parent)
 {
 	int n;
@@ -256,6 +264,7 @@ fn int MTree.children_num(&tree, int parent)
 	return n;
 }
 
+<* @param [&in] tree *>
 fn int MTree.subtree_size(&tree, int parent)
 {
 	int x = tree.children_num(parent);
@@ -266,8 +275,7 @@ fn int MTree.subtree_size(&tree, int parent)
 	return x;
 }
 
-
-
+<* @param [&inout] tree *>
 fn int MTree.level_order_it(&tree, int parent, int i)
 {
 	if (i == 0) {
@@ -285,8 +293,11 @@ fn int MTree.level_order_it(&tree, int parent, int i)
 	return p;
 }
 
+<* @param [&inout] tree *>
 fn void MTree.prune(&tree, int parent)
 {
+	if (!tree.is_used(parent)) return;
+
 	int c;
 	for (int i = 0; (c = tree.children_it(parent, i)) >= 0; i++) {
 		tree.prune(c); // prune the subtree
@@ -312,16 +323,24 @@ fn void MTree.prune(&tree, int parent)
 
 }
 
-<* @require ref >= 0 , ref < tree.elem_vec.len *>
+<*
+@require ref >= 0 , ref < tree.elem_vec.len
+@param [&inout] tree
+*>
 fn Type? MTree.get(&tree, int ref) @operator([])
 {
 	if (tree.is_used(ref)) return tree.elem_vec[ref];
 	return NOT_FOUND?;
 }
 
-<* @require tree.is_used(ref) *>
-fn Type MTree.parentof(&tree, int ref) => tree.refs_vec[ref].parent;
+<* @param [&in] tree *>
+fn Type? MTree.parentof(&tree, int ref)
+{
+	if (!tree.is_used(ref)) return NOT_FOUND?;
+	return tree.refs_vec[ref].parent;
+}
 
+<* @param [&inout] tree *>
 fn void MTree.nuke(&tree)
 {
 	foreach (idx, &b: tree.used) {
@@ -331,9 +350,10 @@ fn void MTree.nuke(&tree)
 	tree.elements = 0;
 }
 
+<* @param [&in] t *>
+macro bool MTree.is_root(&t, int i) => t.is_used(i) && t.refs_vec[i].parent == -1;
 
-macro bool MTree.is_root(&t, int i) => t.refs_vec[i].parent == -1;
-
+<* @param [&in] tree *>
 fn void MTree.print(&tree)
 {
 	foreach (idx, c: tree.elem_vec) {

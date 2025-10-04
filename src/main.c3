@@ -1,5 +1,4 @@
 import std::io;
-import vtree;
 import cache;
 import ugui;
 import std::time;
