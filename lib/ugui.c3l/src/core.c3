@@ -2,7 +2,7 @@ module ugui;
 
 import mtree;
 import cache;
-import fifo;
+
 
 import std::io;
 import std::core::string;
