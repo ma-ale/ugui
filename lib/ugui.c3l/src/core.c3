@@ -8,6 +8,7 @@ import std::io;
 import std::core::string;
 import std::core::mem::allocator;
 import std::collections::pair;
+import std::sort;
 
 
 macro println(...)
@@ -313,7 +314,7 @@ $endif
 	// sort the command buffer by the z-index
 	// FIXME: sorting the buffer fucks with scissor commands that have to be kept in place
 	// TODO: instead of sorting at the end perform ordered inserts into the command buffer
-	//ctx.cmd_queue.sort()!;
+	sort::countingsort(ctx.cmd_queue, fn uint(Cmd c) => c.z_index+1);
 
 //	foreach (i, c: ctx.cmd_queue) {
 //		io::printf("[%d]: ", i);
