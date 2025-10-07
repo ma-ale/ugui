@@ -294,7 +294,13 @@ fn void? Ctx.frame_end(&ctx)
 		ctx.sprite_atlas.should_update = false;
 	}
 
-// debug
+	// sort the command buffer by the z-index
+	// FIXME: sorting the buffer fucks with scissor commands that have to be kept in place
+	// TODO: instead of sorting at the end perform ordered inserts into the command buffer
+	//sort::countingsort(ctx.cmd_queue, fn uint(Cmd c) => c.z_index+1);
+	ctx.cmd_queue.sort()!;
+
+	// debug
 $if $feature(DEBUG_POINTER):
 	// draw mouse position
 	Cmd cmd = {
@@ -310,11 +316,6 @@ $if $feature(DEBUG_POINTER):
 	};
 	ctx.cmd_queue.push(cmd);
 $endif
-
-	// sort the command buffer by the z-index
-	// FIXME: sorting the buffer fucks with scissor commands that have to be kept in place
-	// TODO: instead of sorting at the end perform ordered inserts into the command buffer
-	sort::countingsort(ctx.cmd_queue, fn uint(Cmd c) => c.z_index+1);
 
 //	foreach (i, c: ctx.cmd_queue) {
 //		io::printf("[%d]: ", i);

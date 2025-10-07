@@ -59,6 +59,35 @@ fn int Cmd.compare_to(Cmd a, Cmd b)
 	return a.z_index > b.z_index ? 1 : -1;
 }
 
+
+// FIXME: This sorting method does not fully respect layer ordering for popups.
+//        Popups that start on the same layer but are enqueued at different times
+//        may still be rendered on top of each other, even if the first popup
+//        has elements in higher layers than the second. The current approach
+//        does not truly sort by layer; it only moves elements from higher layers
+//        to the end of the queue as they are encountered.
+fn void? CmdQueue.sort(&queue)
+{
+	CmdQueue stack;
+	stack.init(allocator::tmem);
+
+	for (isz i = queue.len()-1; i > 0; i--) {
+		Cmd cur = (*queue)[i];
+		Cmd next = (*queue)[i - 1];
+		// cur < next
+		if (cur.compare_to(next) < 0) {
+			stack.push(next);
+			queue.remove_at(i-1);
+		}
+	}
+
+	usz l = stack.len();
+	for (usz i; i < l; i++) {
+		queue.push(stack.pop())!;
+	}
+
+}
+
 // implement the Printable interface
 fn usz? Cmd.to_format(Cmd* cmd, Formatter *f) @dynamic
 {
