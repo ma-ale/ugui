@@ -65,7 +65,7 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 	update_parent_size(elem, parent);
 
 	// check input and update the text
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 
 	if (elem.events.text_input || elem.events.key_press) {
 		ctx.text_edit(elem.text.te);

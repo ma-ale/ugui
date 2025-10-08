@@ -34,7 +34,8 @@ enum ElemType {
 
 bitstruct ElemFlags : uint {
 	bool updated : 0;
-	bool is_new : 1;
+	bool is_new  : 1; // element is new in the cache
+	bool shown   : 2; // element has been shown (drawn) this frame
 }
 
 bitstruct ElemEvents : uint {
@@ -175,6 +176,7 @@ fn PElemTuple? Ctx.get_elem(&ctx, Id id, ElemType type)
 	elem = ctx.cache.get_or_insert(&&(Elem){}, id, &is_new)!;
 	elem.flags = (ElemFlags)0;
 	elem.flags.is_new = is_new;
+	elem.flags.shown = true;
 	elem.id = id;
 	elem.layout = {};
 	if (is_new == false && elem.type != type) {
@@ -323,24 +325,13 @@ $endif
 //	}
 }
 
-<*
- * @ensure elem != null
-*>
-macro bool Ctx.is_hovered(&ctx, Elem *elem)
-{
-	return ctx.input.mouse.pos.in_rect(elem.bounds);
-}
-
-macro bool Ctx.elem_focus(&ctx, Elem *elem)
-{
-	return ctx.focus_id == elem.id;
-}
-
 // TODO: add other events
 // FIXME: this does not work with touch
 // FIXME: hacked together, please do better
+/*
 fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 {
+	// FIXME: gross hack to not leak events under a pop-up
 	if (ctx.input.z_index != elem.z_index) return {};
 
 	bool hover = ctx.is_hovered(elem);
@@ -367,3 +358,4 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 	};
 	return ev;
 }
+*/

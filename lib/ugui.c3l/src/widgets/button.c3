@@ -46,7 +46,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 
 	update_parent_size(elem, parent);
 
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 //	if (ctx.input.z_index == elem.z_index) println("true ", elem.z_index);
 	Rect content_bounds = elem.content_bounds();
 
@@ -66,7 +66,7 @@ fn ElemEvents? Ctx.button_id(&ctx, Id id, String label, String icon)
 	};
 	//text_bounds = text_size.center_to(text_bounds);
 
-	bool is_active = ctx.elem_focus(elem) || elem.events.mouse_hover;
+	bool is_active = elem.events.has_focus || elem.events.mouse_hover;
 	Style s = *style;
 	if (is_active) {
 		s.secondary = s.primary;
@@ -115,7 +115,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 
 	update_parent_size(elem, parent);
 
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
 
@@ -189,7 +189,7 @@ fn void? Ctx.toggle_id(&ctx, Id id, String description, bool* active)
 
 	update_parent_size(elem, parent);
 
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 	if (elem.events.mouse_hover && elem.events.mouse_release) *active = !(*active);
 
 	Rect content_bounds = elem.bounds.pad(elem.layout.content_offset);

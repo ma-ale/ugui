@@ -297,6 +297,72 @@ fn void resolve_placement(Elem* c, Elem* p)
 	}
 }
 
+macro bool Ctx.is_hovered(&ctx, Elem *elem) => ctx.input.mouse.pos.in_rect(elem.bounds);
+
+fn void Ctx.update_elem_events(&ctx, Elem* elem)
+{
+	bool hover = ctx.is_hovered(elem);
+	bool focus = ctx.focus_id == elem.id || (hover && ctx.is_mouse_pressed(BTN_ANY));
+
+	if (ctx.is_mouse_pressed(BTN_ANY) && !hover){
+		focus = false;
+		if (ctx.focus_id == elem.id) ctx.focus_id = 0;
+	}
+
+	if (hover) {
+		// TODO: this constant cache lookup could be slow
+		Elem* prev_hover = ctx.find_elem(ctx.hover_id);
+		if (prev_hover.id != elem.id && prev_hover.flags.shown) {
+			if (prev_hover.z_index <= elem.z_index) {
+				// remove hover events from prev_hover
+				prev_hover.events.mouse_hover   = false;
+				prev_hover.events.mouse_press   = false;
+				prev_hover.events.mouse_release = false;
+				prev_hover.events.mouse_hold    = false;
+			} else {
+				hover = false;
+			}
+		}
+	}
+	
+	if (focus) {
+		// TODO: this constant cache lookup could be slow
+		Elem* prev_focus = ctx.find_elem(ctx.hover_id);
+		// update the focus id and element only if the current element is at the same level 
+		// or above the previous element that held focus
+		if (prev_focus.z_index <= elem.z_index) {
+			// remove focus events from prev_focus
+			prev_focus.events.has_focus     = false;
+			prev_focus.events.mouse_press   = false;
+			prev_focus.events.mouse_release = false;
+			prev_focus.events.mouse_hold    = false;
+			prev_focus.events.key_press     = false;
+			prev_focus.events.key_release   = false;
+			prev_focus.events.key_repeat    = false;
+			prev_focus.events.text_input    = false;
+			// update the hover id
+			ctx.focus_id = elem.id;
+		} else if (prev_focus.flags.shown) {
+			focus = false;
+		}
+	}
+	
+	if (hover) ctx.hover_id = elem.id;
+
+	ElemEvents ev = {
+		.has_focus     = focus,
+		.mouse_hover   = hover,
+		.mouse_press   = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
+		.mouse_release = hover && focus && ctx.is_mouse_released(BTN_ANY),
+		.mouse_hold    = hover && focus && ctx.is_mouse_down(BTN_ANY),
+		.key_press     = focus && ctx.input.events.key_press,
+		.key_release   = focus && ctx.input.events.key_release,
+		.key_repeat    = focus && ctx.input.events.key_repeat,
+		.text_input    = focus && (ctx.input.keyboard.text_len || ctx.input.keyboard.modkeys & KMOD_TXT),
+	};
+	elem.events = ev;
+}
+
 fn void? Ctx.layout_element_tree(&ctx)
 {
 	int current;
@@ -334,7 +400,11 @@ fn void? Ctx.layout_element_tree(&ctx)
 			} else {
 				resolve_placement(c, p);
 				update_children_bounds(c, p);
+
+				// reset shown flag
 			}
+			ctx.update_elem_events(c);
+			c.flags.shown = false;
 		}
 	}
 }

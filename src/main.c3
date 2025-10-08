@@ -208,12 +208,14 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
-const String APPLICATION = "calculator";
+const String APPLICATION = "popup";
 $switch APPLICATION:
 $case "debug":
 		debug_app(&ui);
 $case "calculator":
 		calculator(&ui, &te);
+$case "popup":
+		popup(&ui);
 $endswitch
 
 		// Timings counter
@@ -459,5 +461,26 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.text_box(ugui::@grow(), ugui::@exact(100), te, RIGHT)!!;
 		}!!;
 	}!!; }!!;
+}
 
+fn void popup(ugui::Ctx* ui)
+{
+	static bool toggle;
+	static ugui::Point pos;
+	
+	ui.@center(COLUMN) {
+		if (toggle) {
+			toggle = ui.popup_begin(pos, ugui::@fit(), ugui::@fit(), COLUMN)!!;
+			ui.button("POP")!!;
+			ui.button("UP")!!;
+			ui.div_end()!!;
+		}
+		if (ui.button("ciao")!!.mouse_release) {
+			pos = ui.input.mouse.pos;
+			toggle = ~toggle;
+		}
+		if (ui.button("mamma")!!.mouse_press) ugui::println("pressed!");
+	}!!;
+	
+	ugui::println("focus id: ", ui.focus_id, " hover id: ", ui.hover_id);
 }
