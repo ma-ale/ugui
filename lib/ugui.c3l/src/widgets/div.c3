@@ -87,7 +87,6 @@ fn void? Ctx.div_begin_id(&ctx,
 
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
-	if (ctx.input.z_index < elem.z_index) ctx.input.z_index = elem.z_index;
 	
 	// update layout with correct info
 	elem.layout = {
@@ -199,7 +198,6 @@ fn bool? Ctx.popup_begin_id(&ctx,
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
 	elem.z_index++;
-	if (ctx.input.z_index < elem.z_index) ctx.input.z_index = elem.z_index;
 
 	// update layout with correct info
 	elem.layout = {
@@ -222,7 +220,7 @@ fn bool? Ctx.popup_begin_id(&ctx,
 	//elem.events = ctx.get_elem_events(elem);
 	
 	// check close condition, mouse release anywhere outside the div bounds
-	if ((ctx.mouse_released() & BTN_ANY) && !elem.events.mouse_hover) {
+	if ((ctx.mouse_released() & BTN_ANY) && ctx.input.mouse.pos.outside(elem.bounds)) {
 		return false;
 	}
 

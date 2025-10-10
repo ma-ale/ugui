@@ -208,7 +208,7 @@ fn int main(String[] args)
 
 		if (ui.check_key_combo(ugui::KMOD_CTRL, "q")) quit = true;
 
-const String APPLICATION = "popup";
+const String APPLICATION = "calculator";
 $switch APPLICATION:
 $case "debug":
 		debug_app(&ui);
@@ -397,6 +397,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.button("Quattro")!!;
 		ui.div_end()!!;
 	}
+	
 	// ui input/output
 	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) { // center everything on the screen
 	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
@@ -468,19 +469,17 @@ fn void popup(ugui::Ctx* ui)
 	static bool toggle;
 	static ugui::Point pos;
 	
+	if (toggle) {
+		toggle = ui.popup_begin(pos, ugui::@fit(), ugui::@fit(), COLUMN)!!;
+		ui.button("POP")!!;
+		ui.button("UP")!!;
+		ui.div_end()!!;
+	}
 	ui.@center(COLUMN) {
-		if (toggle) {
-			toggle = ui.popup_begin(pos, ugui::@fit(), ugui::@fit(), COLUMN)!!;
-			ui.button("POP")!!;
-			ui.button("UP")!!;
-			ui.div_end()!!;
-		}
 		if (ui.button("ciao")!!.mouse_release) {
 			pos = ui.input.mouse.pos;
 			toggle = ~toggle;
 		}
 		if (ui.button("mamma")!!.mouse_press) ugui::println("pressed!");
 	}!!;
-	
-	ugui::println("focus id: ", ui.focus_id, " hover id: ", ui.hover_id);
 }

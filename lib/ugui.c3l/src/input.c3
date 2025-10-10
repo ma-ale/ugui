@@ -71,7 +71,7 @@ const ModKeys KEY_ANY = (ModKeys)(ModKeys.inner.max);
 
 fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String ...keys)
 {
-	bool is_mod = (bool)(ctx.input.keyboard.modkeys & mod);
+	bool is_mod = (bool)(ctx.current_input.keyboard.modkeys & mod);
 	bool is_keys = true;
 	String haystack = (String)ctx.get_keys();
 	foreach (needle: keys) {
@@ -86,7 +86,7 @@ fn void? Ctx.input_window_size(&ctx, short width, short height)
 	if (width <= 0 || height <= 0) {
 		return INVALID_SIZE?;
 	}
-	ctx.input.events.resize = ctx.width != width || ctx.height != height;
+	ctx.current_input.events.resize = ctx.width != width || ctx.height != height;
 	ctx.width = width;
 	ctx.height = height;
 }
@@ -96,13 +96,13 @@ fn void Ctx.input_changefocus(&ctx, bool has_focus)
 {
 	// FIXME: raylib only has an API to query the focus status so we have to
 	//        update the input flag only if the focus changed
-	ctx.input.events.change_focus = ctx.has_focus != has_focus;
+	ctx.current_input.events.change_focus = ctx.has_focus != has_focus;
 	ctx.has_focus = has_focus;
 }
 
-macro Ctx.mouse_pressed(&ctx) => ctx.input.mouse.updated & ctx.input.mouse.down;
-macro Ctx.mouse_released(&ctx) => ctx.input.mouse.updated & ~ctx.input.mouse.down;
-macro Ctx.mouse_down(&ctx) => ctx.input.mouse.down;
+macro Ctx.mouse_pressed(&ctx) => ctx.current_input.mouse.updated & ctx.current_input.mouse.down;
+macro Ctx.mouse_released(&ctx) => ctx.current_input.mouse.updated & ~ctx.current_input.mouse.down;
+macro Ctx.mouse_down(&ctx) => ctx.current_input.mouse.down;
 
 // FIXME: hthis compairson could be done with a cast using MouseButtons.inner
 // property but I could not figure out how
@@ -113,63 +113,63 @@ macro Ctx.is_mouse_down(&ctx, MouseButtons btn) => (ctx.mouse_down() & btn) != B
 // Mouse Buttons down
 fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 {
-	ctx.input.mouse.updated = ctx.input.mouse.down ^ buttons;
-	ctx.input.mouse.down = buttons;
-	ctx.input.events.mouse_btn = (uint)ctx.input.mouse.down != 0 || (uint)ctx.input.mouse.updated != 0;
+	ctx.current_input.mouse.updated = ctx.current_input.mouse.down ^ buttons;
+	ctx.current_input.mouse.down = buttons;
+	ctx.current_input.events.mouse_btn = (uint)ctx.current_input.mouse.down != 0 || (uint)ctx.current_input.mouse.updated != 0;
 }
 
 // Mouse was moved, report absolute position
 fn void Ctx.input_mouse_abs(&ctx, short x, short y)
 {
-	ctx.input.mouse.pos.x = math::clamp(x, (short)0, ctx.width);
-	ctx.input.mouse.pos.y = math::clamp(y, (short)0, ctx.height);
+	ctx.current_input.mouse.pos.x = math::clamp(x, (short)0, ctx.width);
+	ctx.current_input.mouse.pos.y = math::clamp(y, (short)0, ctx.height);
 
 	short dx, dy;
-	dx = x - ctx.input.mouse.pos.x;
-	dy = y - ctx.input.mouse.pos.y;
+	dx = x - ctx.current_input.mouse.pos.x;
+	dy = y - ctx.current_input.mouse.pos.y;
 
-	ctx.input.mouse.delta.x = dx;
-	ctx.input.mouse.delta.y = dy;
+	ctx.current_input.mouse.delta.x = dx;
+	ctx.current_input.mouse.delta.y = dy;
 
-	ctx.input.events.mouse_move = dx != 0 || dy != 0;
+	ctx.current_input.events.mouse_move = dx != 0 || dy != 0;
 }
 
 // Mouse was moved, report relative motion
 fn void Ctx.input_mouse_delta(&ctx, short dx, short dy)
 {
-	ctx.input.mouse.delta.x = dx;
-	ctx.input.mouse.delta.y = dy;
+	ctx.current_input.mouse.delta.x = dx;
+	ctx.current_input.mouse.delta.y = dy;
 
 	short mx, my;
-	mx = ctx.input.mouse.pos.x + dx;
-	my = ctx.input.mouse.pos.y + dy;
+	mx = ctx.current_input.mouse.pos.x + dx;
+	my = ctx.current_input.mouse.pos.y + dy;
 
-	ctx.input.mouse.pos.x = math::clamp(mx, (short)0, ctx.width);
-	ctx.input.mouse.pos.y = math::clamp(my, (short)0, ctx.height);
+	ctx.current_input.mouse.pos.x = math::clamp(mx, (short)0, ctx.width);
+	ctx.current_input.mouse.pos.y = math::clamp(my, (short)0, ctx.height);
 
-	ctx.input.events.mouse_move = dx != 0 || dy != 0;
+	ctx.current_input.events.mouse_move = dx != 0 || dy != 0;
 }
 
 fn void Ctx.input_mouse_wheel(&ctx, short x, short y, float scale = 1.0)
 {
-	ctx.input.mouse.scroll.x = (short)((float)-x*scale);
-	ctx.input.mouse.scroll.y = (short)((float)-y*scale);
-	ctx.input.events.mouse_scroll = x !=0 || y != 0;
+	ctx.current_input.mouse.scroll.x = (short)((float)-x*scale);
+	ctx.current_input.mouse.scroll.y = (short)((float)-y*scale);
+	ctx.current_input.events.mouse_scroll = x !=0 || y != 0;
 }
 
 fn void Ctx.input_key_press(&ctx)
 {
-	ctx.input.events.key_press = true;
+	ctx.current_input.events.key_press = true;
 }
 
 fn void Ctx.input_key_release(&ctx)
 {
-	ctx.input.events.key_release = true;
+	ctx.current_input.events.key_release = true;
 }
 
 fn void Ctx.input_key_repeat(&ctx)
 {
-	ctx.input.events.key_repeat = true;
+	ctx.current_input.events.key_repeat = true;
 }
 
 // append utf-8 encoded text to the context text input
@@ -177,12 +177,12 @@ fn void Ctx.input_text_utf8(&ctx, char[] text)
 {
 	if (text.len == 0) { return; }
 
-	usz remaining = ctx.input.keyboard.text.len - ctx.input.keyboard.text_len;
+	usz remaining = ctx.current_input.keyboard.text.len - ctx.current_input.keyboard.text_len;
 	usz len = text.len > remaining ? remaining : text.len;
-	char[] s = ctx.input.keyboard.text[ctx.input.keyboard.text_len ..];
+	char[] s = ctx.current_input.keyboard.text[ctx.current_input.keyboard.text_len ..];
 	s[..len-1] = text[..len-1];
-	ctx.input.keyboard.text_len += len;
-	ctx.input.events.text_input = true;
+	ctx.current_input.keyboard.text_len += len;
+	ctx.current_input.events.text_input = true;
 }
 
 fn void Ctx.input_text_unicode(&ctx, char[] text)
@@ -190,8 +190,8 @@ fn void Ctx.input_text_unicode(&ctx, char[] text)
 	if (text.ptr == null || text.len == 0) { return; }
 
 	char[32] tmp;
-	usz remaining = ctx.input.keyboard.text.len - ctx.input.keyboard.text_len;
-	char[] s = ctx.input.keyboard.text[ctx.input.keyboard.text_len ..];
+	usz remaining = ctx.current_input.keyboard.text.len - ctx.current_input.keyboard.text_len;
+	char[] s = ctx.current_input.keyboard.text[ctx.current_input.keyboard.text_len ..];
 
 	usz off;
 	foreach (idx, cp: text) {
@@ -200,9 +200,9 @@ fn void Ctx.input_text_unicode(&ctx, char[] text)
 		s[off..off+enc] = tmp[..enc];
 		off += enc;
 	}
-	ctx.input.keyboard.text_len += off;
+	ctx.current_input.keyboard.text_len += off;
 
-	ctx.input.events.text_input = true;
+	ctx.current_input.events.text_input = true;
 }
 
 fn void Ctx.input_char(&ctx, char c)
@@ -218,6 +218,6 @@ fn ModKeys Ctx.get_mod(&ctx) => ctx.input.keyboard.modkeys;
 // TODO: make this call repetible to input modkeys one by one
 fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys)
 {
-	ctx.input.keyboard.modkeys = modkeys;
-	ctx.input.events.mod_key = (uint)ctx.input.keyboard.modkeys != 0;
+	ctx.current_input.keyboard.modkeys = modkeys;
+	ctx.current_input.events.mod_key = (uint)ctx.current_input.keyboard.modkeys != 0;
 }

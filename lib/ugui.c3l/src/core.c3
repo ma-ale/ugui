@@ -90,6 +90,26 @@ alias ElemCache = cache::Cache{Id, Elem, MAX_ELEMENTS};
 
 faultdef INVALID_SIZE, EVENT_UNSUPPORTED, WRONG_ELEMENT_TYPE, WRONG_ID;
 
+struct InputData {
+	InputEvents events;
+	struct mouse {
+		Point pos, delta;
+		// mouse_down:      bitmap of mouse buttons that are held
+		// mouse_updated:   bitmap of mouse buttons that have been updated
+		// mouse_released = mouse_updated & ~mouse_down
+		// mouse_pressed  = mouse_updated & mouse_down
+		MouseButtons down;
+		MouseButtons updated;
+		// scroll wheel
+		Point scroll;
+	}
+	struct keyboard {
+		char[TEXT_MAX] text;
+		usz text_len;
+		ModKeys modkeys;
+	}
+}
+
 struct Ctx {
 	IdTree tree;
 	ElemCache cache;
@@ -101,26 +121,7 @@ struct Ctx {
 	SpriteAtlas sprite_atlas;
 
 	bool has_focus;
-	struct input {
-		InputEvents events;
-		int z_index; // the layer the input events need to be propageted to
-		struct mouse {
-			Point pos, delta;
-			// mouse_down:      bitmap of mouse buttons that are held
-			// mouse_updated:   bitmap of mouse buttons that have been updated
-			// mouse_released = mouse_updated & ~mouse_down
-			// mouse_pressed  = mouse_updated & mouse_down
-			MouseButtons down;
-			MouseButtons updated;
-			// scroll wheel
-			Point scroll;
-		}
-		struct keyboard {
-			char[TEXT_MAX] text;
-			usz text_len;
-			ModKeys modkeys;
-		}
-	}
+	InputData input, current_input;
 
 	Id hover_id;
 	Id focus_id;
@@ -249,7 +250,6 @@ fn void? Ctx.frame_begin(&ctx)
 	// if the window has focus then the root element also has focus, no other
 	// computation needed, child elements need to check the mouse positon and
 	// other stuff
-	ctx.input.z_index = 0;
 	//elem.flags.has_focus = ctx.has_focus;
 
 	elem.bounds = {0, 0, ctx.width, ctx.height};
@@ -262,29 +262,40 @@ fn void? Ctx.frame_begin(&ctx)
 	elem.layout.h = @exact(ctx.height);
 
 	ctx.div_scissor = elem.bounds;
-
-	// The root element does not push anything to the stack
-	// TODO: add a background color taken from a theme or config
 }
 
 fn void? Ctx.frame_end(&ctx)
 {
-	// FIXME: this is not guaranteed to be root. the user might forget to close a div or some other element
 	Elem* root = ctx.get_active_div()!;
 	if (root.id != ROOT_ID) {
-		io::printn(root.id);
 		return WRONG_ID?;
 	}
+
+	// 2. clear input fields
+	ctx.input = ctx.current_input;
+	ctx.current_input.events = {};
+	ctx.current_input.keyboard.text_len = 0;
 
 	// DO THE LAYOUT
 	ctx.layout_element_tree()!;
 
+	foreach (idx, id : ctx.tree.elem_vec) {
+		if (!ctx.tree.is_used((int)idx)) continue;
+		Elem* c = ctx.find_elem(id);
+		// reset events
+		c.events = {};
+		// reset shown flag
+		// TODO: use shown_last_frame to avoid this loop entirely
+		c.flags.shown = false;
+	}
+
+	// Propagate input events to the right elements
+	ctx.set_elem_events(ctx.hover_id);
+	ctx.set_elem_events(ctx.focus_id);
+	
+
 	// 1. clear the tree
 	ctx.tree.nuke();
-
-	// 2. clear input fields
-	ctx.input.events = (InputEvents)0;
-	ctx.input.keyboard.text_len = 0;
 
 	// send atlas updates
 	if (ctx.font.should_update) {
@@ -325,27 +336,47 @@ $endif
 //	}
 }
 
-// TODO: add other events
-// FIXME: this does not work with touch
-// FIXME: hacked together, please do better
-/*
-fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
+
+macro bool Ctx.is_hovered(&ctx, Elem *elem) => ctx.input.mouse.pos.in_rect(elem.bounds);
+
+// Check if the element is hovered and/or focused, if it is update the context ids.
+// The order in which the elements are passed to this function is not relevant
+fn void Ctx.update_hover_and_focus(&ctx, Elem* elem)
 {
-	// FIXME: gross hack to not leak events under a pop-up
-	if (ctx.input.z_index != elem.z_index) return {};
-
 	bool hover = ctx.is_hovered(elem);
-	bool focus = ctx.elem_focus(elem) || (hover && ctx.is_mouse_pressed(BTN_LEFT));
+	bool focus = ctx.focus_id == elem.id || (hover && ctx.is_mouse_pressed(BTN_ANY));
 
-	if (ctx.is_mouse_pressed(BTN_ANY) && !hover){
-		focus = false;
-		if (ctx.focus_id == elem.id) ctx.focus_id = 0;
+	if (hover) {
+		Elem* prev_hover = ctx.find_elem(ctx.hover_id);
+		bool different = prev_hover.id != elem.id;
+		bool still_hovered = ctx.is_hovered(prev_hover);
+		bool shown = prev_hover.flags.shown;
+		bool above = prev_hover.z_index > elem.z_index;
+
+		hover = !(different && still_hovered && shown && above);
 	}
+	
+	if (focus) {
+		Elem* prev_focus = ctx.find_elem(ctx.hover_id);
+		bool different = prev_focus.id != elem.id;
+		bool shown = prev_focus.flags.shown;
+		bool above = prev_focus.z_index > elem.z_index;
+		
+		focus = !(different && shown && above);
+	}
+	
+	if (hover) ctx.hover_id = elem.id;
+	if (focus) ctx.focus_id = elem.id;
+}
 
-	if (hover) { ctx.hover_id = elem.id; }
-	if (focus) { ctx.focus_id = elem.id; }
+// FIXME: this does not work with touch
+fn void Ctx.set_elem_events(&ctx, Id id)
+{
+	bool hover = id == ctx.hover_id;
+	bool focus = id == ctx.focus_id;
+	Elem* e = ctx.find_elem(id);
 
-	ElemEvents ev = {
+	e.events = {
 		.has_focus     = focus,
 		.mouse_hover   = hover,
 		.mouse_press   = hover && focus && ctx.is_mouse_pressed(BTN_ANY),
@@ -356,6 +387,4 @@ fn ElemEvents Ctx.get_elem_events(&ctx, Elem *elem)
 		.key_repeat    = focus && ctx.input.events.key_repeat,
 		.text_input    = focus && (ctx.input.keyboard.text_len || ctx.input.keyboard.modkeys & KMOD_TXT),
 	};
-	return ev;
 }
-*/
