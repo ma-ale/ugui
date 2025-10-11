@@ -9,6 +9,7 @@ enum CmdType {
 	CMD_UPDATE_ATLAS,
 	CMD_SPRITE,
 	CMD_SCISSOR,
+	CMD_REQ_SKIP_FRAME,
 }
 
 // command to draw a rect
@@ -107,6 +108,8 @@ fn usz? Cmd.to_format(Cmd* cmd, Formatter *f) @dynamic
 	case CMD_UPDATE_ATLAS:
 		ret += f.print("CmdUpdateAtlas")!;
 		ret += io::struct_to_format(cmd.update_atlas, f, false)!;
+	case CMD_REQ_SKIP_FRAME:
+		ret += f.print("Skip Frame Request")!;
 	}
 	
 	ret += f.print("}")!;

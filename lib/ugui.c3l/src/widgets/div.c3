@@ -211,6 +211,13 @@ fn bool? Ctx.popup_begin_id(&ctx,
 		.origin.y = pos.y - parent.bounds.y,
 	};
 
+	// if the position is not the one expected then request a frame-skip to not flash appear in the
+	// wrong position for one frame
+	if (elem.bounds.position() != pos) {
+		ctx.skip_frame = true;
+		return true;
+	}
+
 	ctx.push_rect(elem.bounds.pad(style.margin), elem.z_index, style)!;
 
 	// update the ctx scissor, it HAS to be after drawing the background

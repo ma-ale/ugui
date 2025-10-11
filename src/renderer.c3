@@ -988,6 +988,7 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 	self.start_render_pass("UGUI_PIPELINE");
 	self.bind_textures_id(self.font_atlas_id, self.sprite_atlas_id);
 
+	bool no_draws;
 	uint calls = 0;
 	uint off;
 	while (true) {
@@ -997,6 +998,8 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 			break;
 		}
 		switch (cmd.type) {
+		case CMD_REQ_SKIP_FRAME:
+			no_draws = true;
 		case CMD_UPDATE_ATLAS:
 			// TODO: verify the correct type
 			CmdUpdateAtlas u = cmd.update_atlas;
@@ -1012,6 +1015,8 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 			self.scissor_w = s.w;
 			self.scissor_h = s.h;
 		default:
+			if (no_draws) break;
+
 			self.set_scissor(self.scissor_x, self.scissor_y, self.scissor_w, self.scissor_h);
 			uint count = 1;
 			while (queue.len() != 0 && (queue.get(0).type == CMD_RECT || queue.get(0).type == CMD_SPRITE)) {

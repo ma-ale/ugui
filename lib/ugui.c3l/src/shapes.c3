@@ -208,6 +208,8 @@ macro Point Point.neg(Point p) @operator_s(-) => {-p.x, -p.y};
 macro Point Point.max(Point a, Point b) => {.x = max(a.x, b.x), .y = max(a.y, b.y)};
 macro Point Point.min(Point a, Point b) => {.x = min(a.x, b.x), .y = min(a.y, b.y)};
 
+macro bool Point.equals(Point a, Point b) @operator_s(==) => a.x == b.x && a.y == b.y;
+
 // ---------------------------------------------------------------------------------- //
 //                                    COLOR                                           //
 // ---------------------------------------------------------------------------------- //

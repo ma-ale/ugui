@@ -120,6 +120,8 @@ struct Ctx {
 	Font font;
 	SpriteAtlas sprite_atlas;
 
+	bool skip_frame;
+
 	bool has_focus;
 	InputData input, current_input;
 
@@ -262,6 +264,8 @@ fn void? Ctx.frame_begin(&ctx)
 	elem.layout.h = @exact(ctx.height);
 
 	ctx.div_scissor = elem.bounds;
+	
+	ctx.skip_frame = false;
 }
 
 fn void? Ctx.frame_end(&ctx)
@@ -305,6 +309,11 @@ fn void? Ctx.frame_end(&ctx)
 	if (ctx.sprite_atlas.should_update) {
 		ctx.push_update_atlas(&ctx.sprite_atlas.atlas)!;
 		ctx.sprite_atlas.should_update = false;
+	}
+	
+	// send skip frame request
+	if (ctx.skip_frame) {
+		ctx.cmd_queue.push({.type = CMD_REQ_SKIP_FRAME});
 	}
 
 	// sort the command buffer by the z-index
