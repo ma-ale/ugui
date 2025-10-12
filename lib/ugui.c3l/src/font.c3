@@ -335,6 +335,18 @@ fn TextSize? Ctx.measure_string(&ctx, String text)
 // character's advance value
 // TODO: implement a "reflow" flag to toggle reflow if a character goes out of bounds
 // TODO: also return the total bounds of the laid out string
+// TODO: Following improvements
+//         [ ] struct LineInfo which stores the line information, like offset, width and height, during
+//             the measurement stage each line is scanned and pushed to the list, then to layout
+//             simply pop each line. The LineInfo list can be stored on the stack with the tmem allocator
+//         [ ] if the alignment is TOP_LEFT we can simply skip measuring the string, opting to layout
+//             it directly
+//         [ ] implement a macro to fetch and layout each character, this can be used to reduce code
+//             repetition both here and in measure_string
+//         [ ] the cursor position can be determined by a separate function like get_cursor_position()
+//             this way the function can terminate early if the cursor position is found
+//         [ ] implement a function hit_test_string() to get the character position at point, this can
+//             be used to implement mouse interactions, like cursor movement and selection
 <*
 @param [&in] ctx
 @param [in] text
@@ -484,7 +496,7 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 				ctx.push_sprite(b, uv, texture_id, z_index, hue)!;
 				origin.x += gp.adv;
 			}
-			
+
 			if (line_start + off + x == cursor) {
 				cursor_rect.x = origin.x;
 			}
@@ -493,14 +505,14 @@ fn Rect? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 		// done with the line
 		line_start = line_end;
 		origin.y += line_height + line_gap;
-		
+
 		if (cursor == text.len && text[^1] == '\n') {
 			cursor_rect.x = next_line_x;
 			cursor_rect.y = origin.y;
 		}
 
 	} while(line_end < text.len);
-	
+
 
 	ctx.reset_scissor(z_index)!;
 
