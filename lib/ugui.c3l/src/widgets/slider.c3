@@ -45,9 +45,9 @@ fn ElemEvents? Ctx.slider_hor_id(&ctx, Id id, Size w, Size h, float* value, floa
 	elem.slider.handle = handle;
 
 	Point m = ctx.input.mouse.pos;
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 
-	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
+	if (elem.events.has_focus && ctx.is_mouse_down(BTN_LEFT)) {
 		*value = calc_value(content_bounds.x, m.x, content_bounds.w, hw);
 		elem.slider.handle.x = calc_slider(content_bounds.x, content_bounds.w-hw, *value);
 		elem.events.update = true;
@@ -109,9 +109,9 @@ fn ElemEvents? Ctx.slider_ver_id(&ctx, Id id, Size w, Size h, float* value, floa
 	elem.slider.handle = handle;
 
 	Point m = ctx.input.mouse.pos;
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 
-	if (ctx.elem_focus(elem) && ctx.is_mouse_down(BTN_LEFT)) {
+	if (elem.events.has_focus && ctx.is_mouse_down(BTN_LEFT)) {
 		*value = calc_value(content_bounds.y, m.y, content_bounds.h, hh);
 		elem.slider.handle.y = calc_slider(content_bounds.y, content_bounds.h-hh, *value);
 		elem.events.update = true;
@@ -156,7 +156,7 @@ fn void? Ctx.scrollbar(&ctx, Id id, float *value, float handle_percent, bool ver
 	update_parent_size(elem, parent);
 
 	Rect content_bounds = elem.bounds.pad(elem.layout.content_offset);
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 
 	short o = vertical ? content_bounds.y : content_bounds.x;
 	short m = vertical ? ctx.input.mouse.pos.y : ctx.input.mouse.pos.x;

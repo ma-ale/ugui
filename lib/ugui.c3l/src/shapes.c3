@@ -199,6 +199,8 @@ macro bool Point.in_rect(Point p, Rect r)
 	return (p.x >= r.x && p.x <= r.x + r.w) && (p.y >= r.y && p.y <= r.y + r.h);
 }
 
+macro bool Point.outside(Point p, Rect r) => !p.in_rect(r);
+
 macro Point Point.add(Point a, Point b) @operator_s(+) => {.x = a.x+b.x, .y = a.y+b.y};
 macro Point Point.sub(Point a, Point b) @operator_s(-) => {.x = a.x-b.x, .y = a.y-b.y};
 macro Point Point.neg(Point p) @operator_s(-) => {-p.x, -p.y};
@@ -241,20 +243,22 @@ macro uint Color.to_uint(c) => c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
 //                                    SIZE                                            //
 // ---------------------------------------------------------------------------------- //
 
+macro short short.add_no_of(short a, short b) => (short)max(min((int)a + (int)b, short.max), short.min) @inline;
+
 struct Size {
 	short min, max;
 }
 
 macro Size @grow() => {.min = 0, .max = 0};
 macro Size @exact(short s) => {.min = s, .max = s};
-	// PROBLEM WE ARE OVERFLOWING
-macro Size @fit(short min = 0, short max = 999) => {.min = min, .max = max};
+macro Size @fit(short min = 0, short max = short.max) => {.min = min, .max = max};
+
 macro bool Size.@is_grow(s) => (s.min == 0 && s.max == 0);
 macro bool Size.@is_exact(s) => (s.min == s.max && s.min != 0);
 macro bool Size.@is_fit(s) => (s.min != s.max);
 
-macro Size Size.add(a, Size b) @operator_s(+) => {.min = a.min+b.min, .max = a.max+b.max};
-macro Size Size.sub(a, Size b) @operator_s(-) => {.min = a.min-b.min, .max = a.max-b.max};
+macro Size Size.add(a, Size b) @operator_s(+) => {.min = a.min.add_no_of(b.min), .max = a.max.add_no_of(b.max)};
+macro Size Size.sub(a, Size b) @operator_s(-) => {.min = a.min.add_no_of(-b.min), .max = a.max.add_no_of(-b.max)};
 
 macro Size Size.combine(a, Size b) => {.min = max(a.min, b.min), .max = min(a.max, b.max)};
 macro Size Size.comb_max(a, Size b) => {.min = max(a.min, b.min), .max = max(a.max, b.max)};

@@ -335,6 +335,10 @@ fn void? Ctx.layout_element_tree(&ctx)
 				resolve_placement(c, p);
 				update_children_bounds(c, p);
 			}
+
+			// FIXME: this stuff would be better elsewhere but we are already iteraring through all
+			//        elements so here it fits really well
+			ctx.update_hover_and_focus(c);
 		}
 	}
 }

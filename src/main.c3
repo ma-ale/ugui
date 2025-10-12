@@ -214,6 +214,8 @@ $case "debug":
 		debug_app(&ui);
 $case "calculator":
 		calculator(&ui, &te);
+$case "popup":
+		popup(&ui);
 $endswitch
 
 		// Timings counter
@@ -395,6 +397,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.button("Quattro")!!;
 		ui.div_end()!!;
 	}
+	
 	// ui input/output
 	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) { // center everything on the screen
 	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
@@ -459,5 +462,24 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.text_box(ugui::@grow(), ugui::@exact(100), te, RIGHT)!!;
 		}!!;
 	}!!; }!!;
+}
 
+fn void popup(ugui::Ctx* ui)
+{
+	static bool toggle;
+	static ugui::Point pos;
+	
+	if (toggle) {
+		toggle = ui.popup_begin(pos, ugui::@fit(), ugui::@fit(), COLUMN)!!;
+		ui.button("POP")!!;
+		ui.button("UP")!!;
+		ui.div_end()!!;
+	}
+	ui.@center(COLUMN) {
+		if (ui.button("ciao")!!.mouse_release) {
+			pos = ui.input.mouse.pos;
+			toggle = ~toggle;
+		}
+		if (ui.button("mamma")!!.mouse_press) ugui::println("pressed!");
+	}!!;
 }

@@ -18,6 +18,13 @@ struct ElemDiv {
 }
 
 
+macro Ctx.@center(&ctx, LayoutDirection dir = ROW, ...; @body())
+{
+	ctx.@div(@grow(), @grow(), dir, CENTER) {
+		@body();
+	}!;
+}
+
 macro Ctx.@row(&ctx, Anchor anchor = TOP_LEFT, ...; @body())
 {
 	ctx.@div(@fit(), @fit(), ROW, anchor: anchor) {
@@ -80,7 +87,6 @@ fn void? Ctx.div_begin_id(&ctx,
 
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
-	if (ctx.input.z_index < elem.z_index) ctx.input.z_index = elem.z_index;
 	
 	// update layout with correct info
 	elem.layout = {
@@ -102,7 +108,7 @@ fn void? Ctx.div_begin_id(&ctx,
 	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
 	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.z_index)!;
 
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 
 	// TODO: check active
 	// TODO: check resizeable
@@ -192,7 +198,6 @@ fn bool? Ctx.popup_begin_id(&ctx,
 	elem.div.scroll_x.enabled = scroll_x;
 	elem.div.scroll_y.enabled = scroll_y;
 	elem.z_index++;
-	if (ctx.input.z_index < elem.z_index) ctx.input.z_index = elem.z_index;
 
 	// update layout with correct info
 	elem.layout = {
@@ -212,10 +217,10 @@ fn bool? Ctx.popup_begin_id(&ctx,
 	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
 	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.z_index)!;
 
-	elem.events = ctx.get_elem_events(elem);
+	//elem.events = ctx.get_elem_events(elem);
 	
 	// check close condition, mouse release anywhere outside the div bounds
-	if ((ctx.mouse_released() & BTN_ANY) && !elem.events.mouse_hover) {
+	if ((ctx.mouse_released() & BTN_ANY) && ctx.input.mouse.pos.outside(elem.bounds)) {
 		return false;
 	}
 

@@ -4,12 +4,11 @@
 [x] Implement div.view and scrollbars
 [x] Port font system from C to C3 (rewrite1)
 [ ] Update ARCHITECTURE.md
-[ ] Write a README.md
+[x] Write a README.md
 [x] Use an arena allocator for cache
 [ ] Do not redraw if there was no update (no layout and no draw)
 [ ] Do command buffer damage tracking based on a context grid (see rxi writeup)
-[x] Better handling of the active and focused widgets, try
-to maintain focus until mouse release (fix scroll bars)
+[x] Better handling of the active and focused widgets, try to maintain focus until mouse release (fix scroll bars)
 [x] Clip element bounds to parent div, specifically text
 [ ] Resizeable divs
 [x] Implement a z index and sort command buffer based on that
@@ -30,14 +29,14 @@ to maintain focus until mouse release (fix scroll bars)
     [ ] .png
     [ ] .jpg
 [ ] gif support?
-[ ] layout_set_max_rows() and layout_set_max_columns()
+[x] layout_set_max_rows() and layout_set_max_columns()
 [x] Maybe SDF sprites??
 [x] Stylesheets and stylesheet import
 [x] use SDF to draw anti-aliased rounded rectangles https://zed.dev/blog/videogame
 [ ] Subdivide modules into ugui::ug for exported functions and ugui::core for
     internal use functions (used to create widgets)
 [x] The render loop RAPES the gpu, valve pls fix
-[ ] The way the element structures are implemented wastes a lot of memory since
+[x] The way the element structures are implemented wastes a lot of memory since
     each struct Elem, struct Cmd, etc. is as big as the largest element. It would
     be better to use a different allcation strategy.
 [ ] Add a way to handle time events like double clicks
@@ -52,7 +51,7 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Center elements to the row/column
 [x] Text wrapping / reflow
 [x] Implement a better and unified way to place a glyph and get the cursor position, maybe with a struct
-[ ] Correct whitespace handling in text (\t \r etc)
+[x] Correct whitespace handling in text (\t \r etc)
 [x] Consider a multi-pass recursive approach to layout (like https://github.com/nicbarker/clay)
     instead of the curren multi-frame approach.
 [x] Implement column/row sizing (min, max)
@@ -79,8 +78,8 @@ to maintain focus until mouse release (fix scroll bars)
 [x] Mouse scroll wheel
 [ ] Touch input
 [x] Do not set input event to true if the movement was zero (like no mouse movement)
-[ ] Use input event flags, for example to consume the input event
-[ ] Fix bug in text box: when spamming keys you can get multiple characters in the text input field
+[x] Use input event flags, for example to consume the input event
+[x] Fix bug in text box: when spamming keys you can get multiple characters in the text input field
     of the context, this causes a bug where only the first char is actually used
 
 ## Commands
@@ -89,7 +88,7 @@ to maintain focus until mouse release (fix scroll bars)
     - border width
     - border radius
 [x] add a command to update an atlas
-[ ] New window command, useful for popups
+[x] New window command, useful for popups
 [x] Text command returns the text bounds, this way we can avoid the pattern 
     draw_text(a, pos) -> off = compute_bounds(a) -> draw_text(b, pos+off) -> ...
 [ ] Rounded rectangle with different radius for each corner
