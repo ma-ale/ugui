@@ -39,9 +39,9 @@ fn void? Ctx.text_id(&ctx, Id id, String text)
 }
 
 
-macro Ctx.text_box(&ctx, Size w, Size h, TextEdit* te, Anchor text_alignment = TOP_LEFT, ...)
-	=> ctx.text_box_id(@compute_id($vasplat), w, h, te, text_alignment);
-fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor text_alignment)
+macro Ctx.text_box(&ctx, Size w, Size h, TextEdit* te, Anchor text_alignment = TOP_LEFT, bool reflow = true, ...)
+	=> ctx.text_box_id(@compute_id($vasplat), w, h, te, text_alignment, reflow);
+fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor text_alignment, bool reflow)
 {
 	id = ctx.gen_id(id)!;
 
@@ -76,16 +76,13 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 	Rect bg_bounds = elem.bounds.pad(style.margin);
 	Rect text_bounds = elem.bounds.pad(elem.layout.content_offset);
 	ctx.push_rect(bg_bounds, parent.z_index, style)!;
-	Rect cur;
-	cur = ctx.layout_string(elem.text.te.to_string(), text_bounds, text_alignment, parent.z_index, style.fg, elem.text.te.cursor)!;
+	ctx.layout_string(elem.text.te.to_string(), text_bounds, text_alignment, parent.z_index, style.fg, reflow)!;
 
 	// draw the cursor if the element has focus
-	cur.w = 2;
-	cur.x -= 2;
 	if (elem.events.has_focus) {
-		ctx.push_scissor(text_bounds, parent.z_index)!;
+		Rect cur = ctx.get_cursor_position(elem.text.te.to_string(), text_bounds, text_alignment, elem.text.te.cursor, reflow)!;
+		cur.w = 2;
 		ctx.push_rect(cur, parent.z_index, &&(Style){.bg = style.fg})!;
-		ctx.reset_scissor(parent.z_index)!;
 	}
 	return elem.events;
 }

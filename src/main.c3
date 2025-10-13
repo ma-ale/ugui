@@ -245,6 +245,7 @@ $endswitch
 
 		// wait for the next event, timeout after 100ms
 		int timeout = LIMIT_FPS ? (int)(100.0-sleep_clock.mark().to_ms()-0.5) : 0;
+		if (ui.skip_frame) timeout = 0;
 		sdl::wait_event_timeout(&e, timeout);
 
 		fps = 1.0 / fps_clock.mark().to_sec();
@@ -459,7 +460,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.slider_ver(ugui::@exact(20), ugui::@exact(100), &f)!!;
 		}!!;
 		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
-			ui.text_box(ugui::@grow(), ugui::@exact(100), te, RIGHT)!!;
+			ui.text_box(ugui::@grow(), ugui::@exact(100), te, TOP_LEFT)!!;
 		}!!;
 	}!!; }!!;
 }

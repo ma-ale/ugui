@@ -74,6 +74,7 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 				after -= how_many;
 			}
 		}
+		// FIXME: this still doesn't work
 		if (mod.up) {
 			// back up to previous line
 			if (te.cursor > 0) {
@@ -97,6 +98,10 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 				after = te.chars - te.cursor;
 			}
 		}
+		
+		// TODO: mod.home
+		// TODO: mod.end
+		// TODO: selection with shift+arrows
 	}
 
 	return free == 0;
