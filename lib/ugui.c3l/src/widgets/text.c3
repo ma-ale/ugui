@@ -80,6 +80,9 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 
 	// draw the cursor if the element has focus
 	if (elem.events.has_focus) {
+		if (elem.events.mouse_press) {
+			elem.text.te.cursor = ctx.hit_test_string(elem.text.te.to_string(), text_bounds, text_alignment, ctx.input.mouse.pos, reflow)!;
+		}
 		Rect cur = ctx.get_cursor_position(elem.text.te.to_string(), text_bounds, text_alignment, elem.text.te.cursor, reflow)!;
 		cur.w = 2;
 		ctx.push_rect(cur, parent.z_index, &&(Style){.bg = style.fg})!;

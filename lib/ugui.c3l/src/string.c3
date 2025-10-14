@@ -77,8 +77,6 @@ fn void? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 // TODO: Following improvements
 //         [ ] implement a macro to fetch and layout each character, this can be used to reduce code
 //             repetition both here and in measure_string
-//         [ ] the cursor position can be determined by a separate function like get_cursor_position()
-//             this way the function can terminate early if the cursor position is found
 //         [ ] implement a function hit_test_string() to get the character position at point, this can
 //             be used to implement mouse interactions, like cursor movement and selection
 <*
@@ -281,6 +279,9 @@ fn void? Ctx.layout_string_topleft(&ctx, String text, Rect bounds, int z_index, 
 // ---------------------------------------------------------------------------------- //
 
 
+// TODO: get_cursor_position and hit_test_string can be implemented with a glyph_iterator that
+//       returns the position and offset in the string of each glyph
+
 fn Rect? Ctx.get_cursor_position(&ctx, String text, Rect bounds, Anchor anchor, usz cursor, bool reflow = false)
 {
 	if (anchor != TOP_LEFT) {
@@ -346,6 +347,132 @@ fn Rect? Ctx.get_cursor_position(&ctx, String text, Rect bounds, Anchor anchor, 
 		}
 	}
 	return {};
+}
+
+<*
+@param [&in] ctx
+@param [in] text
+*>
+fn usz? Ctx.hit_test_string(&ctx, String text, Rect bounds, Anchor anchor, Point p, bool reflow = false)
+{
+	if (text == "") return 0;
+	if (bounds.w <= 0 || bounds.h <= 0) return 0;
+
+	Font* font = &ctx.font;
+	Id texture_id = font.id;
+	short line_height = (short)font.line_height();
+	short baseline = (short)font.ascender;
+	short line_gap = (short)font.linegap;
+	short space_width = font.get_glyph(' ').adv!;
+	short tab_width = space_width * TAB_SIZE;
+
+	Point origin = bounds.position();
+
+	LineStack lines;
+	lines.init(tmem, 1);
+
+	Rect str_bounds;
+
+	usz line_start;
+	LineInfo li;
+	Point o;
+	StringIterator ti = text.iterator();
+	for (Codepoint cp; ti.has_next();) {
+		// FIXME: what if the interface changes?
+		cp = ti.next()!;
+		usz off = ti.current;
+		Glyph* gp = font.get_glyph(cp)!;
+		bool push = false;
+
+		switch {
+		case cp == '\n':
+			push = true;
+		case cp == '\t':
+			o.x += tab_width;
+		case ascii::is_cntrl((char)cp):
+			break;
+		default:
+			if (off == line_start) li.first_off = gp.ox;
+
+			Rect b = {
+				.x = o.x + gp.ox,
+				.y = o.y + gp.oy + baseline,
+				.w = gp.w,
+				.h = gp.h,
+			};
+
+			if (reflow && b.x + b.w > bounds.w) {
+				li.width += gp.ox + gp.w;
+				li.height = line_height;
+				push = true;
+			} else {
+				o.x += gp.adv;
+				li.width += gp.adv;
+				li.height = line_height;
+			}
+		}
+		
+		if (push) {
+			li.start = line_start;
+			li.end = off;
+			lines.push(li);
+			str_bounds.w = max(str_bounds.w, li.width);
+			str_bounds.h += li.height;
+
+			o.x = 0;
+			o.y += line_height;
+			line_start = off;
+
+			li.height = 0;
+			li.width = 0;
+		}
+	}
+	// FIXME: crap
+	li.start = line_start;
+	li.end = ti.current;
+	lines.push(li);
+	str_bounds.w = max(str_bounds.w, li.width);
+	str_bounds.h += li.height;
+	
+	// account for the line gap
+	str_bounds.h += (short)(lines.len() - 1)*line_gap;
+
+	o = bounds.position();
+	o.y += bounds.y_off(str_bounds.h, anchor);
+	foreach (idx, line : lines) {
+		o.x = bounds.x + bounds.x_off(line.width, anchor) - line.first_off;
+		
+		StringIterator s = text[line.start:line.end-line.start].iterator();
+		usz prev;
+		for (Codepoint cp; s.has_next(); prev = s.current) {
+			cp = s.next()!;
+			Glyph* gp = font.get_glyph(cp)!;
+
+			switch {
+			case cp == '\n':
+				break;
+			case cp == '\t':
+				o.x += tab_width;
+			case ascii::is_cntrl((char)cp):
+				break;
+			default:
+				Rect b = {
+					.x = o.x + gp.ox,
+					.y = o.y + gp.oy + baseline,
+					.w = gp.w,
+					.h = gp.h,
+				};
+				
+				// TODO: skip lines if p is not inside them
+				Rect r = { .x = b.x, .y = b.y - gp.ox, .w = b.w, .h = line.height};
+				if (p.in_rect(r)) return line.start + prev;
+				
+				o.x += gp.adv;
+			}
+		}
+		o.y += line.height + line_gap;
+	}
+	return text.len;
 }
 
 
