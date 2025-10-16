@@ -65,6 +65,9 @@ struct Font {
 	bool should_update; // should send update_atlas command, resets at frame_end()
 }
 
+macro Rect Glyph.bounds(&g) => {.x = g.ox, .y = g.oy, .w = g.w, .h = g.h};
+macro Rect Glyph.uv(&g) => {.x = g.u, .y = g.v, .w = g.w, .h = g.h};
+
 <*
 @param [&inout] font
 @param [in] name
