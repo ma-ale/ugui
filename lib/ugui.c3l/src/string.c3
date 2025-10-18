@@ -244,6 +244,7 @@ fn Rect? GlyphIterator.next(&self)
 		if (self.anchor == TOP_LEFT) {
 			self.o.x = self.bounds.x;
 			self.o.y += self.line_height + self.line_gap;
+			self.line_idx++;
 		}
 		break;
 	case self.cp == '\t':
@@ -254,10 +255,11 @@ fn Rect? GlyphIterator.next(&self)
 		b = self.gp.bounds().off(self.o);
 		b.y += self.baseline;
 		if (self.anchor == TOP_LEFT) {
-			if (self.o.x == self.bounds.x) self.bounds.x -= self.gp.ox;
+			//if (self.o.x == self.bounds.x) self.bounds.x -= self.gp.ox;
 			if (self.reflow && b.bottom_right().x > self.bounds.bottom_right().x) {
 				self.o.x = self.bounds.x - self.gp.ox;
 				self.o.y += self.line_height + self.line_gap;
+				self.line_idx++;
 				b = self.gp.bounds().off(self.o);
 				b.y += self.baseline;
 			}
@@ -286,7 +288,11 @@ fn bool GlyphIterator.has_next(&self)
 	return true;
 }
 
-fn usz GlyphIterator.current_offset(&self) => self.lines[self.line_idx].start + self.line_off;
+fn usz GlyphIterator.current_offset(&self)
+{
+	if (self.anchor == TOP_LEFT) return self.line_off;
+	return self.lines[self.line_idx].start + self.line_off;
+}
 
 
 // layout a string inside a bounding box, following the given alignment (anchor).
@@ -314,6 +320,7 @@ fn void? Ctx.layout_string(&ctx, String text, Rect bounds, Anchor anchor, int z_
 	ctx.reset_scissor(z_index)!;
 //	ctx.dbg_rect(str_bounds.off(bounds.position()));
 }
+
 
 // ---------------------------------------------------------------------------------- //
 //                              CURSOR AND MOUSE                                      //
@@ -433,6 +440,55 @@ fn usz? Ctx.hit_test_string(&ctx, String text, Rect bounds, Anchor anchor, Point
 	
 	// Point is after all text
 	return text.len;
+}
+
+// TODO: implement a function `layout_string_with_selection` to avoid iterating over the string twice
+fn void? Ctx.draw_string_selection(&ctx, String text, Rect bounds, Anchor anchor, usz start, usz end, int z_index, Color hue, bool reflow = false)
+{
+	if (text == "") return;
+	if (bounds.w <= 0 || bounds.h <= 0) return;
+	
+	if (start > end) @swap(start, end);
+	
+	// Ensure start < end
+	if (start > end) {
+		usz temp = start;
+		start = end;
+		end = temp;
+	}
+	
+	ctx.push_scissor(bounds, z_index)!;
+
+	Font* font = &ctx.font;
+	
+	GlyphIterator gi;
+	gi.init(tmem, text, bounds, font, anchor, reflow, TAB_SIZE)!;
+
+	Rect sel_rect = { .h = gi.line_height }; // selection rect
+	isz sel_line = -1; // selection line
+	while (gi.has_next()) {
+		Rect b = gi.next()!;
+		usz off = gi.current_offset()-1;
+		isz line = gi.line_idx;
+		bool in_selection = start <= off && off <= end;
+
+		if  (in_selection && line != sel_line) {
+			if (sel_line != -1) {
+				ctx.push_rect(sel_rect, z_index, &&{.bg = hue})!;
+			}
+			sel_rect = {.x = gi.o.x - b.w, .y = gi.o.y, .w = 0, .h = gi.line_height};
+			sel_line = line;
+		}
+		if (in_selection) {
+			sel_rect.w = gi.o.x - sel_rect.x;
+			if (gi.cp == '\n') sel_rect.w += gi.space_width;
+		}
+		
+		if (off > end) break;
+	}
+	ctx.push_rect(sel_rect, z_index, &&{.bg = hue})!;
+	
+	ctx.reset_scissor(z_index)!;
 }
 
 

@@ -7,6 +7,8 @@ struct TextEdit {
 	char[] buffer;
 	usz chars;
 	usz cursor;
+	usz sel_start, sel_end;
+	bool selection;
 }
 
 fn String TextEdit.to_string(&te) => (String)te.buffer[:te.chars];
@@ -38,11 +40,15 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 
 	// handle modkeys
 	if (te.chars) {
+		// if not already in selection update the selection start/end to the cursor positon
+		if (!te.selection) {
+			te.sel_start = te.sel_end = te.cursor;
+		}
+
 		// handle backspace and delete
 		if (mod.bkspc) {
 			if (te.cursor > 0) {
-				// TODO: only delete until punctuation
-				usz how_many = mod & KMOD_CTRL ? te.until_cursor().prev_word_off() : te.until_cursor().prev_char_off();
+				usz how_many = te.how_many_bw(mod);
 				te.buffer[te.cursor-how_many : after] = te.buffer[te.cursor : after];
 				te.cursor -= how_many;
 				te.chars -= how_many;
@@ -51,7 +57,7 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 		}
 		if (mod.del) {
 			if (after > 0 && te.cursor < te.chars) {
-				usz how_many = mod & KMOD_CTRL ? te.from_cursor().next_word_off() : te.from_cursor().next_char_off();
+				usz how_many = te.how_many_fw(mod);
 				te.buffer[te.cursor : after] = te.buffer[te.cursor+how_many : after];
 				te.chars -= how_many;
 				after -= how_many;
@@ -62,16 +68,31 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 		// handle arrow keys
 		if (mod.left) {
 			if (te.cursor > 0) {
-				usz how_many = mod & KMOD_CTRL ? te.until_cursor().prev_word_off() : te.until_cursor().prev_char_off();
+				usz how_many = te.how_many_bw(mod);
 				te.cursor -= how_many;
 				after += how_many;
+				
+				if (mod & KMOD_SHIFT) {
+					te.selection = true;
+					if (!te.selection) te.sel_start = te.cursor;
+					te.sel_end = te.cursor;
+				} else {
+					te.selection = false;
+				}
 			}
 		}
 		if (mod.right) {
 			if (after > 0) {
-				usz how_many = mod & KMOD_CTRL ? te.from_cursor().next_word_off() : te.from_cursor().next_char_off();
+				usz how_many = te.how_many_fw(mod);
 				te.cursor += how_many;
 				after -= how_many;
+				
+				if (mod & KMOD_SHIFT) {
+					te.sel_end = te.cursor-1;
+					te.selection = true;
+				} else {
+					te.selection = false;
+				}
 			}
 		}
 		// FIXME: this still doesn't work
@@ -103,8 +124,34 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 		// TODO: mod.end
 		// TODO: selection with shift+arrows
 	}
+	println("cursor: ", te.cursor, " start: ", te.sel_start, " end: ", te.sel_end);
 
 	return free == 0;
+}
+
+fn usz TextEdit.how_many_fw(&te, ModKeys mod)
+{
+	if (mod & KMOD_CTRL) {
+		return te.from_cursor().next_word_off();
+	} else if (te.selection && !(mod & KMOD_SHIFT)) {
+		// FIXME: +1 here is not correct, should use next_char_off()
+		return te.sel_start > te.sel_end ? te.sel_end - te.sel_start + 1 : te.from_cursor().next_char_off();
+	} else {
+		return te.from_cursor().next_char_off();
+	}
+}
+
+// how many characters to jump backwards (left arrow)
+fn usz TextEdit.how_many_bw(&te, ModKeys mod)
+{
+	if (mod & KMOD_CTRL) {
+		return te.until_cursor().prev_word_off();
+	} else if (te.selection && !(mod & KMOD_SHIFT)){
+		// FIXME: +1 here is not correct, should use prev_char_off()
+		return te.sel_start < te.sel_end ? te.sel_end - te.sel_start + 1 : te.until_cursor().prev_char_off();
+	} else {
+		return te.until_cursor().prev_char_off();
+	}
 }
 
 macro isz char[].next_char_off(b) => grapheme::next_character_break_utf8(b.ptr, b.len);
