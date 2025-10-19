@@ -79,6 +79,7 @@ struct GlyphIterator {
 
 	Codepoint cp;
 	Glyph* gp;
+	short adv; // prev advance
 	Point o;
 	Rect str_bounds;
 }
@@ -239,6 +240,8 @@ fn Rect? GlyphIterator.next(&self)
 	
 	Rect b = {.x = self.o.x, .y = self.o.y};
 
+	Point prev_o = self.o;
+	self.adv = 0;
 	switch {
 	case self.cp == '\n':
 		if (self.anchor == TOP_LEFT) {
@@ -265,6 +268,7 @@ fn Rect? GlyphIterator.next(&self)
 			}
 		}
 		self.o.x += self.gp.adv;
+		self.adv = self.o.x - prev_o.x;
 	}
 
 	return b;
@@ -447,9 +451,9 @@ fn void? Ctx.draw_string_selection(&ctx, String text, Rect bounds, Anchor anchor
 {
 	if (text == "") return;
 	if (bounds.w <= 0 || bounds.h <= 0) return;
-	
+
 	if (start > end) @swap(start, end);
-	
+
 	// Ensure start < end
 	if (start > end) {
 		usz temp = start;
@@ -476,7 +480,7 @@ fn void? Ctx.draw_string_selection(&ctx, String text, Rect bounds, Anchor anchor
 			if (sel_line != -1) {
 				ctx.push_rect(sel_rect, z_index, &&{.bg = hue})!;
 			}
-			sel_rect = {.x = gi.o.x - b.w, .y = gi.o.y, .w = 0, .h = gi.line_height};
+			sel_rect = {.x = gi.o.x - gi.adv, .y = gi.o.y, .w = 0, .h = gi.line_height};
 			sel_line = line;
 		}
 		if (in_selection) {

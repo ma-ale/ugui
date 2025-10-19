@@ -44,7 +44,6 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 	// TODO: mod.end
 	// TODO: selection with shift+arrows
 
-	println("cursor: ", te.cursor, " sel_len: ", te.sel_len);
 	return te.chars < te.buffer.len;
 }
 
