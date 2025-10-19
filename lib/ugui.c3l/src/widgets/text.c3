@@ -75,19 +75,20 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 	Rect text_bounds = elem.bounds.pad(elem.layout.content_offset);
 	ctx.push_rect(bg_bounds, parent.z_index, style)!;
 	String s = elem.text.te.to_string();
-	if (elem.text.te.selection) {
-		usz start = elem.text.te.sel_start;
-		usz end = elem.text.te.sel_end;
+	if (te.sel_len) {
+		usz start = te.sel_len > 0 ? te.cursor : te.cursor + te.sel_len;
+		usz end = (te.sel_len > 0 ? te.cursor + te.sel_len : te.cursor) - 1;
 		ctx.draw_string_selection(s, text_bounds, text_alignment, start, end, parent.z_index, style.accent, reflow)!;
 	}
 	ctx.layout_string(s, text_bounds, text_alignment, parent.z_index, style.fg, reflow)!;
 
 	// draw the cursor if the element has focus
 	if (elem.events.has_focus) {
-		if (elem.events.mouse_press) {
-			elem.text.te.cursor = ctx.hit_test_string(s, text_bounds, text_alignment, ctx.input.mouse.pos, reflow)!;
+		if (elem.events.mouse_press || elem.events.mouse_hold) {
+			usz cur = ctx.hit_test_string(s, text_bounds, text_alignment, ctx.input.mouse.pos, reflow)!;
+			te.set_cursor(cur, elem.events.mouse_hold & !elem.events.mouse_press);
 		}
-		Rect cur = ctx.get_cursor_position(s, text_bounds, text_alignment, elem.text.te.cursor, reflow)!;
+		Rect cur = ctx.get_cursor_position(s, text_bounds, text_alignment, te.cursor, reflow)!;
 		cur.w = 2;
 		ctx.push_rect(cur, parent.z_index, &&(Style){.bg = style.fg})!;
 	}

@@ -1,14 +1,12 @@
 module ugui;
 
-import grapheme;
-import std::ascii;
+import ugui::textedit::te;
 
 struct TextEdit {
 	char[] buffer;
 	usz chars;
 	usz cursor;
-	usz sel_start, sel_end;
-	bool selection;
+	isz sel_len;
 }
 
 fn String TextEdit.to_string(&te) => (String)te.buffer[:te.chars];
@@ -21,157 +19,163 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 {
 	String in = ctx.get_keys();
 	ModKeys mod = ctx.get_mod();
-	usz free = te.buffer.len - te.chars;
-	usz after = te.chars - te.cursor;
 
-	// append text input to the buffer
-	if (in.len <= free) {
-		// make space
-		te.buffer[te.cursor+in.len : after] = te.buffer[te.cursor : after];
-		// insert characters
-		te.buffer[te.cursor : in.len] = in[..];
-		// increment characters and cursor
-		te.chars += in.len;
-		te.cursor += in.len;
-		free -= in.len;
-	} else {
-		return true;
+	te.insert_utf8(in);
+
+
+	// handle backspace and delete
+	if (mod.bkspc) {
+		te.remove_character(false);
+	}
+	if (mod.del) {
+		te.remove_character(true);
 	}
 
-	// handle modkeys
-	if (te.chars) {
-		// if not already in selection update the selection start/end to the cursor positon
-		if (!te.selection) {
-			te.sel_start = te.sel_end = te.cursor;
-		}
-
-		// handle backspace and delete
-		if (mod.bkspc) {
-			if (te.cursor > 0) {
-				usz how_many = te.how_many_bw(mod);
-				te.buffer[te.cursor-how_many : after] = te.buffer[te.cursor : after];
-				te.cursor -= how_many;
-				te.chars -= how_many;
-				free += how_many;
-			}
-		}
-		if (mod.del) {
-			if (after > 0 && te.cursor < te.chars) {
-				usz how_many = te.how_many_fw(mod);
-				te.buffer[te.cursor : after] = te.buffer[te.cursor+how_many : after];
-				te.chars -= how_many;
-				after -= how_many;
-				free += how_many;
-			}
-		}
-
-		// handle arrow keys
-		if (mod.left) {
-			if (te.cursor > 0) {
-				usz how_many = te.how_many_bw(mod);
-				te.cursor -= how_many;
-				after += how_many;
-				
-				if (mod & KMOD_SHIFT) {
-					te.selection = true;
-					if (!te.selection) te.sel_start = te.cursor;
-					te.sel_end = te.cursor;
-				} else {
-					te.selection = false;
-				}
-			}
-		}
-		if (mod.right) {
-			if (after > 0) {
-				usz how_many = te.how_many_fw(mod);
-				te.cursor += how_many;
-				after -= how_many;
-				
-				if (mod & KMOD_SHIFT) {
-					te.sel_end = te.cursor-1;
-					te.selection = true;
-				} else {
-					te.selection = false;
-				}
-			}
-		}
-		// FIXME: this still doesn't work
-		if (mod.up) {
-			// back up to previous line
-			if (te.cursor > 0) {
-				usz curr_line_start = te.until_cursor().rindex_of_char('\n') ?? 0;
-				usz prev_line_start = curr_line_start ? te.until_cursor()[..curr_line_start-1].rindex_of_char('\n') ?? 0 : 0;
-				usz curr_line_off = te.cursor - curr_line_start;
-				usz prev_line_len = curr_line_start - prev_line_start;
-				te.cursor = prev_line_start + min(curr_line_off-1, prev_line_len);
-				after = te.chars - te.cursor;
-			}
-		}
-		if (mod.down) {
-			// down to the next line
-			if (after > 0) {
-				usz curr_line_start = te.until_cursor().rindex_of_char('\n') ?? 0;
-				usz curr_line_off = te.cursor - curr_line_start;
-				usz next_line_start = te.from_cursor().index_of_char('\n') + te.cursor + 1 ?? te.chars;
-				usz next_line_end = ((String)te.buffer[next_line_start..]).index_of_char('\n') + next_line_start ?? te.chars;
-				usz next_line_len = next_line_end - next_line_start;
-				te.cursor = next_line_start + min(curr_line_off, next_line_len);
-				after = te.chars - te.cursor;
-			}
-		}
-		
-		// TODO: mod.home
-		// TODO: mod.end
-		// TODO: selection with shift+arrows
+	// handle arrow keys
+	if (mod.left) {
+		te.move_cursor(false, !!(mod & KMOD_SHIFT));
 	}
-	println("cursor: ", te.cursor, " start: ", te.sel_start, " end: ", te.sel_end);
+	if (mod.right) {
+		te.move_cursor(true, !!(mod & KMOD_SHIFT));
+	}
 
-	return free == 0;
+	// TODO: up, down
+	// TODO: mod.home
+	// TODO: mod.end
+	// TODO: selection with shift+arrows
+
+	println("cursor: ", te.cursor, " sel_len: ", te.sel_len);
+	return te.chars < te.buffer.len;
 }
 
-fn usz TextEdit.how_many_fw(&te, ModKeys mod)
+module ugui::textedit::te;
+
+import std::core::string;
+
+// returns the offset of the next codepoint in the buffer from the cursor
+fn usz TextEdit.next_char_off(&te)
 {
-	if (mod & KMOD_CTRL) {
-		return te.from_cursor().next_word_off();
-	} else if (te.selection && !(mod & KMOD_SHIFT)) {
-		// FIXME: +1 here is not correct, should use next_char_off()
-		return te.sel_start > te.sel_end ? te.sel_end - te.sel_start + 1 : te.from_cursor().next_char_off();
-	} else {
-		return te.from_cursor().next_char_off();
-	}
+	usz len = min(te.chars - te.cursor, 4);
+	if (len == 0) return len;
+	conv::utf8_to_char32(&te.buffer[te.cursor], &len)!!;
+	return len;
 }
 
-// how many characters to jump backwards (left arrow)
-fn usz TextEdit.how_many_bw(&te, ModKeys mod)
+// returns the offset of the previous codepoint in the buffer from the cursor
+fn usz TextEdit.prev_char_off(&te)
 {
-	if (mod & KMOD_CTRL) {
-		return te.until_cursor().prev_word_off();
-	} else if (te.selection && !(mod & KMOD_SHIFT)){
-		// FIXME: +1 here is not correct, should use prev_char_off()
-		return te.sel_start < te.sel_end ? te.sel_end - te.sel_start + 1 : te.until_cursor().prev_char_off();
-	} else {
-		return te.until_cursor().prev_char_off();
-	}
-}
-
-macro isz char[].next_char_off(b) => grapheme::next_character_break_utf8(b.ptr, b.len);
-macro isz char[].next_word_off(b) => grapheme::next_word_break_utf8(b.ptr, b.len);
-
-fn isz char[].prev_char_off(b)
-{
+	if (te.cursor == 0) return 0;
+	String b = (String)te.buffer[..te.cursor];
+	usz len;
 	foreach_r (off, c: b) {
 		if (c & 0xC0 == 0x80) continue;
-		return b.len - off;
+		len = b.len - off;
+		break;
 	}
-	return b.len;
+	// verify the utf8 character
+	conv::utf8_to_char32(&b[te.cursor - len], &len)!!;
+	return len;
 }
 
-fn isz char[].prev_word_off(b)
+// moves the cursor forwards or backwards by one codepoint without exiting the bounds, if select is
+// true also change the selection width
+fn void TextEdit.move_cursor(&te, bool forward, bool select)
 {
-	for (isz off = b.len-1; off > 0;) {
-		isz c_off = b[..off].prev_char_off();
-		off -= c_off;
-		if (ascii::is_punct(b[off]) || ascii::is_space(b[off])) return b.len - off - 1;
+	// in selection but trying to move without selecting, snap the cursor and reset selection
+	if (te.sel_len != 0 && !select) {
+		if (te.sel_len > 0 && forward) {
+			// selection is in front of the cursor and trying to move right, snap the cursor to the
+			// end of selection
+			te.cursor += te.sel_len;
+		} else if (te.sel_len < 0 && !forward) {
+			// selection is behind the cursor and trying to move left, snap the cursor to the start
+			// of selection
+			te.cursor += te.sel_len;
+		}
+		te.sel_len = 0;
+
+	} else {
+		isz off = forward ? te.next_char_off() : -te.prev_char_off();
+		if (te.cursor + off < 0 || te.cursor + off > te.chars) return;
+		te.cursor += off;
+		// if trying to select increment selection width
+		if (select) {
+			te.sel_len -= off;
+		}
 	}
-	return b.len;
+}
+
+// set the cursor to the exact offset provided, the selection flags controls wether the selection has
+// expanded or rese
+fn void TextEdit.set_cursor(&te, usz cur, bool select)
+{
+	if (!select) te.sel_len = 0;
+	if (cur == te.cursor) return;
+
+	usz prev_cur = te.cursor;
+	te.cursor = cur;
+	if (select) {
+		te.sel_len += prev_cur - cur;
+	}
+}
+
+fn void TextEdit.delete_selection(&te)
+{
+	if (te.sel_len == 0) return;
+
+	usz start = te.sel_len > 0 ? te.cursor : te.cursor + te.sel_len;
+	usz end   = te.sel_len > 0 ? te.cursor + te.sel_len : te.cursor;
+	usz len = te.chars - end;
+
+	te.buffer[start:len] = te.buffer[end:len];
+	te.cursor -= te.sel_len < 0 ? -te.sel_len : 0;
+	te.chars -= te.sel_len < 0 ? -te.sel_len : te.sel_len;
+	te.sel_len = 0;
+}
+
+// removes the character before or after the cursor
+fn void TextEdit.remove_character(&te, bool forward)
+{
+	// if there is a selection active then delete that selection
+	if (te.sel_len) {
+		te.delete_selection();
+		return;
+	}
+
+	if (te.chars == 0) return;
+	if (forward) {
+		usz rem = te.chars - te.cursor;
+		if (rem > 0) {
+			usz len = te.next_char_off();
+			te.buffer[te.cursor:rem-len] = te.buffer[te.cursor+len:rem-len];
+			te.chars -= len;
+		}
+	} else {
+		if (te.cursor > 0) {
+			usz len = te.prev_char_off();
+			te.buffer[te.cursor-len:te.chars-te.cursor] = te.buffer[te.cursor:te.chars-te.cursor];
+			te.chars -= len;
+			te.cursor -= len;
+		}
+	}
+}
+
+// insert a character at the cursor and update the cursor
+fn void TextEdit.insert_character(&te, uint cp)
+{
+	char[4] b;
+	usz len = conv::char32_to_utf8(cp, b[..])!!;
+	te.insert_utf8((String)b[:len]);
+}
+
+fn void TextEdit.insert_utf8(&te, String s)
+{
+	if (s.len == 0) return;
+	if (s.len + te.chars > te.buffer.len) return;
+
+	te.delete_selection();
+	te.buffer[te.cursor+s.len : te.chars-te.cursor] = te.buffer[te.cursor : te.chars-te.cursor];
+	te.buffer[te.cursor : s.len] = s[..];
+	te.chars += s.len;
+	te.cursor += s.len;
 }
