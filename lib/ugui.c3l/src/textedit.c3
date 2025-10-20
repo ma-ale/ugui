@@ -10,8 +10,10 @@ struct TextEdit {
 }
 
 fn String TextEdit.to_string(&te) => (String)te.buffer[:te.chars];
-fn String TextEdit.until_cursor(&te) => (String)te.buffer[:te.cursor];
-fn String TextEdit.from_cursor(&te) => (String)te.buffer[te.cursor..];
+fn String TextEdit.until_cursor(&te) => (String)te.buffer[..te.cursor];
+fn String TextEdit.from_cursor(&te) => (String)te.buffer[te.cursor..te.chars];
+fn String TextEdit.until(&te, usz off) => (String)te.buffer[..min(te.chars, off)];
+fn String TextEdit.from(&te, usz off) => (String)te.buffer[off..te.chars];
 
 // implement text editing operations on the buffer
 // returns true if the buffer is full
@@ -22,17 +24,19 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 
 	te.insert_utf8(in);
 
+	bool select = !!(mod & KMOD_SHIFT);
+	bool ctrl = !!(mod & KMOD_CTRL);
 
 	// handle backspace and delete
 	if (mod.bkspc) {
-		if (mod & KMOD_CTRL) {
+		if (ctrl) {
 			te.remove_word(false);
 		} else {
 			te.remove_character(false);
 		}
 	}
 	if (mod.del) {
-		if (mod & KMOD_CTRL) {
+		if (ctrl) {
 			te.remove_word(true);
 		} else {
 			te.remove_character(true);
@@ -41,23 +45,29 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 
 	// handle arrow keys
 	if (mod.left) {
-		if (mod & KMOD_CTRL) {
-			te.move_cursor_word(false, !!(mod & KMOD_SHIFT));
+		if (ctrl) {
+			te.move_cursor_word(false, select);
 		} else {
-			te.move_cursor(false, !!(mod & KMOD_SHIFT));
+			te.move_cursor(false, select);
 		}
 	}
 	if (mod.right) {
-		if (mod & KMOD_CTRL) {
-			te.move_cursor_word(true, !!(mod & KMOD_SHIFT));
+		if (ctrl) {
+			te.move_cursor_word(true, select);
 		} else {
-			te.move_cursor(true, !!(mod & KMOD_SHIFT));
+			te.move_cursor(true, select);
 		}
 	}
 
+	if (mod.home) {
+		te.set_cursor(te.search_lines(false).first, select);
+	}
+
+	if (mod.end) {
+		te.set_cursor(te.search_lines(true).first, select);
+	}
+
 	// TODO: up, down
-	// TODO: mod.home
-	// TODO: mod.end
 
 	return te.chars < te.buffer.len;
 }
@@ -66,6 +76,9 @@ module ugui::textedit::te;
 
 import std::core::string;
 import std::ascii;
+import std::collections::pair;
+
+alias OffPair = pair::Pair{usz, usz};
 
 // returns the offset of the next codepoint in the buffer from the cursor
 fn usz TextEdit.next_char_off(&te)
@@ -158,6 +171,32 @@ fn void TextEdit.move_cursor_word(&te, bool forward, bool select)
 
 	// move at least one character
 	if (prev_cur == te.cursor) te.move_cursor(forward, select);
+}
+
+// get the offset of the current line start and the previous line start from the cursor
+fn OffPair TextEdit.search_lines(&te, bool forward)
+{
+	// look for the current line start
+	OffPair p;
+
+	if (forward) {
+		// if searching forwards look for the end of the current line and the end of the next line
+		p.first = te.cursor + (te.from_cursor().index_of_char('\n') ?? (te.chars - te.cursor));
+		if (p.first < te.chars) {
+			p.second = p.first + 1 + (te.from(p.first + 1).index_of_char('\n') ?? (te.chars - p.first - 1));
+		} else {
+			p.second = te.chars;
+		}
+	} else {
+		// if searching backwards, look for the start of the current and previous line
+		if (te.cursor > 0) {
+			p.first = te.until(te.cursor-1).rindex_of_char('\n') ?? 0;
+			if (p.first != 0 && te.chars) p.first++;
+		}
+		p.second = te.until(p.first).rindex_of_char('\n') ?? 0;
+	}
+
+	return p;
 }
 
 fn void TextEdit.delete_selection(&te)

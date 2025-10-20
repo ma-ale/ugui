@@ -155,6 +155,8 @@ fn int main(String[] args)
 				mod.lshift = e.key.key == K_LSHIFT ? !!(e.type == EVENT_KEY_DOWN) : mod.lshift;
 				mod.bkspc  = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
 				mod.del    = e.key.key == K_DELETE ? !!(e.type == EVENT_KEY_DOWN) : mod.del;
+				mod.home   = e.key.key == K_HOME ? !!(e.type == EVENT_KEY_DOWN) : mod.home;
+				mod.end    = e.key.key == K_END ? !!(e.type == EVENT_KEY_DOWN) : mod.end;
 				mod.up     = e.key.key == K_UP ? !!(e.type == EVENT_KEY_DOWN) : mod.up;
 				mod.down   = e.key.key == K_DOWN ? !!(e.type == EVENT_KEY_DOWN) : mod.down;
 				mod.left   = e.key.key == K_LEFT ? !!(e.type == EVENT_KEY_DOWN) : mod.left;
@@ -398,7 +400,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 			ui.button("Quattro")!!;
 		ui.div_end()!!;
 	}
-	
+
 	// ui input/output
 	ui.@div(ugui::@grow(), ugui::@grow(), ROW, CENTER) { // center everything on the screen
 	ui.@div(ugui::@fit(), ugui::@fit(), COLUMN, TOP_LEFT) {
@@ -469,7 +471,7 @@ fn void popup(ugui::Ctx* ui)
 {
 	static bool toggle;
 	static ugui::Point pos;
-	
+
 	if (toggle) {
 		toggle = ui.popup_begin(pos, ugui::@fit(), ugui::@fit(), COLUMN)!!;
 		ui.button("POP")!!;

@@ -44,11 +44,13 @@ bitstruct ModKeys : uint {
 	bool scroll : 11;
 	bool bkspc  : 12;
 	bool del    : 13;
+	bool home   : 14;
+	bool end    : 15;
 	// arrow keys
-	bool up     : 14;
-	bool down   : 15;
-	bool left   : 16;
-	bool right  : 17;
+	bool up     : 16;
+	bool down   : 17;
+	bool left   : 18;
+	bool right  : 19;
 }
 
 const ModKeys KMOD_CTRL  = {.lctrl  = true, .rctrl  = true};
