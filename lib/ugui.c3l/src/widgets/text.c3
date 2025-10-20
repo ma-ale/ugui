@@ -86,7 +86,8 @@ fn ElemEvents? Ctx.text_box_id(&ctx, Id id, Size w, Size h, TextEdit* te, Anchor
 	if (elem.events.has_focus) {
 		if (elem.events.mouse_press || elem.events.mouse_hold) {
 			usz cur = ctx.hit_test_string(s, text_bounds, text_alignment, ctx.input.mouse.pos, reflow)!;
-			te.set_cursor(cur, elem.events.mouse_hold & !elem.events.mouse_press);
+			bool select = (elem.events.mouse_hold && !elem.events.mouse_press) || (ctx.get_mod() & KMOD_SHIFT);
+			te.set_cursor(cur, select);
 		}
 		Rect cur = ctx.get_cursor_position(s, text_bounds, text_alignment, te.cursor, reflow)!;
 		cur.w = 2;

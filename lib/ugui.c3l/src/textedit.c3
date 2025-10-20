@@ -25,24 +25,39 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 
 	// handle backspace and delete
 	if (mod.bkspc) {
-		te.remove_character(false);
+		if (mod & KMOD_CTRL) {
+			te.remove_word(false);
+		} else {
+			te.remove_character(false);
+		}
 	}
 	if (mod.del) {
-		te.remove_character(true);
+		if (mod & KMOD_CTRL) {
+			te.remove_word(true);
+		} else {
+			te.remove_character(true);
+		}
 	}
 
 	// handle arrow keys
 	if (mod.left) {
-		te.move_cursor(false, !!(mod & KMOD_SHIFT));
+		if (mod & KMOD_CTRL) {
+			te.move_cursor_word(false, !!(mod & KMOD_SHIFT));
+		} else {
+			te.move_cursor(false, !!(mod & KMOD_SHIFT));
+		}
 	}
 	if (mod.right) {
-		te.move_cursor(true, !!(mod & KMOD_SHIFT));
+		if (mod & KMOD_CTRL) {
+			te.move_cursor_word(true, !!(mod & KMOD_SHIFT));
+		} else {
+			te.move_cursor(true, !!(mod & KMOD_SHIFT));
+		}
 	}
 
 	// TODO: up, down
 	// TODO: mod.home
 	// TODO: mod.end
-	// TODO: selection with shift+arrows
 
 	return te.chars < te.buffer.len;
 }
@@ -50,6 +65,7 @@ fn bool Ctx.text_edit(&ctx, TextEdit* te)
 module ugui::textedit::te;
 
 import std::core::string;
+import std::ascii;
 
 // returns the offset of the next codepoint in the buffer from the cursor
 fn usz TextEdit.next_char_off(&te)
@@ -118,6 +134,32 @@ fn void TextEdit.set_cursor(&te, usz cur, bool select)
 	}
 }
 
+fn void TextEdit.move_cursor_word(&te, bool forward, bool select)
+{
+	// moving out of selection, snap to the end
+	if (!select && te.sel_len != 0) {
+		te.move_cursor(forward, select);
+		return;
+	}
+
+	usz prev_cur = te.cursor;
+	while (te.cursor <= te.chars) {
+		char c;
+		if (forward) {
+			if (te.cursor == te.chars) break;
+			c = te.buffer[te.cursor];
+		} else {
+			if (te.cursor == 0) break;
+			c = te.buffer[te.cursor-1];
+		}
+		if (ascii::is_space(c) || ascii::is_punct(c)) break;
+		te.move_cursor(forward, select);
+	}
+
+	// move at least one character
+	if (prev_cur == te.cursor) te.move_cursor(forward, select);
+}
+
 fn void TextEdit.delete_selection(&te)
 {
 	if (te.sel_len == 0) return;
@@ -157,6 +199,33 @@ fn void TextEdit.remove_character(&te, bool forward)
 			te.cursor -= len;
 		}
 	}
+}
+
+// remove the word before or after the cursor up until the next punctuation or space
+fn void TextEdit.remove_word(&te, bool forward)
+{
+	// if there is a selection active then delete that selection
+	if (te.sel_len) {
+		te.delete_selection();
+		return;
+	}
+
+	usz prev_cur = te.cursor;
+	while (te.chars > 0) {
+		char c;
+		if (forward) {
+			if (te.cursor == te.chars) break;
+			c = te.buffer[te.cursor];
+		} else {
+			if (te.cursor == 0) break;
+			c = te.buffer[te.cursor-1];
+		}
+		if (ascii::is_space(c) || ascii::is_punct(c)) break;
+		te.remove_character(forward);
+	}
+
+	// delete at least one character
+	if (prev_cur == te.cursor) te.remove_character(forward);
 }
 
 // insert a character at the cursor and update the cursor
