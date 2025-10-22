@@ -105,10 +105,10 @@ fn void? Font.load(&font, Allocator allocator, String name, ZString path, uint h
 	ushort size = (ushort)font.size*(ushort)($$sqrt((float)FONT_CACHED));
 	font.atlas.new(font.id, ATLAS_GRAYSCALE, size, size)!;
 
-// FIXME: this crashes with O1 or greater, why??
 	// preallocate the ASCII range
 	for (char c = ' '; c < '~'; c++) {
-		font.get_glyph((Codepoint)c)!;
+		// FIXME: without @inline, this crashes with O1 or greater
+		font.get_glyph((Codepoint)c) @inline!;
 	}
 }
 
