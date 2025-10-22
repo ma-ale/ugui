@@ -74,7 +74,7 @@ fn int main(String[] args)
 	// FONT LOADING                                                                               //
 	// ========================================================================================== //
 	// import font in the ui context
-	ui.load_font("font1", "resources/hack-nerd.ttf", 16)!!;
+	ui.load_font(&arena, "font1", "resources/hack-nerd.ttf", 16)!!;
 
 	// set the renderer's font atlas
 	ren.font_atlas_id = ui.get_font_id("font1");

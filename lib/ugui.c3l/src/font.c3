@@ -1,4 +1,4 @@
-module ugui;
+module ugui::font;
 
 import schrift;
 import std::collections::map;
@@ -74,9 +74,9 @@ macro Rect Glyph.uv(&g) => {.x = g.u, .y = g.v, .w = g.w, .h = g.h};
 @param [&in] path
 @require height > 0, scale > 0: "height and scale must be positive non-zero"
 *>
-fn void? Font.load(&font, String name, ZString path, uint height, float scale)
+fn void? Font.load(&font, Allocator allocator, String name, ZString path, uint height, float scale)
 {
-	font.table.init(allocator::mem, capacity: FONT_CACHED);
+	font.table.init(allocator, capacity: FONT_CACHED);
 	font.id = name.hash();
 
 	font.size = height*scale;
@@ -127,6 +127,7 @@ fn Glyph*? Font.get_glyph(&font, Codepoint code)
 	} else {
 		return gp;
 	}
+
 
 	// missing glyph, render and place into an atlas
 	Glyph glyph;
@@ -188,15 +189,17 @@ fn void Font.free(&font)
 //                           FONT LOAD AND QUERY                                      //
 // ---------------------------------------------------------------------------------- //
 
+module ugui;
+
 <*
 @param [&inout] ctx
 @param [in] name
 @param [&in] path
 @require height > 0, scale > 0: "height and scale must be positive non-zero"
 *>
-fn void? Ctx.load_font(&ctx, String name, ZString path, uint height, float scale = 1.0)
+fn void? Ctx.load_font(&ctx, Allocator allocator, String name, ZString path, uint height, float scale = 1.0)
 {
-	return ctx.font.load(name, path, height, scale);
+	return ctx.font.load(allocator, name, path, height, scale);
 }
 
 <*
