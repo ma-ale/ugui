@@ -1,9 +1,9 @@
 module ugui;
 
-import grapheme;
 import std::io;
 import std::math;
 import std::core::string;
+
 
 bitstruct InputEvents : uint {
 	bool resize       : 0; // window size was changed
@@ -71,6 +71,7 @@ const MouseButtons BTN_5      = {.btn_5      = true};
 
 const ModKeys KEY_ANY = (ModKeys)(ModKeys.inner.max);
 
+<* @param [&inout] ctx *>
 fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String ...keys)
 {
 	bool is_mod = (bool)(ctx.current_input.keyboard.modkeys & mod);
@@ -83,6 +84,7 @@ fn bool Ctx.check_key_combo(&ctx, ModKeys mod, String ...keys)
 }
 
 // Window size was changed
+<* @param [&inout] ctx *>
 fn void? Ctx.input_window_size(&ctx, short width, short height)
 {
 	if (width <= 0 || height <= 0) {
@@ -94,6 +96,7 @@ fn void? Ctx.input_window_size(&ctx, short width, short height)
 }
 
 // Window gained/lost focus
+<* @param [&inout] ctx *>
 fn void Ctx.input_changefocus(&ctx, bool has_focus)
 {
 	// FIXME: raylib only has an API to query the focus status so we have to
@@ -113,6 +116,7 @@ macro Ctx.is_mouse_released(&ctx, MouseButtons btn) => (ctx.mouse_released() & b
 macro Ctx.is_mouse_down(&ctx, MouseButtons btn) => (ctx.mouse_down() & btn) != BTN_NONE;
 
 // Mouse Buttons down
+<* @param [&inout] ctx *>
 fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 {
 	ctx.current_input.mouse.updated = ctx.current_input.mouse.down ^ buttons;
@@ -121,6 +125,7 @@ fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 }
 
 // Mouse was moved, report absolute position
+<* @param [&inout] ctx *>
 fn void Ctx.input_mouse_abs(&ctx, short x, short y)
 {
 	ctx.current_input.mouse.pos.x = math::clamp(x, (short)0, ctx.width);
@@ -137,6 +142,7 @@ fn void Ctx.input_mouse_abs(&ctx, short x, short y)
 }
 
 // Mouse was moved, report relative motion
+<* @param [&inout] ctx *>
 fn void Ctx.input_mouse_delta(&ctx, short dx, short dy)
 {
 	ctx.current_input.mouse.delta.x = dx;
@@ -152,6 +158,7 @@ fn void Ctx.input_mouse_delta(&ctx, short dx, short dy)
 	ctx.current_input.events.mouse_move = dx != 0 || dy != 0;
 }
 
+<* @param [&inout] ctx *>
 fn void Ctx.input_mouse_wheel(&ctx, short x, short y, float scale = 1.0)
 {
 	ctx.current_input.mouse.scroll.x = (short)((float)-x*scale);
@@ -159,25 +166,29 @@ fn void Ctx.input_mouse_wheel(&ctx, short x, short y, float scale = 1.0)
 	ctx.current_input.events.mouse_scroll = x !=0 || y != 0;
 }
 
+<* @param [&inout] ctx *>
 fn void Ctx.input_key_press(&ctx)
 {
 	ctx.current_input.events.key_press = true;
 }
 
+<* @param [&inout] ctx *>
 fn void Ctx.input_key_release(&ctx)
 {
 	ctx.current_input.events.key_release = true;
 }
 
+<* @param [&inout] ctx *>
 fn void Ctx.input_key_repeat(&ctx)
 {
 	ctx.current_input.events.key_repeat = true;
 }
 
 // append utf-8 encoded text to the context text input
+<* @param [&inout] ctx *>
 fn void Ctx.input_text_utf8(&ctx, char[] text)
 {
-	if (text.len == 0) { return; }
+	if (text == "") return;
 
 	usz remaining = ctx.current_input.keyboard.text.len - ctx.current_input.keyboard.text_len;
 	usz len = text.len > remaining ? remaining : text.len;
@@ -187,26 +198,24 @@ fn void Ctx.input_text_utf8(&ctx, char[] text)
 	ctx.current_input.events.text_input = true;
 }
 
-fn void Ctx.input_text_unicode(&ctx, char[] text)
+<*
+@param [&inout] ctx
+@param [in] text
+*>
+fn void? Ctx.input_text_unicode(&ctx, uint[] text)
 {
-	if (text.ptr == null || text.len == 0) { return; }
+	if (text.len == 0) return;
 
-	char[32] tmp;
 	usz remaining = ctx.current_input.keyboard.text.len - ctx.current_input.keyboard.text_len;
 	char[] s = ctx.current_input.keyboard.text[ctx.current_input.keyboard.text_len ..];
 
-	usz off;
-	foreach (idx, cp: text) {
-		if (off >= remaining) { break; }
-		usz enc = grapheme::encode_utf8(cp, tmp[..], tmp.len);
-		s[off..off+enc] = tmp[..enc];
-		off += enc;
-	}
+	usz off = conv::utf32to8(text, s)!;
 	ctx.current_input.keyboard.text_len += off;
 
 	ctx.current_input.events.text_input = true;
 }
 
+<* @param [&inout] ctx *>
 fn void Ctx.input_char(&ctx, char c)
 {
 	char[1] b = {c};
@@ -218,6 +227,7 @@ fn ModKeys Ctx.get_mod(&ctx) => ctx.input.keyboard.modkeys;
 
 // Modifier keys, like control or backspace
 // TODO: make this call repetible to input modkeys one by one
+<* @param [&inout] ctx *>
 fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys)
 {
 	ctx.current_input.keyboard.modkeys = modkeys;

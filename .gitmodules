@@ -1,7 +1,3 @@
-[submodule "lib/grapheme.c3l/thirdparty/libgrapheme"]
-	path = lib/grapheme.c3l/thirdparty/libgrapheme
-	url = git://git.suckless.org/libgrapheme
-	ignore = dirty
 [submodule "lib/schrift.c3l/thirdparty/libschrift"]
 	path = lib/schrift.c3l/thirdparty/libschrift
 	url = https://github.com/tomolt/libschrift
