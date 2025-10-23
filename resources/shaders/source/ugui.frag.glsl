@@ -64,7 +64,7 @@ void sprite_main()
 {
 	ivec2 ts = textureSize(sprite_atlas, 0);
 	vec2 fts = vec2(ts);
-	vec2 real_uv = in_uv / fts;
+	vec2 real_uv = in_uv.xy / fts;
 	fragColor = texture(sprite_atlas, real_uv);
 }
 
@@ -74,7 +74,7 @@ void font_main()
 {
 	ivec2 ts = textureSize(font_atlas, 0);
 	vec2 fts = vec2(ts);
-	vec2 real_uv = in_uv / fts;
+	vec2 real_uv = in_uv.xy / fts;
 
 	vec4 opacity = texture(font_atlas, real_uv);
 	fragColor = vec4(in_color.rgb, in_color.a*opacity.r);
@@ -85,7 +85,7 @@ void font_main()
 void msdf_main() {
 	ivec2 ts = textureSize(sprite_atlas, 0);
 	vec2 fts = vec2(ts);
-	vec2 real_uv = in_uv / fts;
+	vec2 real_uv = in_uv.xy / fts;
 
 	vec3 msd = texture(sprite_atlas, real_uv).rgb;
 	float sd = median(msd.r, msd.g, msd.b);

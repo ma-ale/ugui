@@ -55,7 +55,7 @@ struct QuadAttributes {
 		short x, y, w, h;
 	}
 	struct uv {
-		short u, v;
+		short u, v, w, h;
 	}
 	uint color;
 	uint type;
@@ -483,7 +483,7 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 				}
 			},
 			.num_vertex_buffers = 2,
-			// the description of each vertex
+			// the description of each vertex, quad and bindings
 			.vertex_attributes = (GPUVertexAttribute[]){
 				{ // at location zero there is the position of the vertex
 					.location = 0,
@@ -500,7 +500,7 @@ fn void Renderer.create_pipeline(&self, String shader_name, PipelineType type)
 				{ // at location two there are the per-quad uv coordinates
 					.location = 2,
 					.buffer_slot = 1,
-					.format = GPU_VERTEXELEMENTFORMAT_SHORT2,
+					.format = GPU_VERTEXELEMENTFORMAT_SHORT4,
 					.offset = QuadAttributes.uv.offsetof,
 				},
 				{ // at location three there is the quad color
@@ -713,11 +713,11 @@ const uint TYPE_FONT   = 1;
 const uint TYPE_SPRITE = 2;
 const uint TYPE_MSDF   = 3;
 
-fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v, uint color = 0xffffffff, uint type)
+fn bool Renderer.push_sprite(&self, short x, short y, short w, short h, short u, short v, short sw, short sh, uint color = 0xffffffff, uint type)
 {
 	QuadAttributes qa = {
 		.pos = {.x = x, .y = y, .w = w, .h = h},
-		.uv = {.u = u, .v = v},
+		.uv = {.u = u, .v = v, .w = sw, .h = sh},
 		.color = color,
 		.type = type,
 	};
@@ -980,7 +980,7 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 			} else {
 				unreachable("unrecognized command type");
 			}
-			self.push_sprite(s.rect.x, s.rect.y, s.texture_rect.w, s.texture_rect.h, s.texture_rect.x, s.texture_rect.y, s.hue.to_uint(), type);
+			self.push_sprite(s.rect.x, s.rect.y, s.rect.w, s.rect.h, s.texture_rect.x, s.texture_rect.y, s.texture_rect.w, s.texture_rect.h, s.hue.to_uint(), type);
 		}
 	}
 	self.upload_quads();

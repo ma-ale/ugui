@@ -10,7 +10,7 @@ layout(set = 1, binding = 0) uniform Viewport {
 // inputs
 layout(location = 0) in ivec2 in_position;
 layout(location = 1) in ivec4 in_attr; // quad x,y,w,h
-layout(location = 2) in ivec2 in_uv;
+layout(location = 2) in ivec4 in_uv;
 layout(location = 3) in uvec4 in_color;
 layout(location = 4) in uint  in_type;
 
@@ -35,7 +35,7 @@ void main()
 	out_color = vec4(in_color) / 255.0;
 
 	// uv output. only useful if the type is SPRITE
-	vec2 px_uv = in_uv.xy + in_position.xy * in_attr.zw;
+	vec2 px_uv = in_uv.xy + in_position.xy * in_uv.zw;
 	out_uv = vec2(px_uv);
 
 	// quad size and radius output, only useful if type is RECT

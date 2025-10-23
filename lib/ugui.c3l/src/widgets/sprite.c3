@@ -4,9 +4,9 @@ struct ElemSprite {
 	Id id;
 }
 
-macro Ctx.sprite(&ctx, String name, ...)
-	=> ctx.sprite_id(@compute_id($vasplat), name);
-fn void? Ctx.sprite_id(&ctx, Id id, String name)
+macro Ctx.sprite(&ctx, String name, short size = 0, ...)
+	=> ctx.sprite_id(@compute_id($vasplat), name, size);
+fn void? Ctx.sprite_id(&ctx, Id id, String name, short size = 0)
 {
 	id = ctx.gen_id(id)!;
 	Elem* parent, elem;
@@ -16,11 +16,26 @@ fn void? Ctx.sprite_id(&ctx, Id id, String name)
 	Sprite* sprite = ctx.sprite_atlas.get(name)!;
 	elem.sprite.id = ctx.get_sprite_atlas_id(name);
 
-	elem.layout.w = elem.layout.children.w = @exact(sprite.w);
-	elem.layout.h = elem.layout.children.h = @exact(sprite.h);
+	// scale the sprite so that the biggest dimension becomes "size"
+	short width = sprite.w;
+	short height = sprite.h;
+	if (size > 0) {
+		if (sprite.w >= sprite.h) {
+			width = size;
+			height = (short)(size * (float)height/width);
+		} else {
+			width = (short)(size * (float)width/height);
+			height = size;
+		}
+	}
+
+	elem.layout.w = elem.layout.children.w = @exact(width);
+	elem.layout.h = elem.layout.children.h = @exact(height);
+	elem.layout.content_offset = style.margin + style.border + style.padding;
 
 	update_parent_size(elem, parent);
 
 	Id tex_id = ctx.sprite_atlas.id;
-	return ctx.push_sprite(elem.bounds, sprite.uv(), tex_id, parent.z_index, type: sprite.type)!;
+	Rect content_bounds = elem.bounds.pad(elem.layout.content_offset);
+	return ctx.push_sprite(content_bounds, sprite.uv(), tex_id, parent.z_index, type: sprite.type)!;
 }

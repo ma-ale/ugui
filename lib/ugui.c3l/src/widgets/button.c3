@@ -145,7 +145,7 @@ fn void? Ctx.checkbox_id(&ctx, Id id, String description, bool* active, String t
 		if (*active) {
 			Sprite* sprite = ctx.sprite_atlas.get(tick_sprite)!;
 			Id tex_id = ctx.sprite_atlas.id;
-			ctx.push_sprite(sprite.rect().center_to(check_bounds), sprite.uv(), tex_id, parent.z_index, type: sprite.type)!;
+			ctx.push_sprite(check_bounds, sprite.uv(), tex_id, parent.z_index, type: sprite.type)!;
 		}
 	} else {
 		if (*active) {
