@@ -7,7 +7,7 @@
         "working_dir": ""
       },
       {
-        "args": "build -g",
+        "args": "build -g --threads 8",
         "command": "c3c",
         "working_dir": ""
       }

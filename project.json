@@ -14,6 +14,7 @@
       "type": "executable"
     }
   },
-  "opt": "O0",
+  "safe": true,
+  "opt": "O1",
   "debug-info": "full"
 }
