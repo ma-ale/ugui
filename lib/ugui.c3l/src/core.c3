@@ -264,7 +264,7 @@ fn void? Ctx.frame_begin(&ctx)
 	elem.layout.h = @exact(ctx.height);
 
 	ctx.div_scissor = elem.bounds;
-	
+
 	ctx.skip_frame = false;
 }
 
@@ -278,7 +278,8 @@ fn void? Ctx.frame_end(&ctx)
 	// 2. clear input fields
 	ctx.input = ctx.current_input;
 	ctx.current_input.events = {};
-	ctx.current_input.keyboard.text_len = 0;
+	ctx.current_input.mouse.scroll = {};
+	ctx.current_input.keyboard = {};
 
 	// DO THE LAYOUT
 	ctx.layout_element_tree()!;
@@ -296,7 +297,7 @@ fn void? Ctx.frame_end(&ctx)
 	// Propagate input events to the right elements
 	ctx.set_elem_events(ctx.hover_id);
 	ctx.set_elem_events(ctx.focus_id);
-	
+
 
 	// 1. clear the tree
 	ctx.tree.nuke();
@@ -310,7 +311,7 @@ fn void? Ctx.frame_end(&ctx)
 		ctx.push_update_atlas(&ctx.sprite_atlas.atlas)!;
 		ctx.sprite_atlas.should_update = false;
 	}
-	
+
 	// send skip frame request
 	if (ctx.skip_frame) {
 		ctx.cmd_queue.push({.type = CMD_REQ_SKIP_FRAME});
@@ -338,11 +339,6 @@ $if $feature(DEBUG_POINTER):
 	};
 	ctx.cmd_queue.push(cmd);
 $endif
-
-//	foreach (i, c: ctx.cmd_queue) {
-//		io::printf("[%d]: ", i);
-//		io::printn(c);
-//	}
 }
 
 
@@ -364,16 +360,16 @@ fn void Ctx.update_hover_and_focus(&ctx, Elem* elem)
 
 		hover = !(different && still_hovered && shown && above);
 	}
-	
+
 	if (focus) {
 		Elem* prev_focus = ctx.find_elem(ctx.hover_id);
 		bool different = prev_focus.id != elem.id;
 		bool shown = prev_focus.flags.shown;
 		bool above = prev_focus.z_index > elem.z_index;
-		
+
 		focus = !(different && shown && above);
 	}
-	
+
 	if (hover) ctx.hover_id = elem.id;
 	if (focus) ctx.focus_id = elem.id;
 }
