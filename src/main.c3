@@ -1,13 +1,11 @@
 import std::io;
-import cache;
 import ugui;
 import std::time;
 import std::collections::ringbuffer;
 import std::core::string;
-import std::ascii;
 import std::core::mem::allocator;
-import sdlrenderer::ren;
-import sdl3::sdl;
+import ugui::sdl::ren;
+
 
 alias Times = ringbuffer::RingBuffer{time::NanoDuration[128]};
 
@@ -127,81 +125,15 @@ fn int main(String[] args)
 	// ========================================================================================== //
 	// MAIN LOOP                                                                                  //
 	// ========================================================================================== //
-	sdl::start_text_input(ren.win);
-
-	sdl::Event e;
-	bool quit = false;
-	ugui::ModKeys mod;
-	ugui::MouseButtons btn;
+	ren::pre(ren.win);
+	
+	bool quit;
 	while (!quit) {
 		clock.mark();
 		fps_clock.mark();
 		sleep_clock.mark();
 
-		do {
-			switch (e.type) {
-			case EVENT_QUIT:
-				quit = true;
-			case EVENT_KEY_UP:
-				ui.input_key_release();
-				nextcase;
-			case EVENT_KEY_DOWN:
-				ui.input_key_press();
-				if (e.key.repeat) ui.input_key_repeat();
-
-				mod.rctrl  = e.key.key == K_RCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.rctrl;
-				mod.lctrl  = e.key.key == K_LCTRL ? !!(e.type == EVENT_KEY_DOWN) : mod.lctrl;
-				mod.rshift = e.key.key == K_RSHIFT ? !!(e.type == EVENT_KEY_DOWN) : mod.rshift;
-				mod.lshift = e.key.key == K_LSHIFT ? !!(e.type == EVENT_KEY_DOWN) : mod.lshift;
-				mod.bkspc  = e.key.key == K_BACKSPACE ? !!(e.type == EVENT_KEY_DOWN) : mod.bkspc;
-				mod.del    = e.key.key == K_DELETE ? !!(e.type == EVENT_KEY_DOWN) : mod.del;
-				mod.home   = e.key.key == K_HOME ? !!(e.type == EVENT_KEY_DOWN) : mod.home;
-				mod.end    = e.key.key == K_END ? !!(e.type == EVENT_KEY_DOWN) : mod.end;
-				mod.up     = e.key.key == K_UP ? !!(e.type == EVENT_KEY_DOWN) : mod.up;
-				mod.down   = e.key.key == K_DOWN ? !!(e.type == EVENT_KEY_DOWN) : mod.down;
-				mod.left   = e.key.key == K_LEFT ? !!(e.type == EVENT_KEY_DOWN) : mod.left;
-				mod.right  = e.key.key == K_RIGHT ? !!(e.type == EVENT_KEY_DOWN) : mod.right;
-
-				// pressing ctrl+key or alt+key does not generate a character as such no
-				// TEXT_INPUT event is generated. When those keys are pressed we have to
-				// do manual text input, bummer
-				if (e.type == EVENT_KEY_DOWN && (mod.lctrl || mod.rctrl)) {
-					if (ascii::is_alnum_m((uint)e.key.key)) {
-						ui.input_char((char)e.key.key);
-					}
-				}
-
-				if (e.type == EVENT_KEY_DOWN && e.key.key == K_RETURN) ui.input_char('\n');
-
-			case EVENT_TEXT_INPUT:
-				ui.input_text_utf8(e.text.text.str_view());
-			case EVENT_WINDOW_RESIZED:
-				ui.input_window_size((short)e.window.data1, (short)e.window.data2)!!;
-			case EVENT_WINDOW_FOCUS_GAINED:
-				ui.input_changefocus(true);
-			case EVENT_WINDOW_FOCUS_LOST:
-				ui.input_changefocus(false);
-			case EVENT_MOUSE_MOTION:
-				ui.input_mouse_abs((short)e.motion.x, (short)e.motion.y);
-			case EVENT_MOUSE_WHEEL:
-				ui.input_mouse_wheel((short)e.wheel.integer_x, (short)e.wheel.integer_y);
-			case EVENT_MOUSE_BUTTON_DOWN: nextcase;
-			case EVENT_MOUSE_BUTTON_UP:
-				sdl::MouseButtonFlags mb = sdl::get_mouse_state(null, null);
-				btn = {
-					.btn_left = !!(mb & BUTTON_LMASK),
-					.btn_right = !!(mb & BUTTON_RMASK),
-					.btn_middle = !!(mb & BUTTON_MMASK),
-					.btn_4 = !!(mb & BUTTON_X1MASK),
-					.btn_5 = !!(mb & BUTTON_X2MASK),
-				};
-			case EVENT_POLL_SENTINEL: break;
-			default:
-				io::eprintfn("unhandled event: %s", e.type);
-			}
-		} while(sdl::poll_event(&e));
-		ui.input_mod_keys(mod);
-		ui.input_mouse_button(btn);
+		quit = ui.handle_events()!!;
 
 		/* End Input Handling */
 
@@ -248,7 +180,7 @@ $endswitch
 		// wait for the next event, timeout after 100ms
 		int timeout = LIMIT_FPS ? (int)(100.0-sleep_clock.mark().to_ms()-0.5) : 0;
 		if (ui.skip_frame) timeout = 0;
-		sdl::wait_event_timeout(&e, timeout);
+		ren::wait_events(timeout);
 
 		fps = 1.0 / fps_clock.mark().to_sec();
 		frame++;
@@ -453,7 +385,7 @@ fn void calculator(ugui::Ctx* ui, TextEdit* te)
 		ui.@div(ugui::@grow(), ugui::@fit(), anchor: CENTER) {
 			static bool state;
 			ui.checkbox("boolean", &state, "tick")!!;
-			ui.sprite("tux")!!;
+			ui.sprite("tux", 32)!!;
 			ui.toggle("lmao", &state)!!;
 		}!!;
 		ui.@div(ugui::@grow(), ugui::@exact(50), anchor: CENTER, scroll_y: true) {

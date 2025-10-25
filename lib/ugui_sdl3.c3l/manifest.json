@@ -1,0 +1,10 @@
+{
+  "provides" : "ugui_sdl3",
+  "targets" : {
+    "linux-x64" : {
+      "link-args" : [],
+      "dependencies" : ["sdl3", "ugui"],
+      "linked-libraries" : []
+    }
+  }
+}

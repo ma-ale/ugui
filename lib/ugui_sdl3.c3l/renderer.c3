@@ -7,11 +7,16 @@ import std::collections::list;
 
 alias IdList = List{Type};
 
+<*
+@param [&in] self
+@param [in] name
+*>
 macro Type* IdList.get_from_name(&self, String name)
 {
 	return self.get_from_id(name.hash());
 }
 
+<* @param [&in] self *>
 macro Type* IdList.get_from_id(&self, id)
 {
 	foreach(&s: self) {
@@ -24,10 +29,11 @@ macro Type* IdList.get_from_id(&self, id)
 
 
 // 2D renderer for ugui, based on SDL3 using the new GPU API
-module sdlrenderer::ren;
+module ugui::sdl::ren;
+
 import std::io;
-import std::core::mem;
 import sdl3::sdl;
+import std::core::mem;
 import idlist;
 import ugui;
 
@@ -1026,7 +1032,6 @@ fn void Renderer.render_ugui(&self, CmdQueue* queue)
 			self.draw_quads(off, count);
 			off += count;
 			calls++;
-//			self.draw_quads(off++, 1);
 		}
 	}
 	self.end_render_pass();
