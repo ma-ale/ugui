@@ -90,7 +90,7 @@ fn int Ctx.import_style_from_file(&ctx, String path)
  * <style name> {
  *     padding: left right top bottom;
  *     border: left right top bottom;
- *     margin: left right top bottoms;
+ *     margin: left right top bottom;
  *     radius: uint;
  *     size: uint;
  *     Color: #RRGGBBAA;
@@ -104,6 +104,8 @@ fn int Ctx.import_style_from_file(&ctx, String path)
  * The default unit is pixels, but millimeters is also available. The parser function accepts a scale
  * factor that has to be obtained with the window manager functions.
 */
+// TODO: implement <style name> : <another style> to easily inherit all properties
+//       of a previously defined style
 
 module ugui::css;
 
@@ -150,6 +152,12 @@ fn short Token.to_px(&t, float mm_to_px)
 	if (t.unit == PIXELS) return (short)(t.value);
 	return (short)(t.value * mm_to_px);
 }
+
+
+// ---------------------------------------------------------------------------------- //
+//                                    LEXER                                           //
+// ---------------------------------------------------------------------------------- //
+
 
 struct Lexer {
 	String text;
@@ -280,6 +288,11 @@ fn Token Lexer.peep_token(&lex)
 }
 
 
+// ---------------------------------------------------------------------------------- //
+//                                    PARSER                                          //
+// ---------------------------------------------------------------------------------- //
+
+
 struct Parser {
 	Lexer lex;
 	Style style;
@@ -295,6 +308,8 @@ macro bool Parser.expect(&p, Token* t, TokenType type)
 	return false;
 }
 
+// style := ( IDENTIFIER "{" property_list "}" )
+// property_list := property property_list
 fn bool Parser.parse_style(&p)
 {
 	Token t;
@@ -319,6 +334,10 @@ fn bool Parser.parse_style(&p)
 	return true;
 }
 
+// property        := ( number_property | color_property | size_property ) ";"
+// number_property := ( "radius" | "size" ) "=" number
+// color_property  := ( "bg" | "fg" | "primary" | "secondary" | "accent" ) "=" color
+// size_property   := ( "padding" | "border" | "margin" ) "=" size
 fn bool Parser.parse_property(&p)
 {
 	Token t, prop;
@@ -393,6 +412,7 @@ fn bool Parser.parse_property(&p)
 	return true;
 }
 
+// number := NUMBER
 fn bool Parser.parse_number(&p, short* n)
 {
 	Token t;
@@ -401,6 +421,7 @@ fn bool Parser.parse_number(&p, short* n)
 	return true;
 }
 
+// color := COLOR
 // FIXME: since '#' is punctuation this cannot be done in parsing but it has to be done in lexing
 fn bool Parser.parse_color(&p, Color* c)
 {
@@ -410,6 +431,8 @@ fn bool Parser.parse_color(&p, Color* c)
 	return true;
 }
 
+// size := number | number_list
+// number_list := number number number number
 fn bool Parser.parse_size(&p, Rect* r)
 {
 	short x;
