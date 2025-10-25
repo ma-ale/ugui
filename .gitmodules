@@ -10,3 +10,6 @@
 	path = lib/vendor
 	url = https://github.com/c3lang/vendor
 	ignore = dirty
+[submodule "lib/ugui_sdl.c3l"]
+	path = lib/ugui_sdl.c3l
+	url = https://git.alemauri.eu/alema/ugui_sdl.c3l.git
