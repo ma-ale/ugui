@@ -279,7 +279,8 @@ fn void? Ctx.frame_end(&ctx)
 	ctx.input = ctx.current_input;
 	ctx.current_input.events = {};
 	ctx.current_input.mouse.scroll = {};
-	ctx.current_input.keyboard = {};
+	ctx.current_input.mouse.updated = BTN_NONE;
+	ctx.current_input.keyboard.text_len = 0;
 
 	// DO THE LAYOUT
 	ctx.layout_element_tree()!;

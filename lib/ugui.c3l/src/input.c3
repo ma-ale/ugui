@@ -105,12 +105,10 @@ fn void Ctx.input_changefocus(&ctx, bool has_focus)
 	ctx.has_focus = has_focus;
 }
 
-macro Ctx.mouse_pressed(&ctx) => ctx.current_input.mouse.updated & ctx.current_input.mouse.down;
-macro Ctx.mouse_released(&ctx) => ctx.current_input.mouse.updated & ~ctx.current_input.mouse.down;
-macro Ctx.mouse_down(&ctx) => ctx.current_input.mouse.down;
-
-// FIXME: hthis compairson could be done with a cast using MouseButtons.inner
-// property but I could not figure out how
+// NOTE: all of these refer to the previous frame's data
+macro Ctx.mouse_pressed(&ctx) => ctx.input.mouse.updated & ctx.input.mouse.down;
+macro Ctx.mouse_released(&ctx) => ctx.input.mouse.updated & ~ctx.input.mouse.down;
+macro Ctx.mouse_down(&ctx) => ctx.input.mouse.down;
 macro Ctx.is_mouse_pressed(&ctx, MouseButtons btn) => (ctx.mouse_pressed() & btn) != BTN_NONE;
 macro Ctx.is_mouse_released(&ctx, MouseButtons btn) => (ctx.mouse_released() & btn) != BTN_NONE;
 macro Ctx.is_mouse_down(&ctx, MouseButtons btn) => (ctx.mouse_down() & btn) != BTN_NONE;
@@ -121,7 +119,7 @@ fn void Ctx.input_mouse_button(&ctx, MouseButtons buttons)
 {
 	ctx.current_input.mouse.updated = ctx.current_input.mouse.down ^ buttons;
 	ctx.current_input.mouse.down = buttons;
-	ctx.current_input.events.mouse_btn = (uint)ctx.current_input.mouse.down != 0 || (uint)ctx.current_input.mouse.updated != 0;
+	ctx.current_input.events.mouse_btn = ctx.current_input.mouse.down != BTN_NONE || ctx.current_input.mouse.updated != BTN_NONE;
 }
 
 // Mouse was moved, report absolute position
@@ -226,10 +224,13 @@ fn String Ctx.get_keys(&ctx) => (String)ctx.input.keyboard.text[:ctx.input.keybo
 fn ModKeys Ctx.get_mod(&ctx) => ctx.input.keyboard.modkeys;
 
 // Modifier keys, like control or backspace
-// TODO: make this call repetible to input modkeys one by one
 <* @param [&inout] ctx *>
-fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys)
+fn void Ctx.input_mod_keys(&ctx, ModKeys modkeys, bool set)
 {
-	ctx.current_input.keyboard.modkeys = modkeys;
+	if (set) {
+		ctx.current_input.keyboard.modkeys |= modkeys;
+	} else {
+		ctx.current_input.keyboard.modkeys &= ~modkeys;
+	}
 	ctx.current_input.events.mod_key = (uint)ctx.current_input.keyboard.modkeys != 0;
 }
