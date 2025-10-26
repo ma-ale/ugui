@@ -20,21 +20,21 @@ struct ElemDiv {
 
 macro Ctx.@center(&ctx, LayoutDirection dir = ROW, ...; @body())
 {
-	ctx.@div(@grow(), @grow(), dir, CENTER) {
+	return ctx.@div(@grow(), @grow(), dir, CENTER) {
 		@body();
 	}!;
 }
 
 macro Ctx.@row(&ctx, Anchor anchor = TOP_LEFT, ...; @body())
 {
-	ctx.@div(@fit(), @fit(), ROW, anchor: anchor) {
+	return ctx.@div(@fit(), @fit(), ROW, anchor: anchor) {
 		@body();
 	}!;
 }
 
 macro Ctx.@column(&ctx, Anchor anchor = TOP_LEFT, ...; @body())
 {
-	ctx.@div(@fit(), @fit(), COLUMN, anchor: anchor) {
+	return ctx.@div(@fit(), @fit(), COLUMN, anchor: anchor) {
 		@body();
 	}!;
 }
