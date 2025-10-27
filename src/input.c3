@@ -93,6 +93,7 @@ fn void? Ctx.input_window_size(&ctx, short width, short height)
 	ctx.current_input.events.resize = ctx.width != width || ctx.height != height;
 	ctx.width = width;
 	ctx.height = height;
+	if (ctx.current_input.events.resize) ctx.skip_frame = true;
 }
 
 // Window gained/lost focus
