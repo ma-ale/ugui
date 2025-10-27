@@ -162,7 +162,7 @@ macro Id @compute_id(...)
 {
 	Id id = (Id)$$LINE.hash() ^ (Id)@str_hash($$FILE);
 	$for var $i = 0; $i < $vacount; $i++:
-		id ^= (Id)$vaconst[$i].hash();
+		id ^= (Id)$vaexpr[$i].hash();
 	$endfor
 	return id;
 }
