@@ -172,6 +172,21 @@ fn Id? Ctx.div_end(&ctx)
 	return elem.id;
 }
 
+<* @param[&inout] state *>
+macro Ctx.@popup(&ctx, bool* state,
+             Point pos,
+             Size width, Size height,
+             LayoutDirection dir = ROW, Anchor anchor = TOP_LEFT, 
+             bool scroll_x = false, bool scroll_y = false,
+             ...; @body())
+{
+	if (*state) {
+		*state = ctx.popup_begin(pos, width, height, dir, anchor, scroll_x, scroll_y)!;
+		@body();
+		ctx.div_end()!;
+	}
+}
+
 macro bool? Ctx.popup_begin(&ctx, Point pos,
                       Size width, Size height,
                       LayoutDirection dir = ROW, Anchor anchor = TOP_LEFT, 
