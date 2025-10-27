@@ -205,7 +205,7 @@ fn void resolve_placement(Elem* c, Elem* p)
 	// if the element has absolute position assign the origin and do not update the parent
 	if (cl.absolute) {
 		c.bounds.x = p.bounds.x + pl.content_offset.x + cl.origin.x;
-		c.bounds.y = p.bounds.x + pl.content_offset.x + cl.origin.y;
+		c.bounds.y = p.bounds.y + pl.content_offset.y + cl.origin.y;
 		return;
 	}
 

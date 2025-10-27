@@ -140,23 +140,22 @@ fn void? Ctx.scrollbar(&ctx, Id id, float *value, float handle_percent, bool ver
 	Style* style = ctx.styles.get_style(@str_hash("scrollbar"));
 
 	Rect pb = parent.bounds.pad(parent.layout.content_offset);
-	elem.bounds.x = vertical ? pb.bottom_right().x - style.size: pb.x;
-	elem.bounds.y = vertical ? pb.y : pb.bottom_right().y - style.size;
 	if (vertical) {
 		elem.layout.w = @exact(style.size);
 		elem.layout.h = @grow();
-		elem.bounds.x -= style.margin.x + style.margin.w + style.border.x + style.border.w;
+		elem.layout.origin.x = pb.w - style.size;
+		elem.layout.origin.y = 0;
 	} else {
 		elem.layout.w = @grow();
 		elem.layout.h = @exact(style.size);
-		elem.bounds.y -= style.margin.y + style.margin.h + style.border.y + style.border.h;
+		elem.layout.origin.x = 0;
+		elem.layout.origin.y = pb.h - style.size;
 	}
 	elem.layout.content_offset = style.margin + style.border + style.padding;
 	elem.layout.absolute = true;
 	update_parent_size(elem, parent);
 
 	Rect content_bounds = elem.bounds.pad(elem.layout.content_offset);
-	//elem.events = ctx.get_elem_events(elem);
 
 	short o = vertical ? content_bounds.y : content_bounds.x;
 	short m = vertical ? ctx.input.mouse.pos.y : ctx.input.mouse.pos.x;
