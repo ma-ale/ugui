@@ -104,8 +104,8 @@ macro Point Layout.get_dimensions(&el)
 macro Point Elem.content_space(&e)
 {
 	return {
-		.x = e.bounds.w - e.layout.content_offset.x - e.layout.content_offset.w,
-		.y = e.bounds.h - e.layout.content_offset.y - e.layout.content_offset.h,
+		.x = (short)max(e.bounds.w - e.layout.content_offset.x - e.layout.content_offset.w, 0),
+		.y = (short)max(e.bounds.h - e.layout.content_offset.y - e.layout.content_offset.h, 0),
 	};
 }
 
@@ -168,7 +168,7 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 		if (e.layout.absolute) { // absolute children do not need to share space
 			e.bounds.w = p.content_space().x;
 		} else if (p.layout.dir == ROW) { // grow along the axis, divide the parent size
-			short slot = (short)((p.content_space().x - p.layout.occupied) / p.layout.grow_children);
+			short slot = (short)max(((p.content_space().x - p.layout.occupied) / p.layout.grow_children), 0);
 			e.bounds.w = slot;
 			p.layout.grow_children--;
 			p.layout.occupied += slot;
@@ -182,7 +182,7 @@ fn void resolve_grow_elements(Elem* e, Elem* p)
 		if (e.layout.absolute) { // absolute children do not need to share space
 			e.bounds.h = p.content_space().y;
 		} else if (p.layout.dir == COLUMN) { // grow along the axis, divide the parent size
-			short slot = (short)((p.content_space().y - p.layout.occupied) / p.layout.grow_children);
+			short slot = (short)max(((p.content_space().y - p.layout.occupied) / p.layout.grow_children), 0);
 			e.bounds.h = slot;
 			p.layout.grow_children--;
 			p.layout.occupied += slot;
