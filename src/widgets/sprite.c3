@@ -21,8 +21,8 @@ fn void? Ctx.sprite_id(&ctx, Id id, String name, short size = 0)
 	short height = sprite.h;
 	if (size > 0) {
 		if (sprite.w >= sprite.h) {
-			width = size;
 			height = (short)(size * (float)height/width);
+			width = size;
 		} else {
 			width = (short)(size * (float)width/height);
 			height = size;
