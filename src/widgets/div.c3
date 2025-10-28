@@ -105,8 +105,8 @@ fn void? Ctx.div_begin_id(&ctx,
 	ctx.push_rect(elem.bounds.pad(style.margin), elem.z_index, style)!;
 
 	// update the ctx scissor, it HAS to be after drawing the background
-	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
-	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.z_index)!;
+	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset).max({0,0,0,0});
+	ctx.push_scissor(ctx.div_scissor, elem.z_index)!;
 
 	//elem.events = ctx.get_elem_events(elem);
 
@@ -164,7 +164,7 @@ fn Id? Ctx.div_end(&ctx)
 	// the active_div returns to the parent of the current one
 	ctx.active_div = ctx.tree.parentof(ctx.active_div)!;
 	Elem* parent = ctx.get_parent()!;
-	ctx.div_scissor = parent.bounds.pad(parent.layout.content_offset);
+	ctx.div_scissor = parent.bounds.pad(parent.layout.content_offset).max({0,0,0,0});
 	ctx.reset_scissor(elem.z_index)!;
 
 	update_parent_size(elem, parent);
@@ -236,8 +236,8 @@ fn bool? Ctx.popup_begin_id(&ctx,
 	ctx.push_rect(elem.bounds.pad(style.margin), elem.z_index, style)!;
 
 	// update the ctx scissor, it HAS to be after drawing the background
-	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset);
-	ctx.push_scissor(elem.bounds.pad(elem.layout.content_offset), elem.z_index)!;
+	ctx.div_scissor = elem.bounds.pad(elem.layout.content_offset).max({0,0,0,0});
+	ctx.push_scissor(ctx.div_scissor, elem.z_index)!;
 
 	//elem.events = ctx.get_elem_events(elem);
 	

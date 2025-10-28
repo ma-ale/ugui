@@ -132,12 +132,6 @@ fn void update_parent_size(Elem* child, Elem* parent)
 	}
 }
 
-fn void update_children_bounds(Elem* child, Elem* parent)
-{
-	if (child.layout.absolute) return;
-	parent.children_bounds = containing_rect(child.bounds + parent.layout.scroll_offset, parent.bounds);
-}
-
 macro Rect Elem.content_bounds(&elem) => elem.bounds.pad(elem.layout.content_offset);
 
 // Assign the width and height of an element in the directions that it doesn't need to grow
@@ -295,6 +289,23 @@ fn void resolve_placement(Elem* c, Elem* p)
 		pl.origin.y += c.bounds.h;
 	default: unreachable("unknown layout direction");
 	}
+
+	// update the parent children_bounds
+	// FIXME: this causes scollbars to flicker in/out during resize because the current frames children_bounds are updated
+	//        with the previous' frame child bounds. It would be better to implement another pass during layout.
+	// FIXME: this long way around to compute the children bounds works and reduces flickering, but it is very ugly 
+	Rect ncb = c.children_bounds;
+	ncb.x = c.bounds.x;
+	ncb.y = c.bounds.y;
+	Rect cb = containing_rect(c.bounds, ncb);
+	Point o = p.layout.scroll_offset;
+	p.children_bounds = containing_rect(cb + o, p.children_bounds);
+
+	// reset the children bounds
+	c.children_bounds = {
+		.x = c.bounds.x,
+		.y = c.bounds.y
+	};
 }
 
 fn void? Ctx.layout_element_tree(&ctx)
@@ -330,10 +341,8 @@ fn void? Ctx.layout_element_tree(&ctx)
 			Elem* c = ctx.find_elem(ctx.tree.get(ch))!;
 			if (ctx.tree.is_root(ch)) {
 				resolve_placement(p, &&{});
-				update_children_bounds(p, &&{});
 			} else {
 				resolve_placement(c, p);
-				update_children_bounds(c, p);
 			}
 
 			// FIXME: this stuff would be better elsewhere but we are already iteraring through all
