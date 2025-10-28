@@ -155,7 +155,7 @@ fn Id? Ctx.div_end(&ctx)
 				elem.div.scroll_x.value = math::clamp(elem.div.scroll_x.value, 0.0f, 1.0f);
 			}
 		}
-		ctx.scrollbar(vsid_raw, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15), false)!;
+		ctx.scrollbar(hsid_raw, &elem.div.scroll_x.value, max((float)bc.x / cbc.x, (float)0.15), false)!;
 		elem.layout.scroll_offset.x = (short)(elem.div.scroll_x.value*(float)(elem.children_bounds.w-elem.bounds.w));
 	} else {
 		elem.div.scroll_x.value = 0;
