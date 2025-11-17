@@ -1,5 +1,5 @@
 module ugui;
-
+import std::math;
 
 // ---------------------------------------------------------------------------------- //
 //                                  RECTANGLE                                         //
@@ -244,8 +244,6 @@ macro uint Color.to_uint(c) => c.r | (c.g << 8) | (c.b << 16) | (c.a << 24);
 //                                    SIZE                                            //
 // ---------------------------------------------------------------------------------- //
 
-macro short short.add_no_of(short a, short b) => (short)max(min((int)a + (int)b, short.max), short.min) @inline;
-
 struct Size {
 	short min, max;
 }
@@ -258,8 +256,8 @@ macro bool Size.@is_grow(s) => (s.min == 0 && s.max == 0);
 macro bool Size.@is_exact(s) => (s.min == s.max && s.min != 0);
 macro bool Size.@is_fit(s) => (s.min != s.max);
 
-macro Size Size.add(a, Size b) @operator_s(+) => {.min = a.min.add_no_of(b.min), .max = a.max.add_no_of(b.max)};
-macro Size Size.sub(a, Size b) @operator_s(-) => {.min = a.min.add_no_of(-b.min), .max = a.max.add_no_of(-b.max)};
+macro Size Size.add(a, Size b) @operator_s(+) => {.min = a.min.sat_add(b.min), .max = a.max.sat_add(b.max)};
+macro Size Size.sub(a, Size b) @operator_s(-) => {.min = a.min.sat_sub(b.min), .max = a.max.sat_sub(b.max)};
 
 macro Size Size.combine(a, Size b) => {.min = max(a.min, b.min), .max = min(a.max, b.max)};
 macro Size Size.comb_max(a, Size b) => {.min = max(a.min, b.min), .max = max(a.max, b.max)};
