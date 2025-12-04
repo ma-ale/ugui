@@ -276,7 +276,9 @@ fn void? Ctx.frame_end(&ctx)
 	}
 
 	// 2. clear input fields
+	Point mdelta = ctx.current_input.mouse.pos - ctx.input.mouse.pos;
 	ctx.input = ctx.current_input;
+	ctx.input.mouse.delta = mdelta;
 	ctx.current_input.events = {};
 	ctx.current_input.mouse.scroll = {};
 	ctx.current_input.mouse.updated = BTN_NONE;
