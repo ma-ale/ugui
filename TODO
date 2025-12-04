@@ -44,6 +44,9 @@
     content, the background color is applied starting from the border. Right now push_rect() offsets
     the background rect by both border and padding
 [x] Investigate why the debug pointer (cyan rectangle) disappears... 
+[ ] Selectable divs
+[ ] Selectable text
+[ ] Copy buffer
 
 ## Layout
 
@@ -71,6 +74,7 @@
 [x] Use containing_rect() in position_element() to skip some computing and semplify the function
 [x] Rename position_element() to layout_element()
 [x] Make functions to mark rows/columns as full, to fix the calculator demo
+[ ] Grids
 
 ## Input
 

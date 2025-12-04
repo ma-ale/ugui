@@ -20,6 +20,18 @@ enum Anchor {
 	CENTER
 }
 
+bitstruct ResizeDirection : char {
+	bool x : 0;
+	bool y : 1;
+}
+
+bitstruct ResizeAnchor : char {
+	bool top    : 0;
+	bool bottom : 1;
+	bool left   : 2;
+	bool right  : 3;
+}
+
 struct Layout {
 	Size w, h; // size of the CONTENT, does not include margin, border and padding
 	struct children { // the children size includes the children's margin/border/pading
@@ -39,7 +51,7 @@ struct Layout {
 	Rect content_offset; // combined effect of margin, border and padding
 }
 
-// Returns the width and height of a @FIT() element based on it's wanted size (min/max)
+// Returns the width and height of a @fit() element based on it's wanted size (min/max)
 // and the content size, this function is used to both update the parent's children size and
 // give the dimensions of a fit element
 // TODO: test and cleanup this function
